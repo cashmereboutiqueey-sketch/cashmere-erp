@@ -11,7 +11,8 @@ import {
   Truck,
   Users,
   BarChart,
-  DollarSign
+  DollarSign,
+  MonitorPlay
 } from 'lucide-react';
 
 import {
@@ -31,6 +32,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 
 const menuItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/pos', label: 'Point of Sale', icon: MonitorPlay },
     { href: '/orders', label: 'Orders', icon: ShoppingCart },
     { href: '/products', label: 'Products', icon: Box },
     { href: '/customers', label: 'Customers', icon: Users },

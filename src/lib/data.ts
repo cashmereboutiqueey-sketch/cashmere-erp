@@ -1,4 +1,4 @@
-import { Order, Customer, User, Product } from '@/lib/types';
+import { Order, Customer, User, Product, Fabric, ProductFabric } from '@/lib/types';
 import { PlaceHolderImages } from './placeholder-images';
 
 export const mockUser: User = {
@@ -22,6 +22,15 @@ export const mockCustomers: Customer[] = [
   { id: 'cust_8', name: 'Samira Hussein', email: 'samira.h@example.com', avatarUrl: 'https://picsum.photos/seed/user8/100/100' },
   { id: 'cust_9', name: 'Farah Said', email: 'farah.s@example.com', avatarUrl: 'https://picsum.photos/seed/user9/100/100' },
   { id: 'cust_10', name: 'Hana El-Masri', email: 'hana.e@example.com', avatarUrl: 'https://picsum.photos/seed/user10/100/100' },
+];
+
+export const mockFabrics: Fabric[] = [
+    { id: 'fab_1', name: 'Silk', code: 'F001', color: 'Gold', length_in_meters: 500, supplier_id: 'supp_1', price_per_meter: 20, min_stock_level: 50 },
+    { id: 'fab_2', name: 'Cotton', code: 'F002', color: 'White', length_in_meters: 1000, supplier_id: 'supp_2', price_per_meter: 8, min_stock_level: 200 },
+    { id: 'fab_3', name: 'Wool', code: 'F003', color: 'Charcoal Gray', length_in_meters: 300, supplier_id: 'supp_1', price_per_meter: 15, min_stock_level: 75 },
+    { id: 'fab_4', name: 'Satin', code: 'F004', color: 'Midnight Blue', length_in_meters: 400, supplier_id: 'supp_3', price_per_meter: 12, min_stock_level: 100 },
+    { id: 'fab_5', name: 'Chiffon', code: 'F005', color: 'Rose Gold', length_in_meters: 800, supplier_id: 'supp_2', price_per_meter: 5, min_stock_level: 150 },
+    { id: 'fab_6', name: 'Knit', code: 'F006', color: 'Beige', length_in_meters: 600, supplier_id: 'supp_3', price_per_meter: 10, min_stock_level: 100 },
 ];
 
 export const mockProducts: Product[] = [
@@ -97,6 +106,17 @@ export const mockProducts: Product[] = [
     min_stock_level: 25,
     created_at: new Date().toISOString(),
   },
+];
+
+export const mockProductFabrics: ProductFabric[] = [
+    { product_id: 'prod_1', fabric_id: 'fab_1', fabric_quantity_meters: 3 },
+    { product_id: 'prod_2', fabric_id: 'fab_2', fabric_quantity_meters: 1.5 },
+    { product_id: 'prod_3', fabric_id: 'fab_3', fabric_quantity_meters: 2 },
+    { product_id: 'prod_4', fabric_id: 'fab_4', fabric_quantity_meters: 4 },
+    { product_id: 'prod_5', fabric_id: 'fab_5', fabric_quantity_meters: 1 },
+    { product_id: 'prod_6', fabric_id: 'fab_6', fabric_quantity_meters: 2.5 },
+    // Example of a product with multiple fabrics
+    { product_id: 'prod_1', fabric_id: 'fab_5', fabric_quantity_meters: 0.5 },
 ];
 
 

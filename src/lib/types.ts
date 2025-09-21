@@ -35,18 +35,16 @@ export type Product = {
   category: string;
   price: number;
   cost: number;
-  fabric_code?: string;
   stock_quantity: number;
   showroom_quantity: number;
   min_stock_level: number;
   created_at: string;
 };
 
-export type ProductModel = {
-  id: string;
+export type ProductFabric = {
   product_id: string;
   fabric_id: string;
-  meters_per_unit: number;
+  fabric_quantity_meters: number;
 };
 
 export type Fabric = {
