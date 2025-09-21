@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { mockProducts, mockFabrics, mockProductFabrics, mockCustomers } from '@/lib/data';
-import { Product, Customer } from '@/lib/types';
+import { Product, Customer, ProductVariant } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
@@ -30,6 +30,7 @@ import { AddCustomerDialog } from '@/components/customers/add-customer-dialog';
 
 type CartItem = {
   product: Product;
+  variant: ProductVariant;
   quantity: number;
 };
 
@@ -48,9 +49,20 @@ export default function PosPage() {
     e.preventDefault();
     if (!sku) return;
 
-    const product = mockProducts.find(p => p.sku.toLowerCase() === sku.toLowerCase());
-    if (product) {
-      addToCart(product);
+    let foundProduct: Product | undefined;
+    let foundVariant: ProductVariant | undefined;
+
+    for (const p of mockProducts) {
+      const v = p.variants.find(va => va.sku.toLowerCase() === sku.toLowerCase());
+      if (v) {
+        foundProduct = p;
+        foundVariant = v;
+        break;
+      }
+    }
+
+    if (foundProduct && foundVariant) {
+      addToCart(foundProduct, foundVariant);
       setSku('');
     } else {
       toast({
@@ -61,36 +73,36 @@ export default function PosPage() {
     }
   };
 
-  const addToCart = (product: Product) => {
+  const addToCart = (product: Product, variant: ProductVariant) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find(
-        (item) => item.product.id === product.id
+        (item) => item.variant.id === variant.id
       );
       if (existingItem) {
         return prevCart.map((item) =>
-          item.product.id === product.id
+          item.variant.id === variant.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...prevCart, { product, quantity: 1 }];
+      return [...prevCart, { product, variant, quantity: 1 }];
     });
   };
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = (variantId: string) => {
     setCart((prevCart) =>
-      prevCart.filter((item) => item.product.id !== productId)
+      prevCart.filter((item) => item.variant.id !== variantId)
     );
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = (variantId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      removeFromCart(variantId);
       return;
     }
     setCart((prevCart) =>
       prevCart.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
+        item.variant.id === variantId ? { ...item, quantity } : item
       )
     );
   };
@@ -108,12 +120,11 @@ export default function PosPage() {
     let alertMessages: string[] = [];
 
     cart.forEach(item => {
-        const product = item.product;
-        const quantity = item.quantity;
-        if (product.stock_quantity >= quantity) {
+        const { product, variant, quantity } = item;
+        if (variant.stock_quantity >= quantity) {
             // Sufficient stock
         } else {
-            const fabricsNeeded = mockProductFabrics.filter(pf => pf.product_id === product.id);
+            const fabricsNeeded = mockProductFabrics.filter(pf => pf.product_id === variant.id);
             if (fabricsNeeded.length > 0) {
                 let canManufacture = true;
                 fabricsNeeded.forEach(pf => {
@@ -122,7 +133,7 @@ export default function PosPage() {
                         canManufacture = false;
                         const required = pf.fabric_quantity_meters * quantity;
                         const available = fabric?.length_in_meters || 0;
-                        alertMessages.push(`${product.name}: Needs ${required}m of ${fabric?.name}, but only ${available}m available.`);
+                        alertMessages.push(`${product.name} (${variant.size || ''} ${variant.color || ''}): Needs ${required}m of ${fabric?.name}, but only ${available}m available.`);
                     }
                 });
                 if (!canManufacture) {
@@ -159,11 +170,38 @@ export default function PosPage() {
   };
 
   const total = cart.reduce(
-    (acc, item) => acc + item.product.price * item.quantity,
+    (acc, item) => acc + item.variant.price * item.quantity,
     0
   );
 
   const filteredCustomers = customerSearch ? mockCustomers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.email.toLowerCase().includes(customerSearch.toLowerCase())) : [];
+
+  const getProductPriceRange = (product: Product) => {
+    const prices = product.variants.map(v => v.price);
+    if (prices.length === 0) return '$0.00';
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const format = (amount: number) => new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+
+    return min === max ? format(min) : `${format(min)} - ${format(max)}`;
+  };
+
+  const handleAddToCart = (product: Product) => {
+    if (product.variants.length > 0) {
+      // In a real scenario, you might want to open a dialog to select a variant.
+      // For simplicity, we'll add the first variant.
+      addToCart(product, product.variants[0]);
+    } else {
+       toast({
+        variant: 'destructive',
+        title: 'Product has no variants',
+        description: `Please add variants to ${product.name} before selling.`,
+      });
+    }
+  }
 
   return (
     <div className="grid md:grid-cols-3 gap-4 p-4 lg:p-6">
@@ -196,8 +234,8 @@ export default function PosPage() {
                     />
                     <div className="p-2">
                       <h3 className="text-sm font-medium truncate">{product.name}</h3>
-                      <p className="text-xs text-muted-foreground">${product.price.toFixed(2)}</p>
-                      <Button size="sm" className="w-full mt-2" onClick={() => addToCart(product)}>
+                      <p className="text-xs text-muted-foreground">{getProductPriceRange(product)}</p>
+                      <Button size="sm" className="w-full mt-2" onClick={() => handleAddToCart(product)}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add
                       </Button>
                     </div>
@@ -271,7 +309,7 @@ export default function PosPage() {
             <ScrollArea className="h-[350px]">
               {cart.length > 0 ? (
                 cart.map((item) => (
-                  <div key={item.product.id} className="flex items-center gap-4 py-2">
+                  <div key={item.variant.id} className="flex items-center gap-4 py-2">
                     <Image
                       src={findImage(item.product.id) || "https://picsum.photos/seed/placeholder/40/40"}
                       alt={item.product.name}
@@ -282,7 +320,7 @@ export default function PosPage() {
                     <div className="flex-1">
                       <p className="font-medium text-sm">{item.product.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        ${item.product.price.toFixed(2)}
+                        {item.variant.size && `${item.variant.size}, `}{item.variant.color && `${item.variant.color}, `}${item.variant.price.toFixed(2)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -291,14 +329,14 @@ export default function PosPage() {
                         min="1"
                         value={item.quantity}
                         onChange={(e) =>
-                          updateQuantity(item.product.id, parseInt(e.target.value))
+                          updateQuantity(item.variant.id, parseInt(e.target.value))
                         }
                         className="h-8 w-16"
                       />
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => removeFromCart(item.product.id)}
+                        onClick={() => removeFromCart(item.variant.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -324,5 +362,3 @@ export default function PosPage() {
     </div>
   );
 }
-
-    
