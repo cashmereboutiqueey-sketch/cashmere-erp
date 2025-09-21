@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -9,7 +10,14 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { salesData } from '@/lib/data';
-import { ChartTooltipContent } from '../ui/chart';
+import { ChartTooltipContent, ChartContainer, type ChartConfig } from '../ui/chart';
+
+const chartConfig = {
+  total: {
+    label: 'Sales',
+    color: 'hsl(var(--chart-1))',
+  },
+} satisfies ChartConfig;
 
 export function SalesChart() {
   return (
@@ -19,8 +27,8 @@ export function SalesChart() {
         <CardDescription>An overview of your monthly sales.</CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={salesData}>
+        <ChartContainer config={chartConfig} className="min-h-[350px] w-full">
+          <BarChart data={salesData} accessibilityLayer>
             <XAxis
               dataKey="name"
               stroke="hsl(var(--foreground))"
@@ -45,7 +53,7 @@ export function SalesChart() {
               radius={[4, 4, 0, 0]}
             />
           </BarChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
