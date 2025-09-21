@@ -1,4 +1,4 @@
-import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier, Payable, ProductionOrder, Expense } from '@/lib/types';
+import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier, Payable, ProductionOrder, Expense, OrderItem } from '@/lib/types';
 import { PlaceHolderImages } from './placeholder-images';
 
 export const mockUser: User = {
@@ -235,6 +235,14 @@ export const mockOrders: Order[] = [
   ...order,
   customer: mockCustomers.find(c => c.id === order.customer_id)
 }));
+
+export const mockOrderItems: OrderItem[] = [
+    { id: 'item_1', order_id: 'ORD-001', product_id: 'prod_1', quantity: 1, price: 250, subtotal: 250 },
+    { id: 'item_2', order_id: 'ORD-002', product_id: 'prod_2', quantity: 1, price: 75, subtotal: 75.75 },
+    { id: 'item_3', order_id: 'ORD-002', product_id: 'prod_5', quantity: 1, price: 45, subtotal: 45 },
+    { id: 'item_4', order_id: 'ORD-003', product_id: 'prod_4', quantity: 1, price: 180, subtotal: 180 },
+    { id: 'item_5', order_id: 'ORD-003', product_id: 'prod_6', quantity: 1, price: 95, subtotal: 95 },
+]
 
 
 export const salesData = [

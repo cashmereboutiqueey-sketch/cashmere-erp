@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { ProductionOrder, Product, Fabric, ProductFabric } from '@/lib/types';
+import { ProductionOrder, Product, Fabric, ProductFabric, OrderItem, Order } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { Badge } from '../ui/badge';
@@ -19,7 +19,7 @@ import { Button } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { mockProductFabrics, mockFabrics, mockProducts, mockOrders } from '@/lib/data';
+import { mockProductFabrics, mockFabrics, mockProducts, mockOrders, mockOrderItems } from '@/lib/data';
 import {
   Dialog,
   DialogContent,
@@ -173,8 +173,36 @@ interface ProductionOrdersTableProps {
 function AddProductionOrderDialog() {
   const [open, setOpen] = useState(false);
   const [orderType, setOrderType] = useState('stock');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [quantity, setQuantity] = useState(1);
 
   const pendingSalesOrders = mockOrders.filter(o => o.status === 'pending' || o.status === 'processing');
+
+  const handleOrderChange = (orderId: string) => {
+    const order = mockOrders.find(o => o.id === orderId);
+    setSelectedOrder(order || null);
+    setSelectedProduct(null); 
+    setQuantity(1);
+  };
+
+  const handleProductChange = (productId: string) => {
+      const product = mockProducts.find(p => p.id === productId);
+      setSelectedProduct(product || null);
+      if (selectedOrder) {
+          const orderItem = mockOrderItems.find(item => item.order_id === selectedOrder.id && item.product_id === productId);
+          if (orderItem) {
+              setQuantity(orderItem.quantity);
+          }
+      }
+  }
+
+  const getProductsForOrder = (orderId: string): Product[] => {
+      const orderItems = mockOrderItems.filter(item => item.order_id === orderId);
+      const productIds = orderItems.map(item => item.product_id);
+      return mockProducts.filter(p => productIds.includes(p.id));
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -211,7 +239,7 @@ function AddProductionOrderDialog() {
                 <Label htmlFor="sales-order" className="text-right">
                   Sales Order
                 </Label>
-                <Select>
+                <Select onValueChange={handleOrderChange}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select an order" />
                   </SelectTrigger>
@@ -229,12 +257,18 @@ function AddProductionOrderDialog() {
             <Label htmlFor="product" className="text-right">
               Product
             </Label>
-            <Select>
+            <Select onValueChange={handleProductChange} value={selectedProduct?.id || ''}>
               <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="Select a product" />
               </SelectTrigger>
               <SelectContent>
-                {mockProducts.map((product) => (
+                {(orderType === 'order' && selectedOrder) ? 
+                    getProductsForOrder(selectedOrder.id).map((product) => (
+                         <SelectItem key={product.id} value={product.id}>
+                            {product.name}
+                        </SelectItem>
+                    ))
+                : mockProducts.map((product) => (
                   <SelectItem key={product.id} value={product.id}>
                     {product.name}
                   </SelectItem>
@@ -246,7 +280,7 @@ function AddProductionOrderDialog() {
             <Label htmlFor="quantity" className="text-right">
               Quantity
             </Label>
-            <Input id="quantity" type="number" className="col-span-3" placeholder="e.g., 25" />
+            <Input id="quantity" type="number" className="col-span-3" placeholder="e.g., 25" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} />
           </div>
         </div>
         <DialogFooter>
