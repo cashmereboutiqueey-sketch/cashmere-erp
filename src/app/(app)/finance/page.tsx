@@ -1,14 +1,25 @@
+import { FinancialSummaryCards } from '@/components/finance/financial-summary-cards';
+import { ProfitLossChart } from '@/components/finance/profit-loss-chart';
+import { RecentTransactions } from '@/components/finance/recent-transactions';
+import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
+
 export default function FinancePage() {
   return (
-    <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h3 className="text-2xl font-bold tracking-tight">
-          Finance Page
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          This page is under construction.
-        </p>
+    <>
+      <PageHeader>
+        <PageHeaderHeading>Finance Dashboard</PageHeaderHeading>
+      </PageHeader>
+      <div className="p-4 lg:p-6 flex flex-col gap-4 md:gap-8">
+        <FinancialSummaryCards />
+        <div className="grid gap-4 md:gap-8 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            <ProfitLossChart />
+          </div>
+          <div className="lg:col-span-2">
+            <RecentTransactions />
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
