@@ -1,4 +1,4 @@
-import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier } from '@/lib/types';
+import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier, Payable } from '@/lib/types';
 import { PlaceHolderImages } from './placeholder-images';
 
 export const mockUser: User = {
@@ -15,6 +15,13 @@ export const mockSuppliers: Supplier[] = [
     { id: 'supp_1', name: 'Luxury Fabrics Inc.', email: 'contact@luxuryfabrics.com', phone: '111-222-3333' },
     { id: 'supp_2', name: 'Global Textiles Co.', email: 'sales@globaltextiles.com', phone: '444-555-6666' },
     { id: 'supp_3', name: 'Artisan Weavers', email: 'support@artisanweavers.net', phone: '777-888-9999' },
+];
+
+export const mockPayables: Payable[] = [
+    { id: 'pay_1', supplier_id: 'supp_1', amount: 5000, due_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(), status: 'unpaid' },
+    { id: 'pay_2', supplier_id: 'supp_2', amount: 1200, due_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), status: 'paid' },
+    { id: 'pay_3', supplier_id: 'supp_1', amount: 3000, due_date: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(), status: 'unpaid' },
+    { id: 'pay_4', supplier_id: 'supp_3', amount: 800, due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(), status: 'unpaid' },
 ];
 
 export const mockCustomers: Customer[] = [

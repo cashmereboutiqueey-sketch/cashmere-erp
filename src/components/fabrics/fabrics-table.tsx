@@ -14,6 +14,24 @@ import { Button } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
+import { mockSuppliers } from '@/lib/data';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '../ui/label';
+import { useState } from 'react';
 
 type FabricWithSupplier = Fabric & { supplier?: Supplier };
 
@@ -74,8 +92,8 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
       return <div>{row.original.supplier?.name || 'N/A'}</div>;
     },
     filterFn: (row, id, value) => {
-        return value.includes(row.getValue(id))
-    }
+      return value.includes(row.getValue(id));
+    },
   },
   {
     id: 'actions',
@@ -106,17 +124,74 @@ interface FabricsTableProps {
 }
 
 function FabricsTableToolbar() {
+  const [open, setOpen] = useState(false);
   return (
     <>
-      <Input placeholder="Filter fabrics..." className="h-8 w-[150px] lg:w-[250px]" />
-      <Button size="sm" className="h-8 ml-auto">
-        <PlusCircle className="mr-2 h-4 w-4" />
-        Add Fabric
-      </Button>
+      <Input
+        placeholder="Filter fabrics..."
+        className="h-8 w-[150px] lg:w-[250px]"
+      />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" className="h-8 ml-auto">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Record Purchase
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Fabric Purchase</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="supplier" className="text-right">
+                Supplier
+              </Label>
+              <Select>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select a supplier" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockSuppliers.map((supplier) => (
+                    <SelectItem key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cost" className="text-right">
+                Total Cost
+              </Label>
+              <Input id="cost" type="number" className="col-span-3" placeholder="e.g., 500.00" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="payment-status" className="text-right">
+                Payment
+              </Label>
+              <Select>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select payment status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="paid">Paid (Cash)</SelectItem>
+                  <SelectItem value="unpaid">To be Paid (Late)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setOpen(false)}>Add Purchase</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
 
 export function FabricsTable({ data }: FabricsTableProps) {
-  return <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar />} />;
+  return (
+    <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar />} />
+  );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { Supplier } from '@/lib/types';
+import { Supplier, Payable } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import {
@@ -14,8 +14,19 @@ import { Button } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
+import { mockPayables } from '@/lib/data';
 
-export const columns: ColumnDef<Supplier>[] = [
+type SupplierWithPayables = Supplier & {
+  amount_owed: number;
+};
+
+const calculateAmountOwed = (supplierId: string): number => {
+  return mockPayables
+    .filter(p => p.supplier_id === supplierId && p.status === 'unpaid')
+    .reduce((total, p) => total + p.amount, 0);
+}
+
+export const columns: ColumnDef<SupplierWithPayables>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -52,6 +63,20 @@ export const columns: ColumnDef<Supplier>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Phone" />
     ),
+  },
+  {
+    accessorKey: 'amount_owed',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Amount Owed" />
+    ),
+    cell: ({ row }) => {
+        const amount = parseFloat(row.getValue('amount_owed'));
+        const formatted = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+        }).format(amount);
+        return <div className="font-medium">{formatted}</div>;
+    }
   },
   {
     id: 'actions',
@@ -97,5 +122,9 @@ function SuppliersTableToolbar() {
 }
 
 export function SuppliersTable({ data }: SuppliersTableProps) {
-  return <DataTable columns={columns} data={data} toolbar={<SuppliersTableToolbar />} />;
+    const dataWithPayables = data.map(supplier => ({
+        ...supplier,
+        amount_owed: calculateAmountOwed(supplier.id),
+    }))
+  return <DataTable columns={columns} data={dataWithPayables} toolbar={<SuppliersTableToolbar />} />;
 }
