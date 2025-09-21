@@ -18,14 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockProducts, mockFabrics, mockProductFabrics } from '@/lib/data';
-import { Product } from '@/lib/types';
+import { mockProducts, mockFabrics, mockProductFabrics, mockCustomers } from '@/lib/data';
+import { Product, Customer } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { PlusCircle, ShoppingCart, Trash2 } from 'lucide-react';
+import { PlusCircle, ShoppingCart, Trash2, Search, UserPlus, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { AddCustomerDialog } from '@/components/customers/add-customer-dialog';
 
 type CartItem = {
   product: Product;
@@ -39,6 +40,26 @@ export default function PosPage() {
   const { toast } = useToast();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [source, setSource] = useState('store');
+  const [sku, setSku] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  const handleSkuSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!sku) return;
+
+    const product = mockProducts.find(p => p.sku.toLowerCase() === sku.toLowerCase());
+    if (product) {
+      addToCart(product);
+      setSku('');
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Product not found',
+        description: `No product with SKU: ${sku}`,
+      });
+    }
+  };
 
   const addToCart = (product: Product) => {
     setCart((prevCart) => {
@@ -142,12 +163,24 @@ export default function PosPage() {
     0
   );
 
+  const filteredCustomers = customerSearch ? mockCustomers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.email.toLowerCase().includes(customerSearch.toLowerCase())) : [];
+
   return (
     <div className="grid md:grid-cols-3 gap-4 p-4 lg:p-6">
       <div className="md:col-span-2">
         <Card>
           <CardHeader>
-            <CardTitle>Products</CardTitle>
+             <form onSubmit={handleSkuSubmit}>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value)}
+                  placeholder="Scan product barcode..."
+                  className="w-full bg-background pl-8"
+                />
+              </div>
+            </form>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[600px]">
@@ -184,6 +217,43 @@ export default function PosPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {selectedCustomer ? (
+                 <div className="flex items-center justify-between p-2 rounded-md bg-muted">
+                    <div>
+                        <p className="font-medium text-sm">{selectedCustomer.name}</p>
+                        <p className="text-xs text-muted-foreground">{selectedCustomer.email}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" onClick={() => setSelectedCustomer(null)}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
+            ) : (
+                <div className="space-y-2">
+                     <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
+                        placeholder="Search for a customer..."
+                        className="w-full bg-background pl-8"
+                        />
+                    </div>
+                    {filteredCustomers.length > 0 && (
+                        <Card className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto">
+                            <CardContent className="p-2">
+                                {filteredCustomers.map(c => (
+                                    <div key={c.id} onClick={() => { setSelectedCustomer(c); setCustomerSearch(''); }} className="p-2 hover:bg-muted rounded-md cursor-pointer">
+                                        <p className="font-medium text-sm">{c.name}</p>
+                                        <p className="text-xs text-muted-foreground">{c.email}</p>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    )}
+                    <AddCustomerDialog />
+                </div>
+            )}
+            
              <div className="grid gap-2">
               <Label htmlFor="source">Order Source</Label>
               <Select value={source} onValueChange={setSource}>
@@ -254,3 +324,5 @@ export default function PosPage() {
     </div>
   );
 }
+
+    
