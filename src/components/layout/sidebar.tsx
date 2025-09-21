@@ -30,6 +30,8 @@ import { Logo } from '@/components/icons';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useAuth } from '@/context/auth-context';
 import type { Role } from '@/lib/types';
+import { Badge } from '../ui/badge';
+import { capitalize } from 'string-ts';
 
 const allMenuItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin'] },
@@ -69,10 +71,15 @@ export function AppSidebar() {
       collapsible="icon"
       className="group-data-[variant=sidebar]:border-r-0"
     >
-      <SidebarHeader className="h-14 items-center px-4 lg:h-[60px] lg:px-6">
+      <SidebarHeader className="h-auto items-center p-4 lg:p-6">
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <Logo className="h-auto w-32" />
         </Link>
+        {user && (
+            <div className="mt-2 w-full text-center group-data-[collapsible=icon]:hidden">
+                <Badge variant="secondary" className="border border-sidebar-border capitalize">{user.role.replace('_', ' ')}</Badge>
+            </div>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
