@@ -1,14 +1,16 @@
+import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
+import { OrdersTable } from '@/components/orders/orders-table';
+import { mockOrders } from '@/lib/data';
+
 export default function OrdersPage() {
   return (
-    <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h3 className="text-2xl font-bold tracking-tight">
-          Orders Page
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          This page is under construction.
-        </p>
+    <>
+      <PageHeader>
+        <PageHeaderHeading>Orders</PageHeaderHeading>
+      </PageHeader>
+      <div className="p-4 lg:p-6">
+        <OrdersTable data={mockOrders} />
       </div>
-    </div>
+    </>
   );
 }

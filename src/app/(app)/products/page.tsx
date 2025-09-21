@@ -1,14 +1,16 @@
+import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
+import { ProductsTable } from '@/components/products/products-table';
+import { mockProducts } from '@/lib/data';
+
 export default function ProductsPage() {
   return (
-    <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h3 className="text-2xl font-bold tracking-tight">
-          Products Page
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          This page is under construction.
-        </p>
+    <>
+      <PageHeader>
+        <PageHeaderHeading>Products</PageHeaderHeading>
+      </PageHeader>
+      <div className="p-4 lg:p-6">
+        <ProductsTable data={mockProducts} />
       </div>
-    </div>
+    </>
   );
 }
