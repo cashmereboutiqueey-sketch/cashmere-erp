@@ -57,154 +57,73 @@ export const mockProducts: Product[] = [
   {
     id: 'prod_1',
     name: 'Elegant Gold Dress',
-    sku: 'SKU-GD-001-S',
     category: 'Dresses',
-    price: 250,
-    cost: 100,
-    stock_quantity: 20,
-    showroom_quantity: 5,
-    min_stock_level: 15,
     created_at: new Date().toISOString(),
-    size: 'S',
-    color: 'Gold'
-  },
-   {
-    id: 'prod_1_2',
-    name: 'Elegant Gold Dress',
-    sku: 'SKU-GD-001-M',
-    category: 'Dresses',
-    price: 250,
-    cost: 100,
-    stock_quantity: 30,
-    showroom_quantity: 5,
-    min_stock_level: 15,
-    created_at: new Date().toISOString(),
-    size: 'M',
-    color: 'Gold'
-  },
-  {
-    id: 'prod_1_3',
-    name: 'Elegant Gold Dress',
-    sku: 'SKU-GD-001-L',
-    category: 'Dresses',
-    price: 250,
-    cost: 100,
-    stock_quantity: 25,
-    showroom_quantity: 5,
-    min_stock_level: 15,
-    created_at: new Date().toISOString(),
-    size: 'L',
-    color: 'Gold'
-  },
-  {
-    id: 'prod_1_4',
-    name: 'Elegant Gold Dress',
-    sku: 'SKU-GD-001-XL',
-    category: 'Dresses',
-    price: 250,
-    cost: 100,
-    stock_quantity: 10,
-    showroom_quantity: 2,
-    min_stock_level: 10,
-    created_at: new Date().toISOString(),
-    size: 'XL',
-    color: 'Gold'
-  },
-  {
-    id: 'prod_1_5',
-    name: 'Elegant Gold Dress',
-    sku: 'SKU-GD-001-XXL',
-    category: 'Dresses',
-    price: 250,
-    cost: 100,
-    stock_quantity: 5,
-    showroom_quantity: 1,
-    min_stock_level: 5,
-    created_at: new Date().toISOString(),
-    size: 'XXL',
-    color: 'Gold'
+    variants: [
+        { id: 'prod_1_1', sku: 'SKU-GD-001-S', price: 250, cost: 100, stock_quantity: 20, showroom_quantity: 5, min_stock_level: 15, size: 'S', color: 'Gold' },
+        { id: 'prod_1_2', sku: 'SKU-GD-001-M', price: 250, cost: 100, stock_quantity: 30, showroom_quantity: 5, min_stock_level: 15, size: 'M', color: 'Gold' },
+        { id: 'prod_1_3', sku: 'SKU-GD-001-L', price: 250, cost: 100, stock_quantity: 25, showroom_quantity: 5, min_stock_level: 15, size: 'L', color: 'Gold' },
+        { id: 'prod_1_4', sku: 'SKU-GD-001-XL', price: 250, cost: 100, stock_quantity: 10, showroom_quantity: 2, min_stock_level: 10, size: 'XL', color: 'Gold' },
+        { id: 'prod_1_5', sku: 'SKU-GD-001-XXL', price: 250, cost: 100, stock_quantity: 5, showroom_quantity: 1, min_stock_level: 5, size: 'XXL', color: 'Gold' },
+    ]
   },
   {
     id: 'prod_2',
     name: 'Classic White Shirt',
-    sku: 'SKU-WS-001-M',
     category: 'Tops',
-    price: 75,
-    cost: 30,
-    stock_quantity: 120,
-    showroom_quantity: 25,
-    min_stock_level: 30,
     created_at: new Date().toISOString(),
-    size: 'M',
-    color: 'White',
+    variants: [
+        { id: 'prod_2_1', sku: 'SKU-WS-001-M', price: 75, cost: 30, stock_quantity: 120, showroom_quantity: 25, min_stock_level: 30, size: 'M', color: 'White' },
+    ]
   },
   {
     id: 'prod_3',
     name: 'Charcoal Gray Pants',
-    sku: 'SKU-GP-001-32',
     category: 'Pants',
-    price: 120,
-    cost: 50,
-    stock_quantity: 80,
-    showroom_quantity: 15,
-    min_stock_level: 20,
     created_at: new Date().toISOString(),
-    size: '32',
-    color: 'Gray'
+    variants: [
+        { id: 'prod_3_1', sku: 'SKU-GP-001-32', price: 120, cost: 50, stock_quantity: 80, showroom_quantity: 15, min_stock_level: 20, size: '32', color: 'Gray' }
+    ]
   },
     {
     id: 'prod_4',
     name: 'Midnight Blue Abaya',
-    sku: 'SKU-AB-001-L',
     category: 'Abayas',
-    price: 180,
-    cost: 75,
-    stock_quantity: 60,
-    showroom_quantity: 12,
-    min_stock_level: 20,
     created_at: new Date().toISOString(),
-    size: 'L',
-    color: 'Blue'
+    variants: [
+        { id: 'prod_4_1', sku: 'SKU-AB-001-L', price: 180, cost: 75, stock_quantity: 60, showroom_quantity: 12, min_stock_level: 20, size: 'L', color: 'Blue' }
+    ]
   },
   {
     id: 'prod_5',
     name: 'Rose Gold Hijab',
-    sku: 'SKU-HJ-001',
     category: 'Hijabs',
-    price: 45,
-    cost: 15,
-    stock_quantity: 200,
-    showroom_quantity: 50,
-    min_stock_level: 50,
     created_at: new Date().toISOString(),
-    color: 'Rose Gold'
+    variants: [
+        { id: 'prod_5_1', sku: 'SKU-HJ-001', price: 45, cost: 15, stock_quantity: 200, showroom_quantity: 50, min_stock_level: 50, color: 'Rose Gold' }
+    ]
   },
   {
     id: 'prod_6',
     name: 'Beige Knit Tunic',
-    sku: 'SKU-KT-001-M',
     category: 'Tops',
-    price: 95,
-    cost: 40,
-    stock_quantity: 90,
-    showroom_quantity: 20,
-    min_stock_level: 25,
     created_at: new Date().toISOString(),
-    size: 'M',
-    color: 'Beige'
+    variants: [
+      { id: 'prod_6_1', sku: 'SKU-KT-001-M', price: 95, cost: 40, stock_quantity: 90, showroom_quantity: 20, min_stock_level: 25, size: 'M', color: 'Beige' }
+    ]
   },
 ];
 
 export const mockProductFabrics: ProductFabric[] = [
-    { product_id: 'prod_1', fabric_id: 'fab_1', fabric_quantity_meters: 3 },
+    { product_id: 'prod_1_1', fabric_id: 'fab_1', fabric_quantity_meters: 3 },
     { product_id: 'prod_1_2', fabric_id: 'fab_1', fabric_quantity_meters: 3.2 },
-    { product_id: 'prod_2', fabric_id: 'fab_2', fabric_quantity_meters: 1.5 },
-    { product_id: 'prod_3', fabric_id: 'fab_3', fabric_quantity_meters: 2 },
-    { product_id: 'prod_4', fabric_id: 'fab_4', fabric_quantity_meters: 4 },
-    { product_id: 'prod_5', fabric_id: 'fab_5', fabric_quantity_meters: 1 },
-    { product_id: 'prod_6', fabric_id: 'fab_6', fabric_quantity_meters: 2.5 },
+    { product_id: 'prod_2_1', fabric_id: 'fab_2', fabric_quantity_meters: 1.5 },
+    { product_id: 'prod_3_1', fabric_id: 'fab_3', fabric_quantity_meters: 2 },
+    { product_id: 'prod_4_1', fabric_id: 'fab_4', fabric_quantity_meters: 4 },
+    { product_id: 'prod_5_1', fabric_id: 'fab_5', fabric_quantity_meters: 1 },
+    { product_id: 'prod_6_1', fabric_id: 'fab_6', fabric_quantity_meters: 2.5 },
     // Example of a product with multiple fabrics
-    { product_id: 'prod_1', fabric_id: 'fab_5', fabric_quantity_meters: 0.5 },
+    { product_id: 'prod_1_1', fabric_id: 'fab_5', fabric_quantity_meters: 0.5 },
 ];
 
 
@@ -305,11 +224,11 @@ export const mockOrders: Order[] = [
 }));
 
 export const mockOrderItems: OrderItem[] = [
-    { id: 'item_1', order_id: 'ORD-001', product_id: 'prod_1', quantity: 1, price: 250, subtotal: 250 },
-    { id: 'item_2', order_id: 'ORD-002', product_id: 'prod_2', quantity: 1, price: 75, subtotal: 75.75 },
-    { id: 'item_3', order_id: 'ORD-002', product_id: 'prod_5', quantity: 1, price: 45, subtotal: 45 },
-    { id: 'item_4', order_id: 'ORD-003', product_id: 'prod_4', quantity: 1, price: 180, subtotal: 180 },
-    { id: 'item_5', order_id: 'ORD-003', product_id: 'prod_6', quantity: 1, price: 95, subtotal: 95 },
+    { id: 'item_1', order_id: 'ORD-001', product_id: 'prod_1_1', quantity: 1, price: 250, subtotal: 250 },
+    { id: 'item_2', order_id: 'ORD-002', product_id: 'prod_2_1', quantity: 1, price: 75, subtotal: 75.75 },
+    { id: 'item_3', order_id: 'ORD-002', product_id: 'prod_5_1', quantity: 1, price: 45, subtotal: 45 },
+    { id: 'item_4', order_id: 'ORD-003', product_id: 'prod_4_1', quantity: 1, price: 180, subtotal: 180 },
+    { id: 'item_5', order_id: 'ORD-003', product_id: 'prod_6_1', quantity: 1, price: 95, subtotal: 95 },
 ]
 
 

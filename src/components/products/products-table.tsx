@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
-import { Product } from '@/lib/types';
+import { Product, ProductVariant } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { Badge } from '../ui/badge';
@@ -13,12 +13,11 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Input } from '../ui/input';
-import { DataTableViewOptions } from '../shared/data-table-view-options';
 import {
   Dialog,
   DialogContent,
@@ -30,29 +29,86 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
 
+const VariantRow = ({ variant }: { variant: ProductVariant }) => {
+  return (
+    <TableRow>
+      <TableCell className="pl-12">
+        <Badge variant="outline">{variant.sku}</Badge>
+      </TableCell>
+      <TableCell>
+        <div className="flex gap-1">
+          {variant.color && <Badge variant="secondary">{variant.color}</Badge>}
+          {variant.size && <Badge variant="secondary">{variant.size}</Badge>}
+        </div>
+      </TableCell>
+      <TableCell>
+        {new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: 'USD',
+        }).format(variant.price)}
+      </TableCell>
+      <TableCell>{variant.stock_quantity}</TableCell>
+      <TableCell></TableCell>
+    </TableRow>
+  );
+};
+
+
 export const columns: ColumnDef<Product>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected()}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
+    {
+    id: 'expander',
+    header: () => null,
+    cell: ({ row }) => {
+      const [isOpen, setIsOpen] = useState(false);
+      return (
+        <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
+          <>
+            <div className="flex items-center">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <span className="sr-only">Toggle variants</span>
+                </Button>
+              </CollapsibleTrigger>
+              <Checkbox
+                checked={row.getIsSelected()}
+                onCheckedChange={(value) => row.toggleSelected(!!value)}
+                aria-label="Select row"
+                className="ml-2"
+              />
+            </div>
+            <CollapsibleContent asChild>
+              <tr className="bg-muted/50 hover:bg-muted">
+                <td colSpan={columns.length}>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-12">SKU</TableHead>
+                        <TableHead>Variant</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {row.original.variants.map((variant) => (
+                        <VariantRow key={variant.id} variant={variant} />
+                      ))}
+                    </TableBody>
+                  </Table>
+                </td>
+              </tr>
+            </CollapsibleContent>
+          </>
+        </Collapsible>
+      );
+    },
   },
   {
     accessorKey: 'name',
@@ -72,13 +128,7 @@ export const columns: ColumnDef<Product>[] = [
             height={40}
             className="rounded-md"
           />
-          <div className='flex flex-col'>
-            <span className="font-medium">{product.name}</span>
-            <div className='flex gap-1'>
-            {product.color && <Badge variant="outline"> {product.color} </Badge>}
-            {product.size && <Badge variant="outline"> {product.size} </Badge>}
-            </div>
-          </div>
+          <span className="font-medium">{product.name}</span>
         </div>
       );
     },
@@ -91,25 +141,31 @@ export const columns: ColumnDef<Product>[] = [
     cell: ({ row }) => <Badge variant="outline">{row.original.category}</Badge>,
   },
   {
-    accessorKey: 'price',
+    id: 'price',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Price" />
     ),
     cell: ({ row }) => {
-      const amount = parseFloat(row.getValue('price'));
-      const formatted = new Intl.NumberFormat('en-US', {
+      const prices = row.original.variants.map(v => v.price);
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      const format = (amount: number) => new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: 'USD',
       }).format(amount);
 
-      return <div className="font-medium">{formatted}</div>;
+      return <div className="font-medium">{min === max ? format(min) : `${format(min)} - ${format(max)}`}</div>;
     },
   },
   {
-    accessorKey: 'stock_quantity',
+    id: 'stock',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Stock" />
+      <DataTableColumnHeader column={column} title="Total Stock" />
     ),
+     cell: ({ row }) => {
+      const totalStock = row.original.variants.reduce((acc, v) => acc + v.stock_quantity, 0);
+      return <span>{totalStock}</span>;
+    },
   },
   {
     id: 'actions',

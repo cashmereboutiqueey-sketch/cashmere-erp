@@ -28,19 +28,24 @@ export type Supplier = {
   payment_terms?: string;
 };
 
-export type Product = {
+export type ProductVariant = {
   id: string;
-  name: string;
   sku: string;
-  category: string;
   price: number;
   cost: number;
   stock_quantity: number;
   showroom_quantity: number;
   min_stock_level: number;
-  created_at: string;
   size?: string;
   color?: string;
+}
+
+export type Product = {
+  id: string;
+  name: string;
+  category: string;
+  created_at: string;
+  variants: ProductVariant[];
 };
 
 export type ProductFabric = {
