@@ -57,19 +57,35 @@ export const mockProducts: Product[] = [
   {
     id: 'prod_1',
     name: 'Elegant Gold Dress',
-    sku: 'SKU-GD-001',
+    sku: 'SKU-GD-001-S',
     category: 'Dresses',
     price: 250,
     cost: 100,
-    stock_quantity: 50,
-    showroom_quantity: 10,
+    stock_quantity: 20,
+    showroom_quantity: 5,
     min_stock_level: 15,
     created_at: new Date().toISOString(),
+    size: 'S',
+    color: 'Gold'
+  },
+   {
+    id: 'prod_1_2',
+    name: 'Elegant Gold Dress',
+    sku: 'SKU-GD-001-M',
+    category: 'Dresses',
+    price: 250,
+    cost: 100,
+    stock_quantity: 30,
+    showroom_quantity: 5,
+    min_stock_level: 15,
+    created_at: new Date().toISOString(),
+    size: 'M',
+    color: 'Gold'
   },
   {
     id: 'prod_2',
     name: 'Classic White Shirt',
-    sku: 'SKU-WS-001',
+    sku: 'SKU-WS-001-M',
     category: 'Tops',
     price: 75,
     cost: 30,
@@ -77,11 +93,13 @@ export const mockProducts: Product[] = [
     showroom_quantity: 25,
     min_stock_level: 30,
     created_at: new Date().toISOString(),
+    size: 'M',
+    color: 'White',
   },
   {
     id: 'prod_3',
     name: 'Charcoal Gray Pants',
-    sku: 'SKU-GP-001',
+    sku: 'SKU-GP-001-32',
     category: 'Pants',
     price: 120,
     cost: 50,
@@ -89,11 +107,13 @@ export const mockProducts: Product[] = [
     showroom_quantity: 15,
     min_stock_level: 20,
     created_at: new Date().toISOString(),
+    size: '32',
+    color: 'Gray'
   },
     {
     id: 'prod_4',
     name: 'Midnight Blue Abaya',
-    sku: 'SKU-AB-001',
+    sku: 'SKU-AB-001-L',
     category: 'Abayas',
     price: 180,
     cost: 75,
@@ -101,6 +121,8 @@ export const mockProducts: Product[] = [
     showroom_quantity: 12,
     min_stock_level: 20,
     created_at: new Date().toISOString(),
+    size: 'L',
+    color: 'Blue'
   },
   {
     id: 'prod_5',
@@ -113,11 +135,12 @@ export const mockProducts: Product[] = [
     showroom_quantity: 50,
     min_stock_level: 50,
     created_at: new Date().toISOString(),
+    color: 'Rose Gold'
   },
   {
     id: 'prod_6',
     name: 'Beige Knit Tunic',
-    sku: 'SKU-KT-001',
+    sku: 'SKU-KT-001-M',
     category: 'Tops',
     price: 95,
     cost: 40,
@@ -125,11 +148,14 @@ export const mockProducts: Product[] = [
     showroom_quantity: 20,
     min_stock_level: 25,
     created_at: new Date().toISOString(),
+    size: 'M',
+    color: 'Beige'
   },
 ];
 
 export const mockProductFabrics: ProductFabric[] = [
     { product_id: 'prod_1', fabric_id: 'fab_1', fabric_quantity_meters: 3 },
+    { product_id: 'prod_1_2', fabric_id: 'fab_1', fabric_quantity_meters: 3.2 },
     { product_id: 'prod_2', fabric_id: 'fab_2', fabric_quantity_meters: 1.5 },
     { product_id: 'prod_3', fabric_id: 'fab_3', fabric_quantity_meters: 2 },
     { product_id: 'prod_4', fabric_id: 'fab_4', fabric_quantity_meters: 4 },

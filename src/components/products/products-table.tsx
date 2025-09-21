@@ -164,7 +164,7 @@ function AddProductDialog() {
         <DialogHeader>
           <DialogTitle>Add New Product</DialogTitle>
           <DialogDescription>
-            Enter the details for the new product. Use comma-separated values for multiple sizes or colors.
+            Enter product details. Use commas to separate multiple sizes or colors, which will automatically generate variants.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
