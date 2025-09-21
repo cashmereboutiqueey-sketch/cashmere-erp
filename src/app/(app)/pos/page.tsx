@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -27,6 +28,9 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { PlusCircle, ShoppingCart, Trash2, Search, UserPlus, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AddCustomerDialog } from '@/components/customers/add-customer-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type CartItem = {
   product: Product;
@@ -44,6 +48,12 @@ export default function PosPage() {
   const [sku, setSku] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  // State for variant selection dialog
+  const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
+  const [selectedProductForVariant, setSelectedProductForVariant] = useState<Product | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
 
   const handleSkuSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -188,22 +198,52 @@ export default function PosPage() {
 
     return min === max ? format(min) : `${format(min)} - ${format(max)}`;
   };
-
-  const handleAddToCart = (product: Product) => {
-    if (product.variants.length > 0) {
-      // In a real scenario, you might want to open a dialog to select a variant.
-      // For simplicity, we'll add the first variant.
-      addToCart(product, product.variants[0]);
-    } else {
-       toast({
+  
+  const handleOpenVariantDialog = (product: Product) => {
+    if (product.variants.length === 0) {
+      toast({
         variant: 'destructive',
         title: 'Product has no variants',
         description: `Please add variants to ${product.name} before selling.`,
       });
+      return;
     }
-  }
+    setSelectedProductForVariant(product);
+    setSelectedSize(product.variants[0]?.size || null);
+    setSelectedColor(product.variants[0]?.color || null);
+    setIsVariantDialogOpen(true);
+  };
+  
+  const handleAddToCartFromDialog = () => {
+    if (!selectedProductForVariant || !selectedSize || !selectedColor) {
+      toast({ variant: 'destructive', title: 'Please select size and color' });
+      return;
+    }
+
+    const selectedVariant = selectedProductForVariant.variants.find(
+      (v) => v.size === selectedSize && v.color === selectedColor
+    );
+
+    if (selectedVariant) {
+      addToCart(selectedProductForVariant, selectedVariant);
+      setIsVariantDialogOpen(false);
+      setSelectedProductForVariant(null);
+      setSelectedSize(null);
+      setSelectedColor(null);
+    } else {
+      toast({
+        variant: 'destructive',
+        title: 'Variant not found',
+        description: 'The selected size and color combination is not available.',
+      });
+    }
+  };
+  
+  const availableSizes = selectedProductForVariant ? [...new Set(selectedProductForVariant.variants.map(v => v.size).filter(Boolean))] as string[] : [];
+  const availableColors = selectedProductForVariant ? [...new Set(selectedProductForVariant.variants.map(v => v.color).filter(Boolean))] as string[] : [];
 
   return (
+    <>
     <div className="grid md:grid-cols-3 gap-4 p-4 lg:p-6">
       <div className="md:col-span-2">
         <Card>
@@ -235,7 +275,7 @@ export default function PosPage() {
                     <div className="p-2">
                       <h3 className="text-sm font-medium truncate">{product.name}</h3>
                       <p className="text-xs text-muted-foreground">{getProductPriceRange(product)}</p>
-                      <Button size="sm" className="w-full mt-2" onClick={() => handleAddToCart(product)}>
+                      <Button size="sm" className="w-full mt-2" onClick={() => handleOpenVariantDialog(product)}>
                         <PlusCircle className="mr-2 h-4 w-4" /> Add
                       </Button>
                     </div>
@@ -320,7 +360,7 @@ export default function PosPage() {
                     <div className="flex-1">
                       <p className="font-medium text-sm">{item.product.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.variant.size && `${item.variant.size}, `}{item.variant.color && `${item.variant.color}, `}${item.variant.price.toFixed(2)}
+                        {item.variant.size && `${item.variant.size}, `}{item.variant.color && `${item.variant.color}, `}{item.variant.price.toFixed(2)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -360,5 +400,53 @@ export default function PosPage() {
         </Card>
       </div>
     </div>
+    <Dialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Select Variant for {selectedProductForVariant?.name}</DialogTitle>
+          <DialogDescription>Choose a size and color to add to your order.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          {availableSizes.length > 0 && (
+            <div>
+              <Label>Size</Label>
+              <div className="flex flex-wrap gap-2 pt-2">
+                {availableSizes.map(size => (
+                  <Button 
+                    key={size}
+                    variant={selectedSize === size ? 'secondary' : 'outline'}
+                    onClick={() => setSelectedSize(size)}
+                  >
+                    {size}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          {availableColors.length > 0 && (
+            <div>
+              <Label>Color</Label>
+              <div className="flex flex-wrap gap-2 pt-2">
+                {availableColors.map(color => (
+                  <Button 
+                    key={color}
+                    variant={selectedColor === color ? 'secondary' : 'outline'}
+                    onClick={() => setSelectedColor(color)}
+                    >
+                    {color}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button onClick={handleAddToCartFromDialog}>Add to Cart</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
+
+    
