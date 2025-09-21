@@ -19,7 +19,7 @@ import { Button } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { mockProductFabrics, mockFabrics, mockProducts } from '@/lib/data';
+import { mockProductFabrics, mockFabrics, mockProducts, mockOrders } from '@/lib/data';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ import {
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useState } from 'react';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -171,6 +172,9 @@ interface ProductionOrdersTableProps {
 
 function AddProductionOrderDialog() {
   const [open, setOpen] = useState(false);
+  const [orderType, setOrderType] = useState('stock');
+
+  const pendingSalesOrders = mockOrders.filter(o => o.status === 'pending' || o.status === 'processing');
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -185,6 +189,42 @@ function AddProductionOrderDialog() {
           <DialogTitle>Add New Production Order</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+           <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right">Type</Label>
+               <RadioGroup
+                value={orderType}
+                onValueChange={setOrderType}
+                className="col-span-3 flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="stock" id="stock" />
+                  <Label htmlFor="stock">For Store Stock</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="order" id="order" />
+                  <Label htmlFor="order">For Sales Order</Label>
+                </div>
+              </RadioGroup>
+           </div>
+            {orderType === 'order' && (
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="sales-order" className="text-right">
+                  Sales Order
+                </Label>
+                <Select>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select an order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pendingSalesOrders.map((order) => (
+                      <SelectItem key={order.id} value={order.id}>
+                        {order.id} - {order.customer?.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="product" className="text-right">
               Product
