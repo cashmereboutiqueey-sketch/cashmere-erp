@@ -13,9 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockOrders, mockPayables } from '@/lib/data';
+import { mockOrders, mockPayables, mockExpenses } from '@/lib/data';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
+import { capitalize } from 'string-ts';
 
 type Transaction = {
     id: string;
@@ -36,19 +37,27 @@ export function RecentTransactions() {
             date: order.created_at,
         }));
     
-    const expenseTransactions: Transaction[] = mockPayables
+    const cogsTransactions: Transaction[] = mockPayables
         .filter(p => p.status === 'paid')
         .map(payable => ({
-            id: payable.id,
+            id: `payable-${payable.id}`,
             description: `Payment to supplier for PO #${payable.id.slice(0,4)}`,
             amount: payable.amount,
             type: 'expense',
             date: payable.due_date,
         }));
 
-    const allTransactions = [...revenueTransactions, ...expenseTransactions]
+    const expenseTransactions: Transaction[] = mockExpenses.map(expense => ({
+        id: `expense-${expense.id}`,
+        description: capitalize(expense.category),
+        amount: expense.amount,
+        type: 'expense',
+        date: expense.created_at,
+    }));
+
+    const allTransactions = [...revenueTransactions, ...cogsTransactions, ...expenseTransactions]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 10);
+        .slice(0, 15);
     
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {

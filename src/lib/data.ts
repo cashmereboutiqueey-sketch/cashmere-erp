@@ -1,4 +1,4 @@
-import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier, Payable, ProductionOrder } from '@/lib/types';
+import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier, Payable, ProductionOrder, Expense } from '@/lib/types';
 import { PlaceHolderImages } from './placeholder-images';
 
 export const mockUser: User = {
@@ -23,6 +23,13 @@ export const mockPayables: Payable[] = [
     { id: 'pay_3', supplier_id: 'supp_1', amount: 3000, due_date: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(), status: 'unpaid' },
     { id: 'pay_4', supplier_id: 'supp_3', amount: 800, due_date: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(), status: 'unpaid' },
 ];
+
+export const mockExpenses: Expense[] = [
+    { id: 'exp_1', category: 'marketing', amount: 1500, note: 'Social media campaign', created_at: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: 'exp_2', category: 'rent', amount: 2500, note: 'Workshop rent', created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: 'exp_3', category: 'salaries', amount: 8000, note: 'Monthly payroll', created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
+    { id: 'exp_4', category: 'utilities', amount: 400, note: 'Electricity and water', created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
+]
 
 export const mockCustomers: Customer[] = [
   { id: 'cust_1', name: 'Alia Hassan', email: 'alia.h@example.com', avatarUrl: findImage('user_1') },
