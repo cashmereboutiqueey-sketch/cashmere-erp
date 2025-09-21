@@ -1,6 +1,7 @@
+'use client'
+
 import Link from 'next/link';
 import {
-  Bell,
   Box,
   Factory,
   LayoutDashboard,
@@ -14,7 +15,7 @@ import {
   DollarSign,
   MonitorPlay
 } from 'lucide-react';
-
+import { usePathname } from 'next/navigation';
 import {
   Sidebar,
   SidebarContent,
@@ -26,27 +27,41 @@ import {
 } from '@/components/ui/sidebar';
 
 import { Logo } from '@/components/icons';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { mockUser } from '@/lib/data';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { useAuth } from '@/context/auth-context';
+import type { Role } from '@/lib/types';
 
-const menuItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/pos', label: 'Point of Sale', icon: MonitorPlay },
-    { href: '/orders', label: 'Orders', icon: ShoppingCart },
-    { href: '/products', label: 'Products', icon: Box },
-    { href: '/customers', label: 'Customers', icon: Users },
-    { href: '/suppliers', label: 'Suppliers', icon: Truck },
-    { href: '/fabrics', label: 'Fabrics', icon: Scissors },
-    { href: '/production', label: 'Production', icon: Factory },
-    { href: '/finance', label: 'Finance', icon: DollarSign },
-    { href: '/reports', label: 'Reports', icon: BarChart },
-    { href: '/settings', label: 'Settings', icon: Settings },
-]
+const allMenuItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin'] },
+    { href: '/pos', label: 'Point of Sale', icon: MonitorPlay, roles: ['admin', 'sales'] },
+    { href: '/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin', 'sales'] },
+    { href: '/products', label: 'Products', icon: Box, roles: ['admin', 'production', 'warehouse_manager'] },
+    { href: '/customers', label: 'Customers', icon: Users, roles: ['admin', 'sales'] },
+    { href: '/suppliers', label: 'Suppliers', icon: Truck, roles: ['admin', 'production'] },
+    { href: '/fabrics', label: 'Fabrics', icon: Scissors, roles: ['admin', 'production'] },
+    { href: '/production', label: 'Production', icon: Factory, roles: ['admin', 'production'] },
+    { href: '/finance', label: 'Finance', icon: DollarSign, roles: ['admin', 'accountant'] },
+    { href: '/reports', label: 'Reports', icon: BarChart, roles: ['admin', 'accountant'] },
+    { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
+];
+
+const hasAccess = (userRole: Role['name'] | undefined, itemRoles: Role['name'][]) => {
+  if (!userRole) return false;
+  return itemRoles.includes(userRole);
+};
+
 
 export function AppSidebar() {
-  // In a real app, you'd get the current path from `usePathname`
-  const pathname = '/dashboard';
+  const pathname = usePathname();
+  const { user, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  }
+
+  const menuItems = allMenuItems.filter(item => hasAccess(user?.role, item.roles));
 
   return (
     <Sidebar
@@ -79,7 +94,7 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <div className="hidden flex-col gap-2 p-2 group-data-[collapsible=icon]:flex">
-            <SidebarMenuButton asChild tooltip="Logout">
+            <SidebarMenuButton asChild tooltip="Logout" onClick={handleLogout}>
                 <Link href="/login"><LogOut /></Link>
             </SidebarMenuButton>
         </div>

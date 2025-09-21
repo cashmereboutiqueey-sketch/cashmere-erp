@@ -1,6 +1,6 @@
 export type Role = {
   id: string;
-  name: 'admin' | 'accountant' | 'sales' | 'warehouse_manager' | 'production';
+  name: 'admin' | 'accountant' | 'sales' | 'production' | 'warehouse_manager';
 };
 
 export type UserRole = {
