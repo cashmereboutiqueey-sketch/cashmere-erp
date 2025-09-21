@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { Product } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
@@ -142,6 +142,15 @@ interface ProductsTableProps {
 
 function AddProductDialog() {
   const [open, setOpen] = useState(false);
+  const skuInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setTimeout(() => {
+        skuInputRef.current?.focus();
+      }, 100);
+    }
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -159,6 +168,12 @@ function AddProductDialog() {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="sku" className="text-right">
+              SKU / Code
+            </Label>
+            <Input id="sku" ref={skuInputRef} className="col-span-3" placeholder="Scan or enter SKU" />
+          </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">
               Name
