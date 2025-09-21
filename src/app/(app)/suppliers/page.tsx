@@ -1,14 +1,16 @@
+import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
+import { SuppliersTable } from '@/components/suppliers/suppliers-table';
+import { mockSuppliers } from '@/lib/data';
+
 export default function SuppliersPage() {
   return (
-    <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h3 className="text-2xl font-bold tracking-tight">
-          Suppliers Page
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          This page is under construction.
-        </p>
+    <>
+      <PageHeader>
+        <PageHeaderHeading>Suppliers</PageHeaderHeading>
+      </PageHeader>
+      <div className="p-4 lg:p-6">
+        <SuppliersTable data={mockSuppliers} />
       </div>
-    </div>
+    </>
   );
 }

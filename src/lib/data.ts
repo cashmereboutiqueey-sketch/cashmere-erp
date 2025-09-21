@@ -1,4 +1,4 @@
-import { Order, Customer, User, Product, Fabric, ProductFabric } from '@/lib/types';
+import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier } from '@/lib/types';
 import { PlaceHolderImages } from './placeholder-images';
 
 export const mockUser: User = {
@@ -11,6 +11,12 @@ export const mockUser: User = {
 
 const findImage = (id: string) => PlaceHolderImages.find(img => img.id === id)?.imageUrl || '';
 
+export const mockSuppliers: Supplier[] = [
+    { id: 'supp_1', name: 'Luxury Fabrics Inc.', email: 'contact@luxuryfabrics.com', phone: '111-222-3333' },
+    { id: 'supp_2', name: 'Global Textiles Co.', email: 'sales@globaltextiles.com', phone: '444-555-6666' },
+    { id: 'supp_3', name: 'Artisan Weavers', email: 'support@artisanweavers.net', phone: '777-888-9999' },
+];
+
 export const mockCustomers: Customer[] = [
   { id: 'cust_1', name: 'Alia Hassan', email: 'alia.h@example.com', avatarUrl: findImage('user_1') },
   { id: 'cust_2', name: 'Fatima Ahmed', email: 'fatima.a@example.com', avatarUrl: findImage('user_2') },
@@ -19,9 +25,9 @@ export const mockCustomers: Customer[] = [
   { id: 'cust_5', name: 'Zainab Tariq', email: 'zainab.t@example.com', avatarUrl: findImage('user_5') },
   { id: 'cust_6', name: 'Aisha Abdullah', email: 'aisha.a@example.com', avatarUrl: 'https://picsum.photos/seed/user6/100/100' },
   { id: 'cust_7', name: 'Maryam Ali', email: 'maryam.a@example.com', avatarUrl: 'https://picsum.photos/seed/user7/100/100' },
-  { id: 'cust_8', name: 'Samira Hussein', email: 'samira.h@example.com', avatarUrl: 'https://picsum.photos/seed/user8/100/100' },
-  { id: 'cust_9', name: 'Farah Said', email: 'farah.s@example.com', avatarUrl: 'https://picsum.photos/seed/user9/100/100' },
-  { id: 'cust_10', name: 'Hana El-Masri', email: 'hana.e@example.com', avatarUrl: 'https://picsum.photos/seed/user10/100/100' },
+  { id: 'cust_8', name: 'Samira Hussein', email: 'samira.h@example.com', avatarUrl: 'httpsum.photos/seed/user8/100/100' },
+  { id: 'cust_9', name: 'Farah Said', email: 'farah.s@example.com', avatarUrl: 'httpsum.photos/seed/user9/100/100' },
+  { id: 'cust_10', name: 'Hana El-Masri', email: 'hana.e@example.com', avatarUrl: 'httpsum.photos/seed/user10/100/100' },
 ];
 
 export const mockFabrics: Fabric[] = [

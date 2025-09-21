@@ -1,14 +1,24 @@
+import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
+import { FabricsTable } from '@/components/fabrics/fabrics-table';
+import { mockFabrics, mockSuppliers } from '@/lib/data';
+import { Fabric, Supplier } from '@/lib/types';
+
 export default function FabricsPage() {
+  const fabricsWithSuppliers = mockFabrics.map((fabric: Fabric) => {
+    const supplier = mockSuppliers.find(
+      (s: Supplier) => s.id === fabric.supplier_id
+    );
+    return { ...fabric, supplier };
+  });
+
   return (
-    <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm">
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h3 className="text-2xl font-bold tracking-tight">
-          Fabrics Page
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          This page is under construction.
-        </p>
+    <>
+      <PageHeader>
+        <PageHeaderHeading>Fabrics</PageHeaderHeading>
+      </PageHeader>
+      <div className="p-4 lg:p-6">
+        <FabricsTable data={fabricsWithSuppliers} />
       </div>
-    </div>
+    </>
   );
 }
