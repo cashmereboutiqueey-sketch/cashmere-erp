@@ -9,6 +9,14 @@ export const mockUser: User = {
   role: 'admin',
 };
 
+export const mockUsers: User[] = [
+    { id: 'user_123', name: 'Admin User', email: 'admin@cashmere.com', avatarUrl: 'https://picsum.photos/seed/admin/100/100', role: 'admin' },
+    { id: 'user_sales_1', name: 'Alia Hassan', email: 'alia.h@example.com', avatarUrl: 'https://picsum.photos/seed/user1/100/100', role: 'sales' },
+    { id: 'user_prod_1', name: 'Fatima Ahmed', email: 'fatima.a@example.com', avatarUrl: 'https://picsum.photos/seed/user2/100/100', role: 'production' },
+    { id: 'user_acc_1', name: 'Noor Khan', email: 'noor.k@example.com', avatarUrl: 'https://picsum.photos/seed/user3/100/100', role: 'accountant' },
+    { id: 'user_wh_1', name: 'Layla Ibrahim', email: 'layla.i@example.com', avatarUrl: 'https://picsum.photos/seed/user4/100/100', role: 'warehouse_manager' },
+];
+
 const findImage = (id: string) => PlaceHolderImages.find(img => img.id === id)?.imageUrl || '';
 
 export const mockSuppliers: Supplier[] = [
