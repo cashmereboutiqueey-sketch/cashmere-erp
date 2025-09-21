@@ -1,4 +1,4 @@
-import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier, Payable } from '@/lib/types';
+import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier, Payable, ProductionOrder } from '@/lib/types';
 import { PlaceHolderImages } from './placeholder-images';
 
 export const mockUser: User = {
@@ -254,3 +254,30 @@ export const stockAlerts = {
         'Fabric F001 (Silk) will be low by 100 meters by the end of the month.',
     ]
 }
+
+export const mockProductionOrders: ProductionOrder[] = [
+  {
+    id: 'PROD-001',
+    product_id: 'prod_1',
+    required_quantity: 5,
+    status: 'pending',
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'PROD-002',
+    product_id: 'prod_3',
+    required_quantity: 10,
+    status: 'in_progress',
+    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'PROD-003',
+    product_id: 'prod_4',
+    required_quantity: 8,
+    status: 'done',
+    created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+].map(order => ({
+    ...order,
+    product: mockProducts.find(p => p.id === order.product_id)
+}));

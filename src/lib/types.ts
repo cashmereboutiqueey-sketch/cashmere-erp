@@ -81,8 +81,8 @@ export type OrderItem = {
 export type ProductionOrder = {
   id: string;
   product_id: string;
+  product?: Product;
   required_quantity: number;
-  fabric_needed: number;
   status: 'pending' | 'in_progress' | 'done';
   created_at: string;
 };
