@@ -16,10 +16,28 @@ import {
   DropdownMenuPortal,
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { mockProductFabrics, mockFabrics } from '@/lib/data';
+import { mockProductFabrics, mockFabrics, mockProducts } from '@/lib/data';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { useState } from 'react';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -151,6 +169,68 @@ interface ProductionOrdersTableProps {
   data: ProductionOrder[];
 }
 
+function AddProductionOrderDialog() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="h-8">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Production Order
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add New Production Order</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="product" className="text-right">
+              Product
+            </Label>
+            <Select>
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select a product" />
+              </SelectTrigger>
+              <SelectContent>
+                {mockProducts.map((product) => (
+                  <SelectItem key={product.id} value={product.id}>
+                    {product.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="quantity" className="text-right">
+              Quantity
+            </Label>
+            <Input id="quantity" type="number" className="col-span-3" placeholder="e.g., 25" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setOpen(false)}>Create Order</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ProductionOrdersToolbar() {
+  return (
+    <>
+      <Input
+        placeholder="Filter production orders..."
+        className="h-8 w-[150px] lg:w-[250px]"
+      />
+      <div className="ml-auto flex items-center gap-2">
+        <AddProductionOrderDialog />
+      </div>
+    </>
+  );
+}
+
 export function ProductionOrdersTable({ data }: ProductionOrdersTableProps) {
-  return <DataTable columns={columns} data={data} />;
+  return <DataTable columns={columns} data={data} toolbar={<ProductionOrdersToolbar />} />;
 }
