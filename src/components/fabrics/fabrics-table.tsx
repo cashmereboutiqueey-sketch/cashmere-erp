@@ -85,6 +85,20 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
       return <div>{row.original.length_in_meters}m</div>;
     },
   },
+   {
+    accessorKey: 'price_per_meter',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Cost/meter" />
+    ),
+    cell: ({ row }) => {
+       const amount = parseFloat(row.getValue('price_per_meter'));
+        const formatted = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+        }).format(amount);
+      return <div>{formatted}</div>;
+    },
+  },
   {
     accessorKey: 'supplier',
     header: 'Supplier',
