@@ -83,6 +83,48 @@ export const mockProducts: Product[] = [
     color: 'Gold'
   },
   {
+    id: 'prod_1_3',
+    name: 'Elegant Gold Dress',
+    sku: 'SKU-GD-001-L',
+    category: 'Dresses',
+    price: 250,
+    cost: 100,
+    stock_quantity: 25,
+    showroom_quantity: 5,
+    min_stock_level: 15,
+    created_at: new Date().toISOString(),
+    size: 'L',
+    color: 'Gold'
+  },
+  {
+    id: 'prod_1_4',
+    name: 'Elegant Gold Dress',
+    sku: 'SKU-GD-001-XL',
+    category: 'Dresses',
+    price: 250,
+    cost: 100,
+    stock_quantity: 10,
+    showroom_quantity: 2,
+    min_stock_level: 10,
+    created_at: new Date().toISOString(),
+    size: 'XL',
+    color: 'Gold'
+  },
+  {
+    id: 'prod_1_5',
+    name: 'Elegant Gold Dress',
+    sku: 'SKU-GD-001-XXL',
+    category: 'Dresses',
+    price: 250,
+    cost: 100,
+    stock_quantity: 5,
+    showroom_quantity: 1,
+    min_stock_level: 5,
+    created_at: new Date().toISOString(),
+    size: 'XXL',
+    color: 'Gold'
+  },
+  {
     id: 'prod_2',
     name: 'Classic White Shirt',
     sku: 'SKU-WS-001-M',
