@@ -31,6 +31,7 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { cn } from '@/lib/utils';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -196,8 +197,13 @@ interface ProductsTableProps {
   data: Product[];
 }
 
+const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+const ALL_COLORS = ["Black", "White", "Gray", "Navy", "Beige", "Gold", "Rose Gold", "Blue"];
+
 function AddProductDialog() {
   const [open, setOpen] = useState(false);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const skuInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -205,8 +211,23 @@ function AddProductDialog() {
       setTimeout(() => {
         skuInputRef.current?.focus();
       }, 100);
+    } else {
+        setSelectedSizes([]);
+        setSelectedColors([]);
     }
   }, [open]);
+
+  const toggleSize = (size: string) => {
+    setSelectedSizes(prev => 
+      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
+    );
+  };
+
+  const toggleColor = (color: string) => {
+    setSelectedColors(prev => 
+      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -220,7 +241,7 @@ function AddProductDialog() {
         <DialogHeader>
           <DialogTitle>Add New Product</DialogTitle>
           <DialogDescription>
-            Enter product details. Use commas to separate multiple sizes or colors, which will automatically generate variants.
+            Enter product details and select the sizes and colors to generate variants.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -242,17 +263,41 @@ function AddProductDialog() {
             </Label>
             <Input id="category" className="col-span-3" placeholder="e.g., Abayas" />
           </div>
-           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="sizes" className="text-right">
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right pt-2">
               Sizes
             </Label>
-            <Input id="sizes" className="col-span-3" placeholder="e.g., S, M, L, XL" />
+            <div className="col-span-3 flex flex-wrap gap-2">
+              {ALL_SIZES.map(size => (
+                <Button 
+                  key={size} 
+                  variant={selectedSizes.includes(size) ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleSize(size)}
+                  className="h-8"
+                >
+                  {size}
+                </Button>
+              ))}
+            </div>
           </div>
-           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="colors" className="text-right">
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label className="text-right pt-2">
               Colors
             </Label>
-            <Input id="colors" className="col-span-3" placeholder="e.g., Black, Navy, Beige" />
+            <div className="col-span-3 flex flex-wrap gap-2">
+              {ALL_COLORS.map(color => (
+                 <Button 
+                  key={color} 
+                  variant={selectedColors.includes(color) ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => toggleColor(color)}
+                   className="h-8"
+                >
+                  {color}
+                </Button>
+              ))}
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="price" className="text-right">
