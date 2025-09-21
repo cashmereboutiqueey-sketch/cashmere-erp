@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -38,7 +39,24 @@ export default function LoginPage() {
             role: selectedRole
         }
         login(user);
-        router.push('/dashboard');
+
+        let redirectPath = '/dashboard';
+        switch (selectedRole) {
+            case 'admin':
+            case 'accountant':
+                redirectPath = '/dashboard';
+                break;
+            case 'sales':
+                redirectPath = '/pos';
+                break;
+            case 'production':
+                redirectPath = '/production';
+                break;
+            case 'warehouse_manager':
+                redirectPath = '/products';
+                break;
+        }
+        router.push(redirectPath);
     }
 
   return (
