@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { Product } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
@@ -18,8 +19,20 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Input } from '../ui/input';
 import { DataTableViewOptions } from '../shared/data-table-view-options';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 
-const findImage = (id: string) => PlaceHolderImages.find(img => img.id === id)?.imageUrl || '';
+const findImage = (id: string) =>
+  PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
 
 export const columns: ColumnDef<Product>[] = [
   {
@@ -47,15 +60,28 @@ export const columns: ColumnDef<Product>[] = [
       <DataTableColumnHeader column={column} title="Product" />
     ),
     cell: ({ row }) => {
-        const product = row.original;
-        const imageUrl = findImage(product.id) || "https://picsum.photos/seed/placeholder/40/40";
-        return (
-            <div className="flex items-center gap-2">
-                <Image src={imageUrl} alt={product.name} width={40} height={40} className="rounded-md" />
-                <span className="font-medium">{product.name}</span>
+      const product = row.original;
+      const imageUrl =
+        findImage(product.id) || 'https://picsum.photos/seed/placeholder/40/40';
+      return (
+        <div className="flex items-center gap-2">
+          <Image
+            src={imageUrl}
+            alt={product.name}
+            width={40}
+            height={40}
+            className="rounded-md"
+          />
+          <div className='flex flex-col'>
+            <span className="font-medium">{product.name}</span>
+            <div className='flex gap-1'>
+            {product.color && <Badge variant="outline"> {product.color} </Badge>}
+            {product.size && <Badge variant="outline"> {product.size} </Badge>}
             </div>
-        )
-    }
+          </div>
+        </div>
+      );
+    },
   },
   {
     accessorKey: 'category',
@@ -114,27 +140,92 @@ interface ProductsTableProps {
   data: Product[];
 }
 
+function AddProductDialog() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" className="h-8">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Product
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add New Product</DialogTitle>
+          <DialogDescription>
+            Enter the details for the new product. Use comma-separated values for multiple sizes or colors.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="name" className="text-right">
+              Name
+            </Label>
+            <Input id="name" className="col-span-3" placeholder="e.g., Silk Abaya" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="category" className="text-right">
+              Category
+            </Label>
+            <Input id="category" className="col-span-3" placeholder="e.g., Abayas" />
+          </div>
+           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="sizes" className="text-right">
+              Sizes
+            </Label>
+            <Input id="sizes" className="col-span-3" placeholder="e.g., S, M, L, XL" />
+          </div>
+           <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="colors" className="text-right">
+              Colors
+            </Label>
+            <Input id="colors" className="col-span-3" placeholder="e.g., Black, Navy, Beige" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="price" className="text-right">
+              Price
+            </Label>
+            <Input id="price" type="number" className="col-span-3" placeholder="e.g., 150.00" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="stock" className="text-right">
+              Initial Stock
+            </Label>
+            <Input id="stock" type="number" className="col-span-3" placeholder="e.g., 50" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="min-stock" className="text-right">
+             Min. Stock
+            </Label>
+            <Input id="min-stock" type="number" className="col-span-3" placeholder="e.g., 10" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setOpen(false)}>Add Product</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ProductsTableToolbar() {
-    return (
-        <>
-            <Input
-                placeholder="Filter products..."
-                className="h-8 w-[150px] lg:w-[250px]"
-            />
-            <Button size="sm" className="h-8 ml-auto">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Product
-            </Button>
-        </>
-    )
+  return (
+    <>
+      <Input
+        placeholder="Filter products..."
+        className="h-8 w-[150px] lg:w-[250px]"
+      />
+      <div className="ml-auto flex items-center gap-2">
+        <AddProductDialog />
+      </div>
+    </>
+  );
 }
 
 export function ProductsTable({ data }: ProductsTableProps) {
   return (
-    <DataTable
-      columns={columns}
-      data={data}
-      toolbar={<ProductsTableToolbar />}
-    />
+    <DataTable columns={columns} data={data} toolbar={<ProductsTableToolbar />} />
   );
 }

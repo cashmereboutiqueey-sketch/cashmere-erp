@@ -39,6 +39,8 @@ export type Product = {
   showroom_quantity: number;
   min_stock_level: number;
   created_at: string;
+  size?: string;
+  color?: string;
 };
 
 export type ProductFabric = {
