@@ -15,7 +15,7 @@ import {
   DollarSign,
   MonitorPlay
 } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Sidebar,
   SidebarContent,
