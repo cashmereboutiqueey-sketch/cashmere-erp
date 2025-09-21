@@ -13,7 +13,9 @@ import {
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
+  getExpandedRowModel,
   useReactTable,
+  Row,
 } from '@tanstack/react-table';
 
 import {
@@ -32,12 +34,14 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   toolbar?: React.ReactNode;
+  renderSubComponent?: (props: { row: Row<TData> }) => React.ReactElement;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   toolbar,
+  renderSubComponent,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -45,6 +49,7 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [expanded, setExpanded] = React.useState({});
 
   const table = useReactTable({
     data,
@@ -54,18 +59,21 @@ export function DataTable<TData, TValue>({
       columnVisibility,
       rowSelection,
       columnFilters,
+      expanded,
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
+    onExpandedChange: setExpanded,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
+    getExpandedRowModel: getExpandedRowModel(),
   });
 
   return (
@@ -107,13 +115,11 @@ export function DataTable<TData, TValue>({
                       </TableCell>
                     ))}
                   </TableRow>
-                  {/* This is where the magic happens. We render the sub-row if the row is expanded. */}
-                  {row.getVisibleCells().map(cell => {
-                    if (cell.column.id === 'expander' && (cell.getContext().renderValue() as any)?.props?.open) {
-                       return (cell.getContext().renderValue() as any)?.props.children[1];
-                    }
-                    return null;
-                  })}
+                  {row.getIsExpanded() && (
+                    <TableRow>
+                        {renderSubComponent?.({ row })}
+                    </TableRow>
+                  )}
                 </Fragment>
               ))
             ) : (

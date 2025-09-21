@@ -66,48 +66,21 @@ export const columns: ColumnDef<Product>[] = [
     id: 'expander',
     header: () => null,
     cell: ({ row }) => {
-      const [isOpen, setIsOpen] = useState(false);
       return (
-        <Collapsible open={isOpen} onOpenChange={setIsOpen} asChild>
-          <>
-            <div className="flex items-center">
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                  <span className="sr-only">Toggle variants</span>
-                </Button>
-              </CollapsibleTrigger>
-              <Checkbox
-                checked={row.getIsSelected()}
-                onCheckedChange={(value) => row.toggleSelected(!!value)}
-                aria-label="Select row"
-                className="ml-2"
-              />
-            </div>
-            <CollapsibleContent asChild>
-              <tr className="bg-muted/50 hover:bg-muted">
-                <td colSpan={columns.length}>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="pl-12">SKU</TableHead>
-                        <TableHead>Variant</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {row.original.variants.map((variant) => (
-                        <VariantRow key={variant.id} variant={variant} />
-                      ))}
-                    </TableBody>
-                  </Table>
-                </td>
-              </tr>
-            </CollapsibleContent>
-          </>
-        </Collapsible>
+        <div className="flex items-center">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => row.toggleSelected(!row.getIsSelected())}>
+              {row.getIsSelected() ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              <span className="sr-only">Toggle variants</span>
+            </Button>
+          </CollapsibleTrigger>
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+            className="ml-2"
+          />
+        </div>
       );
     },
   },
@@ -403,12 +376,37 @@ function ProductsTableToolbar({ allSizes, setAllSizes, allColors, setAllColors }
 export function ProductsTable({ data }: ProductsTableProps) {
   const [allSizes, setAllSizes] = useState(INITIAL_SIZES);
   const [allColors, setAllColors] = useState(INITIAL_COLORS);
+  
+  const renderSubComponent = React.useCallback(({ row }: { row: any }) => {
+    return (
+        <td colSpan={columns.length} className='p-0'>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-12">SKU</TableHead>
+                <TableHead>Variant</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Stock</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {row.original.variants.map((variant: ProductVariant) => (
+                <VariantRow key={variant.id} variant={variant} />
+              ))}
+            </TableBody>
+          </Table>
+        </td>
+    );
+  }, []);
+
 
   return (
     <DataTable 
       columns={columns} 
       data={data} 
-      toolbar={<ProductsTableToolbar allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />} 
+      toolbar={<ProductsTableToolbar allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />}
+      renderSubComponent={renderSubComponent}
     />
   );
 }
