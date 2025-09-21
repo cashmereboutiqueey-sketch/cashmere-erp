@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DateRange } from 'react-day-picker';
 import { subDays, format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -30,10 +30,14 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Pie, PieChar
 
 
 export function ExpensesReport() {
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 29),
-    to: new Date(),
-  });
+  const [date, setDate] = useState<DateRange | undefined>();
+
+  useEffect(() => {
+    setDate({
+      from: subDays(new Date(), 29),
+      to: new Date(),
+    });
+  }, []);
 
   const filteredExpenses = mockExpenses.filter((expense) => {
     if (!date?.from || !date?.to) return true;
