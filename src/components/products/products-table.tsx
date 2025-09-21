@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
-import { MoreHorizontal, PlusCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -197,10 +197,10 @@ interface ProductsTableProps {
   data: Product[];
 }
 
-const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
-const ALL_COLORS = ["Black", "White", "Gray", "Navy", "Beige", "Gold", "Rose Gold", "Blue"];
+const INITIAL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
+const INITIAL_COLORS = ["Black", "White", "Gray", "Navy", "Beige", "Gold", "Rose Gold", "Blue"];
 
-function AddProductDialog() {
+function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColors: string[] }) {
   const [open, setOpen] = useState(false);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -268,7 +268,7 @@ function AddProductDialog() {
               Sizes
             </Label>
             <div className="col-span-3 flex flex-wrap gap-2">
-              {ALL_SIZES.map(size => (
+              {allSizes.map(size => (
                 <Button 
                   key={size} 
                   variant={selectedSizes.includes(size) ? 'secondary' : 'outline'}
@@ -286,7 +286,7 @@ function AddProductDialog() {
               Colors
             </Label>
             <div className="col-span-3 flex flex-wrap gap-2">
-              {ALL_COLORS.map(color => (
+              {allColors.map(color => (
                  <Button 
                   key={color} 
                   variant={selectedColors.includes(color) ? 'secondary' : 'outline'}
@@ -326,7 +326,66 @@ function AddProductDialog() {
   );
 }
 
-function ProductsTableToolbar() {
+function ManageAttributesDialog({ allSizes, setAllSizes, allColors, setAllColors }: { allSizes: string[], setAllSizes: (sizes: string[]) => void, allColors: string[], setAllColors: (colors: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [newSize, setNewSize] = useState('');
+  const [newColor, setNewColor] = useState('');
+
+  const handleAddSize = () => {
+    if (newSize && !allSizes.includes(newSize)) {
+      setAllSizes([...allSizes, newSize]);
+      setNewSize('');
+    }
+  };
+
+  const handleAddColor = () => {
+    if (newColor && !allColors.includes(newColor)) {
+      setAllColors([...allColors, newColor]);
+      setNewColor('');
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8">
+          <Settings className="mr-2 h-4 w-4" />
+          Manage Attributes
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Manage Attributes</DialogTitle>
+          <DialogDescription>
+            Add new sizes and colors to be available when creating products.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="new-size" className="text-right">
+              New Size
+            </Label>
+            <Input id="new-size" value={newSize} onChange={(e) => setNewSize(e.target.value)} className="col-span-2" placeholder="e.g., XXXL" />
+            <Button onClick={handleAddSize} className="col-span-1">Add</Button>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="new-color" className="text-right">
+              New Color
+            </Label>
+            <Input id="new-color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="col-span-2" placeholder="e.g., Green" />
+             <Button onClick={handleAddColor} className="col-span-1">Add</Button>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={() => setOpen(false)}>Done</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+function ProductsTableToolbar({ allSizes, setAllSizes, allColors, setAllColors }: { allSizes: string[], setAllSizes: (sizes: string[]) => void, allColors: string[], setAllColors: (colors: string[]) => void }) {
   return (
     <>
       <Input
@@ -334,14 +393,22 @@ function ProductsTableToolbar() {
         className="h-8 w-[150px] lg:w-[250px]"
       />
       <div className="ml-auto flex items-center gap-2">
-        <AddProductDialog />
+        <AddProductDialog allSizes={allSizes} allColors={allColors} />
+        <ManageAttributesDialog allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />
       </div>
     </>
   );
 }
 
 export function ProductsTable({ data }: ProductsTableProps) {
+  const [allSizes, setAllSizes] = useState(INITIAL_SIZES);
+  const [allColors, setAllColors] = useState(INITIAL_COLORS);
+
   return (
-    <DataTable columns={columns} data={data} toolbar={<ProductsTableToolbar />} />
+    <DataTable 
+      columns={columns} 
+      data={data} 
+      toolbar={<ProductsTableToolbar allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />} 
+    />
   );
 }
