@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import Link from 'next/link';
 import {
@@ -13,7 +13,7 @@ import {
   Users,
   BarChart,
   DollarSign,
-  MonitorPlay
+  MonitorPlay,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -27,31 +27,94 @@ import {
 } from '@/components/ui/sidebar';
 
 import { Logo } from '@/components/icons';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../ui/card';
 import { useAuth } from '@/context/auth-context';
 import type { Role } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { capitalize } from 'string-ts';
 
 const allMenuItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin'] },
-    { href: '/pos', label: 'Point of Sale', icon: MonitorPlay, roles: ['admin', 'sales'] },
-    { href: '/orders', label: 'Orders', icon: ShoppingCart, roles: ['admin', 'sales'] },
-    { href: '/products', label: 'Products', icon: Box, roles: ['admin', 'production', 'warehouse_manager'] },
-    { href: '/customers', label: 'Customers', icon: Users, roles: ['admin', 'sales'] },
-    { href: '/suppliers', label: 'Suppliers', icon: Truck, roles: ['admin', 'production'] },
-    { href: '/fabrics', label: 'Fabrics', icon: Scissors, roles: ['admin', 'production'] },
-    { href: '/production', label: 'Production', icon: Factory, roles: ['admin', 'production'] },
-    { href: '/finance', label: 'Finance', icon: DollarSign, roles: ['admin', 'accountant'] },
-    { href: '/reports', label: 'Reports', icon: BarChart, roles: ['admin', 'accountant'] },
-    { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
+  {
+    href: '/dashboard',
+    label: 'Dashboard',
+    icon: LayoutDashboard,
+    roles: ['admin', 'accountant'],
+  },
+  {
+    href: '/pos',
+    label: 'Point of Sale',
+    icon: MonitorPlay,
+    roles: ['admin', 'sales'],
+  },
+  {
+    href: '/orders',
+    label: 'Orders',
+    icon: ShoppingCart,
+    roles: ['admin', 'sales'],
+  },
+  {
+    href: '/products',
+    label: 'Products',
+    icon: Box,
+    roles: ['admin', 'production', 'warehouse_manager'],
+  },
+  {
+    href: '/customers',
+    label: 'Customers',
+    icon: Users,
+    roles: ['admin', 'sales'],
+  },
+  {
+    href: '/suppliers',
+    label: 'Suppliers',
+    icon: Truck,
+    roles: ['admin', 'production'],
+  },
+  {
+    href: '/fabrics',
+    label: 'Fabrics',
+    icon: Scissors,
+    roles: ['admin', 'production'],
+  },
+  {
+    href: '/production',
+    label: 'Production',
+    icon: Factory,
+    roles: ['admin', 'production'],
+  },
+  {
+    href: '/finance',
+    label: 'Finance',
+    icon: DollarSign,
+    roles: ['admin', 'accountant'],
+  },
+  {
+    href: '/reports',
+    label: 'Reports',
+    icon: BarChart,
+    roles: ['admin', 'accountant'],
+  },
+  {
+    href: '/settings',
+    label: 'Settings',
+    icon: Settings,
+    roles: ['admin'],
+  },
 ];
 
-const hasAccess = (userRole: Role['name'] | undefined, itemRoles: Role['name'][]) => {
+const hasAccess = (
+  userRole: Role['name'] | undefined,
+  itemRoles: Role['name'][]
+) => {
   if (!userRole) return false;
   return itemRoles.includes(userRole);
 };
-
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -61,9 +124,11 @@ export function AppSidebar() {
   const handleLogout = () => {
     logout();
     router.push('/login');
-  }
+  };
 
-  const menuItems = allMenuItems.filter(item => hasAccess(user?.role, item.roles));
+  const menuItems = allMenuItems.filter((item) =>
+    hasAccess(user?.role, item.roles)
+  );
 
   return (
     <Sidebar
@@ -76,9 +141,11 @@ export function AppSidebar() {
           <Logo className="h-auto w-32" />
         </Link>
         {user && (
-            <div className="mt-2 w-full text-center group-data-[collapsible=icon]:hidden">
-                <Badge variant="secondary" className="border border-sidebar-border capitalize">{user.role.replace('_', ' ')}</Badge>
-            </div>
+          <div className="mt-2 w-full text-center group-data-[collapsible=icon]:hidden">
+            <Badge variant="secondary" className="border border-sidebar-border capitalize">
+              {user.role.replace('_', ' ')}
+            </Badge>
+          </div>
         )}
       </SidebarHeader>
       <SidebarContent>
@@ -101,24 +168,26 @@ export function AppSidebar() {
       </SidebarContent>
       <SidebarFooter>
         <div className="hidden flex-col gap-2 p-2 group-data-[collapsible=icon]:flex">
-            <SidebarMenuButton asChild tooltip="Logout" onClick={handleLogout}>
-                <Link href="/login"><LogOut /></Link>
-            </SidebarMenuButton>
+          <SidebarMenuButton asChild tooltip="Logout" onClick={handleLogout}>
+            <Link href="/login">
+              <LogOut />
+            </Link>
+          </SidebarMenuButton>
         </div>
         <div className="flex flex-col gap-2 p-2 group-data-[collapsible=icon]:hidden">
-        <Card>
-          <CardHeader className="p-2 pt-0 md:p-4">
-            <CardTitle className="font-headline">Need Help?</CardTitle>
-            <CardDescription>
-              Contact support for any issues.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
-            <Link href="#" className="w-full">
-              <span className="font-bold underline">Contact Support</span>
-            </Link>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="p-2 pt-0 md:p-4">
+              <CardTitle className="font-headline">Need Help?</CardTitle>
+              <CardDescription>
+                Contact support for any issues.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
+              <Link href="#" className="w-full">
+                <span className="font-bold underline">Contact Support</span>
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </SidebarFooter>
     </Sidebar>
