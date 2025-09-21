@@ -19,20 +19,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockOrders } from '@/lib/data';
+import { mockOrders, mockOrderItems, mockProducts } from '@/lib/data';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Order } from '@/lib/types';
-import { Badge } from '../ui/badge';
+import { Order, Product, ProductVariant, OrderItem } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-const statusVariantMap: {
-  [key: string]: 'default' | 'secondary' | 'destructive' | 'outline';
-} = {
-  pending: 'outline',
-  processing: 'secondary',
-  completed: 'default',
-  cancelled: 'destructive',
+const findImage = (id: string) =>
+  PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
+
+type ProductSalesData = {
+  product: Product;
+  unitsSold: number;
+  totalRevenue: number;
 };
 
 export function SalesReport() {
@@ -47,13 +48,52 @@ export function SalesReport() {
     return orderDate >= date.from && orderDate <= date.to;
   });
 
-  const totalRevenue = filteredOrders
-    .filter((o) => o.status === 'completed')
-    .reduce((sum, order) => sum + order.total_amount, 0);
+  const completedOrders = filteredOrders.filter(o => o.status === 'completed');
 
-  const totalOrders = filteredOrders.length;
+  const productSales = completedOrders.reduce((acc, order) => {
+    const itemsInOrder = mockOrderItems.filter(item => item.order_id === order.id);
+    
+    itemsInOrder.forEach(item => {
+      let product: Product | undefined;
+      let variant: ProductVariant | undefined;
+
+      for (const p of mockProducts) {
+        const v = p.variants.find(v => v.id === item.product_id);
+        if (v) {
+          product = p;
+          variant = v;
+          break;
+        }
+      }
+
+      if (product) {
+        if (!acc[product.id]) {
+          acc[product.id] = {
+            product: product,
+            unitsSold: 0,
+            totalRevenue: 0,
+          };
+        }
+        acc[product.id].unitsSold += item.quantity;
+        acc[product.id].totalRevenue += item.subtotal;
+      }
+    });
+    return acc;
+  }, {} as Record<string, ProductSalesData>);
+
+  const productSalesArray = Object.values(productSales).sort((a,b) => b.totalRevenue - a.totalRevenue);
+
+  const totalRevenue = productSalesArray.reduce(
+    (sum, product) => sum + product.totalRevenue,
+    0
+  );
+
+  const totalUnitsSold = productSalesArray.reduce(
+    (sum, product) => sum + product.unitsSold,
+    0
+  );
   
-  const bestSeller = filteredOrders.length > 0 ? filteredOrders.reduce((prev, current) => (prev.total_amount > current.total_amount) ? prev : current) : null;
+  const bestSeller = productSalesArray.length > 0 ? productSalesArray[0] : null;
 
 
   return (
@@ -116,10 +156,10 @@ export function SalesReport() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Units Sold</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalOrders}</div>
+            <div className="text-2xl font-bold">{totalUnitsSold}</div>
              <p className="text-xs text-muted-foreground">
               In selected period
             </p>
@@ -130,53 +170,54 @@ export function SalesReport() {
             <CardTitle className="text-sm font-medium">Best Seller</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold truncate">{bestSeller?.customer?.name || 'N/A'}</div>
+            <div className="text-2xl font-bold truncate">{bestSeller?.product.name || 'N/A'}</div>
             <p className="text-xs text-muted-foreground">
-              Top order by value in period
+              Top product by revenue in period
             </p>
           </CardContent>
         </Card>
       </div>
 
       <div>
-        <h3 className="text-lg font-medium mb-2">Order Details</h3>
+        <h3 className="text-lg font-medium mb-2">Sales by Product</h3>
         <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Order ID</TableHead>
-              <TableHead>Customer</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead>Product</TableHead>
+              <TableHead className="text-right">Units Sold</TableHead>
+              <TableHead className="text-right">Total Revenue</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredOrders.length > 0 ? (
-              filteredOrders.map((order: Order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
-                  <TableCell>{order.customer?.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariantMap[order.status]} className="capitalize">
-                        {order.status}
-                    </Badge>
+            {productSalesArray.length > 0 ? (
+              productSalesArray.map(({ product, unitsSold, totalRevenue }) => (
+                <TableRow key={product.id}>
+                  <TableCell className="font-medium">
+                     <div className="flex items-center gap-2">
+                        <Image
+                            src={findImage(product.id) || "https://picsum.photos/seed/placeholder/40/40"}
+                            alt={product.name}
+                            width={40}
+                            height={40}
+                            className="rounded-md"
+                        />
+                        <span className="font-medium">{product.name}</span>
+                    </div>
                   </TableCell>
-                  <TableCell>
-                    {format(new Date(order.created_at), 'LLL dd, y')}
-                  </TableCell>
+                  <TableCell className="text-right">{unitsSold}</TableCell>
                   <TableCell className="text-right">
                     {new Intl.NumberFormat('en-US', {
                       style: 'currency',
                       currency: 'USD',
-                    }).format(order.total_amount)}
+                    }).format(totalRevenue)}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
-                  No orders found for the selected period.
+                <TableCell colSpan={3} className="h-24 text-center">
+                  No sales found for the selected period.
                 </TableCell>
               </TableRow>
             )}
