@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "prod_1",
+      "description": "Elegant gold dress on a mannequin",
+      "imageUrl": "https://picsum.photos/seed/prod1/400/500",
+      "imageHint": "fashion dress"
+    },
+    {
+      "id": "prod_2",
+      "description": "A crisp white shirt hanging on a rack",
+      "imageUrl": "https://picsum.photos/seed/prod2/400/500",
+      "imageHint": "white shirt"
+    },
+    {
+      "id": "prod_3",
+      "description": "Well-tailored charcoal gray pants",
+      "imageUrl": "https://picsum.photos/seed/prod3/400/500",
+      "imageHint": "gray pants"
+    },
+    {
+      "id": "user_1",
+      "description": "Profile picture of a woman with curly hair",
+      "imageUrl": "https://picsum.photos/seed/user1/100/100",
+      "imageHint": "woman portrait"
+    },
+    {
+      "id": "user_2",
+      "description": "Profile picture of a smiling man",
+      "imageUrl": "https://picsum.photos/seed/user2/100/100",
+      "imageHint": "man smiling"
+    },
+    {
+      "id": "user_3",
+      "description": "Profile picture of a person with glasses",
+      "imageUrl": "https://picsum.photos/seed/user3/100/100",
+      "imageHint": "person glasses"
+    },
+     {
+      "id": "user_4",
+      "description": "Profile picture of a woman looking sideways",
+      "imageUrl": "https://picsum.photos/seed/user4/100/100",
+      "imageHint": "woman profile"
+    },
+    {
+      "id": "user_5",
+      "description": "Profile picture of a man in a suit",
+      "imageUrl": "https://picsum.photos/seed/user5/100/100",
+      "imageHint": "man suit"
+    }
+  ]
 }
