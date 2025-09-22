@@ -157,3 +157,11 @@ export type User = {
   avatarUrl: string;
   role: Role['name'];
 };
+
+export type Account = {
+  id: string;
+  name: string;
+  code: string;
+  type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
+  balance: number;
+};

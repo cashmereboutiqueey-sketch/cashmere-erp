@@ -36,7 +36,7 @@ const mockAccounts: Account[] = [
     { id: '8', name: 'Owner\'s Equity', code: '3010', type: 'equity', balance: 55000 },
 ];
 
-const accountTypeVariant: { [key in Account['type']]: 'default' | 'secondary' | 'outline' } = {
+const accountTypeVariant: { [key in Account['type']]: 'default' | 'secondary' | 'outline' | 'destructive' } = {
     asset: 'default',
     liability: 'destructive',
     equity: 'outline',
