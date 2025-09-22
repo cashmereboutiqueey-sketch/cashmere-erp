@@ -157,25 +157,3 @@ export type User = {
   avatarUrl: string;
   role: Role['name'];
 };
-
-export type Account = {
-  id: string;
-  name: string;
-  code: string;
-  type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
-  balance: number;
-};
-
-export type JournalEntry = {
-  account_id: string;
-  debit: number;
-  credit: number;
-};
-
-export type JournalVoucher = {
-  id: string;
-  date: string;
-  description: string;
-  entries: JournalEntry[];
-  created_at: string;
-};
