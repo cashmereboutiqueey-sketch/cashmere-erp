@@ -35,6 +35,7 @@ const paymentStatusVariantMap: {
 } = {
   paid: 'default',
   unpaid: 'destructive',
+  partially_paid: 'secondary',
 };
 
 const statuses: Order['status'][] = ['pending', 'processing', 'completed', 'cancelled'];
@@ -86,7 +87,7 @@ export function getColumns(onStatusChange: (orderId: string, status: Order['stat
                 variant={paymentStatusVariantMap[row.original.payment_status]}
                 className="capitalize"
             >
-                {row.original.payment_status}
+                {row.original.payment_status.replace('_', ' ')}
             </Badge>
             ),
         },

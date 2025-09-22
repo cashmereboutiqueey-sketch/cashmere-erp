@@ -79,7 +79,9 @@ export type Order = {
   customer?: Customer;
   status: 'pending' | 'processing' | 'completed' | 'cancelled';
   source: 'social' | 'shopify' | 'store';
-  payment_status: 'paid' | 'unpaid';
+  payment_status: 'paid' | 'unpaid' | 'partially_paid';
+  payment_method?: 'cash' | 'card' | 'online';
+  amount_paid?: number;
   total_amount: number;
   created_at: string;
   items?: OrderItem[];

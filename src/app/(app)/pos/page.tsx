@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { PlusCircle, ShoppingCart, Trash2, Search, X } from 'lucide-react';
+import { PlusCircle, ShoppingCart, Trash2, Search, X, CreditCard } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AddCustomerDialog } from '@/components/customers/add-customer-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -51,7 +51,7 @@ export default function PosPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [source, setSource] = useState('store');
+  const [source, setSource] = useState<Order['source']>('store');
   const [sku, setSku] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -60,6 +60,10 @@ export default function PosPage() {
   const [selectedProductForVariant, setSelectedProductForVariant] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<Order['payment_method']>('cash');
+  const [amountPaid, setAmountPaid] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -143,22 +147,37 @@ export default function PosPage() {
     );
   };
   
+  const handleProceedToPayment = () => {
+      if (cart.length === 0) {
+        toast({ variant: 'destructive', title: 'Cart is empty' });
+        return;
+      }
+      if (!selectedCustomer) {
+        toast({ variant: 'destructive', title: 'Please select a customer' });
+        return;
+      }
+      setAmountPaid(total);
+      setIsPaymentDialogOpen(true);
+  }
+
   const handlePlaceOrder = async () => {
-    if (cart.length === 0) {
-      toast({ variant: 'destructive', title: 'Cart is empty' });
-      return;
-    }
-    if (!selectedCustomer) {
-      toast({ variant: 'destructive', title: 'Please select a customer' });
-      return;
+    if (!selectedCustomer) return; // Should not happen if button is disabled
+
+    let paymentStatus: Order['payment_status'] = 'unpaid';
+    if (amountPaid >= total) {
+        paymentStatus = 'paid';
+    } else if (amountPaid > 0) {
+        paymentStatus = 'partially_paid';
     }
 
     try {
       const newOrder: Omit<Order, 'id' | 'created_at' | 'customer'> = {
         customer_id: selectedCustomer.id,
-        status: 'pending',
-        source: source as Order['source'],
-        payment_status: 'unpaid',
+        status: 'pending', // This will be updated by the backend service
+        source,
+        payment_status: paymentStatus,
+        payment_method: paymentMethod,
+        amount_paid: amountPaid,
         total_amount: total,
         items: cart,
       };
@@ -174,6 +193,7 @@ export default function PosPage() {
       setCart([]);
       setSelectedCustomer(null);
       setCustomerSearch('');
+      setIsPaymentDialogOpen(false);
 
       // Redirect to orders page
       router.push('/orders');
@@ -193,6 +213,8 @@ export default function PosPage() {
     (acc, item) => acc + item.variant.price * item.quantity,
     0
   );
+
+  const changeDue = amountPaid - total > 0 ? amountPaid - total : 0;
 
   const filteredCustomers = customerSearch ? customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.email.toLowerCase().includes(customerSearch.toLowerCase())) : [];
 
@@ -361,7 +383,7 @@ export default function PosPage() {
             
              <div className="grid gap-2">
               <Label htmlFor="source">Order Source</Label>
-              <Select value={source} onValueChange={setSource}>
+              <Select value={source} onValueChange={(v) => setSource(v as Order['source'])}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select order source" />
                 </SelectTrigger>
@@ -422,7 +444,10 @@ export default function PosPage() {
                 <span>Total</span>
                 <span>${total.toFixed(2)}</span>
             </div>
-            <Button className="w-full" onClick={handlePlaceOrder} disabled={cart.length === 0 || !selectedCustomer}>Place Order</Button>
+            <Button className="w-full" onClick={handleProceedToPayment} disabled={cart.length === 0 || !selectedCustomer}>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Proceed to Payment
+            </Button>
           </CardFooter>
         </Card>
       </div>
@@ -471,6 +496,58 @@ export default function PosPage() {
           <Button onClick={handleAddToCartFromDialog}>Add to Cart</Button>
         </DialogFooter>
       </DialogContent>
+    </Dialog>
+    <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Complete Payment</DialogTitle>
+                <DialogDescription>
+                    Finalize the order by recording the payment.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
+                <div className="text-center">
+                    <p className="text-sm text-muted-foreground">Order Total</p>
+                    <p className="text-4xl font-bold">${total.toFixed(2)}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="payment-method">Payment Method</Label>
+                        <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as Order['payment_method'])}>
+                            <SelectTrigger id="payment-method">
+                                <SelectValue placeholder="Select method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="cash">Cash</SelectItem>
+                                <SelectItem value="card">Credit Card</SelectItem>
+                                <SelectItem value="online">Online</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="amount-paid">Amount Paid</Label>
+                        <Input
+                            id="amount-paid"
+                            type="number"
+                            value={amountPaid}
+                            onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
+                            placeholder={total.toFixed(2)}
+                        />
+                    </div>
+                </div>
+                 <div className="text-center text-muted-foreground text-sm">
+                    {changeDue > 0 ? (
+                        <p>Change Due: <span className="font-bold text-foreground">${changeDue.toFixed(2)}</span></p>
+                    ) : (
+                        <p>Full amount covered.</p>
+                    )}
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handlePlaceOrder}>Place Order</Button>
+            </DialogFooter>
+        </DialogContent>
     </Dialog>
     </>
   );
