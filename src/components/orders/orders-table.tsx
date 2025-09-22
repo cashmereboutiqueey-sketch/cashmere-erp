@@ -15,13 +15,24 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
+import { buttonVariants, Button } from '../ui/button';
 import { MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { updateOrderStatus } from '@/services/order-service';
+import { deleteOrder, updateOrderStatus } from '@/services/order-service';
 import { useToast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './order-details-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const statusVariantMap: {
   [key: string]: 'default' | 'secondary' | 'destructive' | 'outline';
@@ -44,7 +55,8 @@ const statuses: Order['status'][] = ['pending', 'processing', 'completed', 'canc
 
 export function getColumns(
     onStatusChange: (orderId: string, status: Order['status']) => void,
-    onViewDetails: (order: Order) => void
+    onViewDetails: (order: Order) => void,
+    onDelete: (order: Order) => void
 ): ColumnDef<Order>[] {
     return [
         {
@@ -132,11 +144,7 @@ export function getColumns(
                     </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                        onClick={() => navigator.clipboard.writeText(order.id)}
-                    >
-                        Copy order ID
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onViewDetails(order)}>View details</DropdownMenuItem>
                      <DropdownMenuSub>
                         <DropdownMenuSubTrigger>Update Status</DropdownMenuSubTrigger>
                         <DropdownMenuPortal>
@@ -149,7 +157,13 @@ export function getColumns(
                             </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                     </DropdownMenuSub>
-                    <DropdownMenuItem onClick={() => onViewDetails(order)}>View details</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                        onClick={() => navigator.clipboard.writeText(order.id)}
+                    >
+                        Copy order ID
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
                 </div>
@@ -159,6 +173,44 @@ export function getColumns(
     ];
 }
 
+function DeleteOrderDialog({ order, isOpen, onOpenChange }: { order: Order | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+    const { toast } = useToast();
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        if (!order) return;
+        setIsDeleting(true);
+        try {
+            await deleteOrder(order.id);
+            toast({ title: "Success", description: "Order deleted successfully and stock replenished." });
+            onOpenChange(false);
+            window.location.reload();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete order." });
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+
+    return (
+        <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to delete this order?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete order #{order?.id.slice(0, 8)} and replenish the stock for all items in this order.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
+                        {isDeleting ? "Deleting..." : "Delete Order"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
 
 interface OrdersTableProps {
   data: Order[];
@@ -168,6 +220,7 @@ export function OrdersTable({ data }: OrdersTableProps) {
   const { toast } = useToast();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const handleStatusChange = async (orderId: string, status: Order['status']) => {
     try {
@@ -193,7 +246,12 @@ export function OrdersTable({ data }: OrdersTableProps) {
     setIsDetailsOpen(true);
   };
   
-  const columns = getColumns(handleStatusChange, handleViewDetails);
+  const handleDelete = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDeleteOpen(true);
+  }
+  
+  const columns = getColumns(handleStatusChange, handleViewDetails, handleDelete);
 
   return (
     <>
@@ -202,6 +260,11 @@ export function OrdersTable({ data }: OrdersTableProps) {
             order={selectedOrder}
             isOpen={isDetailsOpen}
             onOpenChange={setIsDetailsOpen}
+        />
+         <DeleteOrderDialog
+            order={selectedOrder}
+            isOpen={isDeleteOpen}
+            onOpenChange={setIsDeleteOpen}
         />
     </>
   );

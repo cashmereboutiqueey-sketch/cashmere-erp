@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction, deleteDoc } from 'firebase/firestore';
 import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVariant } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { getProductFabricsForProduct } from './product-fabric-service';
@@ -53,59 +53,55 @@ export async function getOrders(): Promise<Order[]> {
 export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'customer'>) {
   try {
     const newOrderId = await runTransaction(db, async (transaction) => {
-      // --- READ PHASE ---
       if (!orderData.items || orderData.items.length === 0) {
         throw new Error('Order must have items.');
       }
 
-      // 1. Fetch all unique product documents in the order
       const productIds = [...new Set(orderData.items.map(item => item.productId))];
       const productRefs = productIds.map(id => doc(db, 'products', id));
       const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
       
       const productsMap = new Map<string, { doc: any, data: Product }>();
-      for (const productDoc of productDocs) {
+      productDocs.forEach(productDoc => {
         if (!productDoc.exists()) {
           throw new Error(`Product with ID ${productDoc.id} not found.`);
         }
         productsMap.set(productDoc.id, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
-      }
+      });
 
       let allItemsInStock = true;
       const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
-      const productStockUpdates = new Map<string, ProductVariant[]>();
+      const productUpdates = new Map<string, { ref: any, newVariants: ProductVariant[] }>();
 
-      // 2. Process each item, check stock, and prepare updates
       for (const item of orderData.items) {
         const productInfo = productsMap.get(item.productId);
         if (!productInfo) {
-          throw new Error(`Internal error: Product info for ${item.productId} not found in transaction map.`);
+          throw new Error(`Internal error: Product info for ${item.productId} not found.`);
         }
 
-        // Use the latest variant data from our updates map, or the original if not yet updated
-        const currentVariants = productStockUpdates.get(item.productId) || productInfo.data.variants;
-        const variantToUpdate = currentVariants.find(v => v.id === item.variant.id);
+        let currentVariants = productInfo.data.variants;
+        if (productUpdates.has(item.productId)) {
+          currentVariants = productUpdates.get(item.productId)!.newVariants;
+        }
         
-        if (!variantToUpdate) {
+        const variantIndex = currentVariants.findIndex(v => v.id === item.variant.id);
+        if (variantIndex === -1) {
           throw new Error(`Variant ${item.variant.id} not found for product ${item.productName}`);
         }
-
+        
+        const variantToUpdate = currentVariants[variantIndex];
+        
         if (variantToUpdate.stock_quantity >= item.quantity) {
-          // Item is in stock, prepare stock deduction
-          const updatedVariants = currentVariants.map(v => 
-            v.id === item.variant.id 
-              ? { ...v, stock_quantity: v.stock_quantity - item.quantity } 
-              : v
-          );
-          productStockUpdates.set(item.productId, updatedVariants);
+          const newVariants = [...currentVariants];
+          newVariants[variantIndex] = { ...variantToUpdate, stock_quantity: variantToUpdate.stock_quantity - item.quantity };
+          productUpdates.set(item.productId, { ref: productInfo.doc.ref, newVariants });
         } else {
-          // Item is out of stock, flag for production
           allItemsInStock = false;
           
           const recipe = await getProductFabricsForProduct(productInfo.data.id);
           if (recipe.length === 0) {
             console.warn(`Product ${productInfo.data.name} is out of stock and has no recipe. It cannot be produced.`);
-            continue; // Move to the next item
+            continue; 
           }
 
           let canProduce = true;
@@ -124,7 +120,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
               product_id: item.productId,
               variant_id: item.variant.id,
               required_quantity: item.quantity,
-              sales_order_id: '', // Will be set later with the new order ID
+              sales_order_id: '',
               status: 'pending'
             });
           }
@@ -133,8 +129,6 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
       
       const finalOrderStatus: Order['status'] = allItemsInStock ? 'processing' : 'pending';
 
-      // --- WRITE PHASE ---
-      // 3. Create the new order document
       const newOrderRef = doc(collection(db, 'orders'));
       transaction.set(newOrderRef, {
         ...orderData,
@@ -142,21 +136,18 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         created_at: serverTimestamp(),
       });
 
-      // 4. Apply all prepared stock updates
-      for (const [productId, updatedVariants] of productStockUpdates.entries()) {
-        const productRef = doc(db, 'products', productId);
-        transaction.update(productRef, { variants: updatedVariants });
-      }
+      productUpdates.forEach(update => {
+        transaction.update(update.ref, { variants: update.newVariants });
+      });
 
-      // 5. Create all necessary production orders
-      for (const poData of productionOrdersToCreate) {
+      productionOrdersToCreate.forEach(poData => {
         const newProdOrderRef = doc(collection(db, 'production_orders'));
         transaction.set(newProdOrderRef, {
           ...poData,
-          sales_order_id: newOrderRef.id, // Link to the newly created order
+          sales_order_id: newOrderRef.id,
           created_at: serverTimestamp()
         });
-      }
+      });
 
       return newOrderRef.id;
     });
@@ -231,7 +222,7 @@ export async function deleteOrder(id: string) {
             if (!orderDoc.exists()) {
                 throw new Error("Order does not exist!");
             }
-            const orderData = orderDoc.data() as Order;
+            const orderData = await fromFirestore(orderDoc);
 
             if (orderData.items) {
                  for (const item of orderData.items) {

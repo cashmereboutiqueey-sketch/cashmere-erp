@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { ProductionOrder, Product, Fabric, Order, OrderItem, ProductVariant } from '@/lib/types';
+import { ProductionOrder, Product, Order, OrderItem, ProductVariant } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { Badge } from '../ui/badge';
@@ -14,8 +14,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
+import { buttonVariants, Button } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -28,6 +29,16 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -38,7 +49,7 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useState } from 'react';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
-import { addProductionOrder, updateProductionOrderStatus } from '@/services/production-service';
+import { addProductionOrder, updateProductionOrderStatus, deleteProductionOrder } from '@/services/production-service';
 import { useToast } from '@/hooks/use-toast';
 
 const findImage = (id: string) =>
@@ -54,7 +65,10 @@ const statusVariantMap: {
 
 const statuses: ProductionOrder['status'][] = ['pending', 'in_progress', 'done'];
 
-export const getColumns = (onStatusChange: (orderId: string, status: ProductionOrder['status']) => void): ColumnDef<ProductionOrder>[] => [
+export const getColumns = (
+  onStatusChange: (orderId: string, status: ProductionOrder['status']) => void,
+  onDelete: (order: ProductionOrder) => void,
+): ColumnDef<ProductionOrder>[] => [
   {
     accessorKey: 'product',
     header: ({ column }) => (
@@ -145,6 +159,8 @@ export const getColumns = (onStatusChange: (orderId: string, status: ProductionO
                 </DropdownMenuPortal>
               </DropdownMenuSub>
               <DropdownMenuItem>View Details</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>Delete</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -352,8 +368,49 @@ function ProductionOrdersToolbar({ products, salesOrders }: { products: Product[
   );
 }
 
+function DeleteProductionOrderDialog({ order, isOpen, onOpenChange }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+    const { toast } = useToast();
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        if (!order) return;
+        setIsDeleting(true);
+        try {
+            await deleteProductionOrder(order.id);
+            toast({ title: "Success", description: "Production order deleted." });
+            onOpenChange(false);
+            window.location.reload();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete production order." });
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+
+    return (
+        <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to delete this production order?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete production order for {order?.required_quantity} pc(s) of "{order?.product?.name}".
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
+                        {isDeleting ? "Deleting..." : "Delete Order"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
 export function ProductionOrdersTable({ data, products, salesOrders }: ProductionOrdersTableProps) {
   const { toast } = useToast();
+  const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   
   const handleStatusChange = async (orderId: string, status: ProductionOrder['status']) => {
     try {
@@ -372,7 +429,21 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
     }
   };
 
-  const columns = getColumns(handleStatusChange);
+  const handleDelete = (order: ProductionOrder) => {
+    setSelectedOrder(order);
+    setIsDeleteOpen(true);
+  };
 
-  return <DataTable columns={columns} data={data} toolbar={<ProductionOrdersToolbar products={products} salesOrders={salesOrders} />} />;
+  const columns = getColumns(handleStatusChange, handleDelete);
+
+  return (
+    <>
+      <DataTable columns={columns} data={data} toolbar={<ProductionOrdersToolbar products={products} salesOrders={salesOrders} />} />
+      <DeleteProductionOrderDialog
+          order={selectedOrder}
+          isOpen={isDeleteOpen}
+          onOpenChange={setIsDeleteOpen}
+      />
+    </>
+  );
 }
