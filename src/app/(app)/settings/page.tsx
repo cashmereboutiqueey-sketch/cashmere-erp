@@ -38,6 +38,7 @@ import { mockUsers } from '@/lib/data';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import type { Role } from '@/lib/types';
 import { capitalize } from 'string-ts';
+import { Separator } from '@/components/ui/separator';
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
 
@@ -85,7 +86,7 @@ export default function SettingsPage() {
               </CardFooter>
             </Card>
           </TabsContent>
-          <TabsContent value="integrations">
+          <TabsContent value="integrations" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Shopify Integration</CardTitle>
@@ -114,6 +115,29 @@ export default function SettingsPage() {
                 <Button>Connect to Shopify</Button>
               </CardFooter>
             </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Shipping Integrations</CardTitle>
+                <CardDescription>
+                  Connect your shipping carriers to generate labels and track shipments.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="carrier-a-key">Carrier A API Key</Label>
+                  <Input id="carrier-a-key" type="password" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="carrier-b-key">Carrier B API Key</Label>
+                  <Input id="carrier-b-key" type="password" />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button>Save Shipping Keys</Button>
+              </CardFooter>
+            </Card>
+
           </TabsContent>
            <TabsContent value="users">
                 <Card>
