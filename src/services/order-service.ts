@@ -3,7 +3,7 @@
 
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction, deleteDoc, where, Timestamp } from 'firebase/firestore';
-import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVariant, OrderFulfillmentType } from '@/lib/types';
+import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVariant, OrderFulfillmentType, ProductFabric } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { getProductFabricsForProduct } from './product-fabric-service';
 import type { DateRange } from 'react-day-picker';
@@ -79,68 +79,103 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         throw new Error('Order must have items.');
       }
 
-      const fulfillmentType = orderData.fulfillment_type || 'from_stock';
       let finalOrderStatus: Order['status'] = 'processing';
+      let finalFulfillmentType: OrderFulfillmentType = 'from_stock';
+      
       const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
       const stockUpdates = new Map<string, { ref: any, newVariants: ProductVariant[] }>();
 
+      // Pre-fetch all products and fabrics to use inside the transaction
       const productIds = [...new Set(orderData.items.map(item => item.productId))];
       const productRefs = productIds.map(id => doc(db, 'products', id));
       const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
-      
       const productsMap = new Map<string, { doc: any, data: Product }>();
-      for (const productDoc of productDocs) {
+      productDocs.forEach(productDoc => {
         if (!productDoc.exists()) throw new Error(`Product with ID ${productDoc.id} not found.`);
         productsMap.set(productDoc.id, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
-      }
+      });
 
-      if (fulfillmentType === 'make_to_order') {
-        finalOrderStatus = 'pending';
-        for (const item of orderData.items) {
-           productionOrdersToCreate.push({
-              product_id: item.productId,
-              variant_id: item.variant.id,
-              required_quantity: item.quantity,
-              sales_order_id: '', // Will be set later
-              status: 'pending'
-            });
-        }
-      } else { // 'from_stock'
-         for (const item of orderData.items) {
-            const productInfo = productsMap.get(item.productId);
-            if (!productInfo) throw new Error(`Internal error: Product info for ${item.productId} not found.`);
+      const allFabricsSnap = await getDocs(collection(db, 'fabrics'));
+      const allFabricsMap = new Map<string, Fabric>();
+      allFabricsSnap.forEach(doc => allFabricsMap.set(doc.id, { id: doc.id, ...doc.data()} as Fabric));
+      
+      const allProductFabricsSnap = await getDocs(collection(db, 'product_fabrics'));
+      const productFabricsMap = new Map<string, ProductFabric[]>();
+      allProductFabricsSnap.forEach(doc => {
+          const pf = doc.data() as ProductFabric;
+          const existing = productFabricsMap.get(pf.product_id) || [];
+          existing.push(pf);
+          productFabricsMap.set(pf.product_id, existing);
+      });
 
-            const currentVariants = stockUpdates.get(item.productId)?.newVariants || productInfo.data.variants;
-            const variantIndex = currentVariants.findIndex(v => v.id === item.variant.id);
-            if (variantIndex === -1) throw new Error(`Variant ${item.variant.id} not found for product ${item.productName}`);
-            
-            const variantToUpdate = currentVariants[variantIndex];
-            
-            if (variantToUpdate.stock_quantity < item.quantity) {
-              throw new Error(`Not enough stock for ${item.productName} (${item.variant.size}/${item.variant.color}). Required: ${item.quantity}, Available: ${variantToUpdate.stock_quantity}. Use 'Make to Order' instead.`);
+      // Main logic loop
+      for (const item of orderData.items) {
+        const productInfo = productsMap.get(item.productId);
+        if (!productInfo) throw new Error(`Internal error: Product info for ${item.productId} not found.`);
+        
+        const currentVariants = stockUpdates.get(item.productId)?.newVariants || productInfo.data.variants;
+        const variantIndex = currentVariants.findIndex(v => v.id === item.variant.id);
+        if (variantIndex === -1) throw new Error(`Variant ${item.variant.id} not found for product ${item.productName}`);
+        
+        const variantInCart = currentVariants[variantIndex];
+        
+        if (variantInCart.stock_quantity >= item.quantity) {
+          // Sell from stock
+          const newVariants = [...currentVariants];
+          newVariants[variantIndex] = { ...variantInCart, stock_quantity: variantInCart.stock_quantity - item.quantity };
+          stockUpdates.set(item.productId, { ref: productInfo.doc.ref, newVariants });
+        } else {
+          // Out of stock, check if we can produce it
+          finalFulfillmentType = 'make_to_order';
+          finalOrderStatus = 'pending';
+
+          const recipe = productFabricsMap.get(item.productId);
+          if (!recipe || recipe.length === 0) {
+            throw new Error(`Cannot produce "${item.productName}": No recipe found.`);
+          }
+
+          for (const recipeItem of recipe) {
+            const fabric = allFabricsMap.get(recipeItem.fabric_id);
+            if (!fabric) {
+              throw new Error(`Cannot produce "${item.productName}": Recipe fabric ID ${recipeItem.fabric_id} not found.`);
             }
-            const newVariants = [...currentVariants];
-            newVariants[variantIndex] = { ...variantToUpdate, stock_quantity: variantToUpdate.stock_quantity - item.quantity };
-            stockUpdates.set(item.productId, { ref: productInfo.doc.ref, newVariants });
+            const requiredFabric = recipeItem.fabric_quantity_meters * item.quantity;
+            if (fabric.length_in_meters < requiredFabric) {
+              throw new Error(`Cannot produce "${item.productName}": Not enough ${fabric.name} fabric. Required: ${requiredFabric}m, Available: ${fabric.length_in_meters}m.`);
+            }
+          }
+
+          // If all fabric checks pass, queue for production
+          productionOrdersToCreate.push({
+            product_id: item.productId,
+            variant_id: item.variant.id,
+            required_quantity: item.quantity,
+            sales_order_id: '', // Will be set later
+            status: 'pending'
+          });
         }
       }
 
+      // Create new order document
       const newOrderRef = doc(collection(db, 'orders'));
       transaction.set(newOrderRef, {
         ...orderData,
         status: finalOrderStatus,
+        fulfillment_type: finalFulfillmentType,
         created_at: serverTimestamp(),
       });
       
+      // Apply stock updates
       stockUpdates.forEach(update => {
         transaction.update(update.ref, { variants: update.newVariants });
       });
 
+      // Create production orders
       productionOrdersToCreate.forEach(poData => {
         const newProdOrderRef = doc(collection(db, 'production_orders'));
         transaction.set(newProdOrderRef, {
           ...poData,
-          sales_order_id: newOrderRef.id,
+          sales_order_id: newOrderRef.id, // Link to the new sales order
           created_at: serverTimestamp()
         });
       });
