@@ -4,10 +4,8 @@ import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { Fabric } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { INITIAL_MOCK_FABRICS } from '@/lib/data';
 
 const fabricsCollection = collection(db, 'fabrics');
-const suppliersCollection = collection(db, 'suppliers');
 
 const fromFirestore = (doc: any): Fabric => {
   const data = doc.data();
@@ -26,27 +24,6 @@ const fromFirestore = (doc: any): Fabric => {
 export async function getFabrics(): Promise<Fabric[]> {
   try {
     const snapshot = await getDocs(fabricsCollection);
-    if (snapshot.empty) {
-        console.log('No fabrics found, adding mock data...');
-        // To add mock data, we need supplier IDs. Let's fetch them.
-        const suppliersSnapshot = await getDocs(suppliersCollection);
-        const supplierIds = suppliersSnapshot.docs.map(doc => doc.id);
-
-        if(supplierIds.length > 0) {
-            for (const fabric of INITIAL_MOCK_FABRICS) {
-                // Assign a random real supplier ID
-                const randomSupplierId = supplierIds[Math.floor(Math.random() * supplierIds.length)];
-                await addDoc(fabricsCollection, {
-                    ...fabric, 
-                    supplier_id: randomSupplierId,
-                    length_in_meters: Math.floor(Math.random() * 500) + 50, // Random stock
-                    createdAt: serverTimestamp()
-                });
-            }
-        }
-        const newSnapshot = await getDocs(fabricsCollection);
-        return newSnapshot.docs.map(fromFirestore);
-    }
     return snapshot.docs.map(fromFirestore);
   } catch (error) {
     console.error('Error getting fabrics: ', error);

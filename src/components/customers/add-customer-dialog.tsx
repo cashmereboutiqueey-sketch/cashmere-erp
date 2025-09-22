@@ -55,7 +55,9 @@ export function AddCustomerDialog() {
       setOpen(false);
       form.reset();
       // You might want to trigger a re-fetch of customers on the parent page
-      window.location.reload();
+      // For simplicity, we can use window.location.reload()
+      // A more advanced solution would use a state management library or context
+       window.location.reload();
     } catch (error) {
       toast({
         variant: 'destructive',

@@ -4,7 +4,6 @@ import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { Product, ProductVariant } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { INITIAL_MOCK_PRODUCTS } from '@/lib/data';
 
 const productsCollection = collection(db, 'products');
 
@@ -22,17 +21,6 @@ const fromFirestore = (doc: any): Product => {
 export async function getProducts(): Promise<Product[]> {
   try {
     const snapshot = await getDocs(productsCollection);
-    if (snapshot.empty) {
-        console.log('No products found, adding mock data...');
-        for (const product of INITIAL_MOCK_PRODUCTS) {
-            await addDoc(productsCollection, {
-                ...product,
-                created_at: serverTimestamp()
-            });
-        }
-        const newSnapshot = await getDocs(productsCollection);
-        return newSnapshot.docs.map(fromFirestore);
-    }
     return snapshot.docs.map(fromFirestore);
   } catch (error) {
     console.error('Error getting products: ', error);

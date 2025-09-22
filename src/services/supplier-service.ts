@@ -4,7 +4,6 @@ import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { Supplier } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { INITIAL_MOCK_SUPPLIERS } from '@/lib/data';
 
 const suppliersCollection = collection(db, 'suppliers');
 
@@ -23,14 +22,6 @@ const fromFirestore = (doc: any): Supplier => {
 export async function getSuppliers(): Promise<Supplier[]> {
   try {
     const snapshot = await getDocs(suppliersCollection);
-    if (snapshot.empty) {
-        console.log('No suppliers found, adding mock data...');
-        for (const supplier of INITIAL_MOCK_SUPPLIERS) {
-            await addDoc(suppliersCollection, {...supplier, createdAt: serverTimestamp()});
-        }
-        const newSnapshot = await getDocs(suppliersCollection);
-        return newSnapshot.docs.map(fromFirestore);
-    }
     return snapshot.docs.map(fromFirestore);
   } catch (error) {
     console.error('Error getting suppliers: ', error);
