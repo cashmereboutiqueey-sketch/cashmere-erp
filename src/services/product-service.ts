@@ -4,7 +4,7 @@ import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { Product, ProductFabric } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
-import { addProductFabrics } from './product-fabric-service';
+import { addProductFabrics, deleteProductFabrics } from './product-fabric-service';
 
 const productsCollection = collection(db, 'products');
 
@@ -33,10 +33,9 @@ export async function addProduct(productData: Omit<Product, 'id' | 'created_at'>
   try {
     const batch = writeBatch(db);
     
-    // Generate unique IDs for variants
     const variantsWithIds = productData.variants.map(variant => ({
         ...variant,
-        id: doc(collection(db, 'products')).id // Generate a new unique ID
+        id: doc(collection(db, 'products')).id 
     }));
 
     const newProductRef = doc(productsCollection);
@@ -47,7 +46,6 @@ export async function addProduct(productData: Omit<Product, 'id' | 'created_at'>
       created_at: serverTimestamp(),
     });
 
-    // Add product-fabric relationships
     if (productData.fabrics && productData.fabrics.length > 0) {
         await addProductFabrics(newProductRef.id, productData.fabrics, batch);
     }
@@ -62,13 +60,26 @@ export async function addProduct(productData: Omit<Product, 'id' | 'created_at'>
   }
 }
 
-export async function updateProduct(id: string, productData: Partial<Product>) {
+export async function updateProduct(id: string, productData: Partial<Product> & { fabrics?: Omit<ProductFabric, 'product_id'>[] }) {
   try {
+    const batch = writeBatch(db);
     const productDoc = doc(db, 'products', id);
-    await updateDoc(productDoc, {
-        ...productData,
+
+    // Update product main details
+    const { fabrics, ...productDetails } = productData;
+    batch.update(productDoc, {
+        ...productDetails,
         updatedAt: serverTimestamp()
     });
+
+    // Replace the product-fabric relationships
+    if (fabrics) {
+        await deleteProductFabrics(id, batch);
+        await addProductFabrics(id, fabrics, batch);
+    }
+
+    await batch.commit();
+
     revalidatePath('/products');
   } catch (error) {
     console.error('Error updating product: ', error);
@@ -78,8 +89,16 @@ export async function updateProduct(id: string, productData: Partial<Product>) {
 
 export async function deleteProduct(id: string) {
   try {
+    const batch = writeBatch(db);
+    
     const productDoc = doc(db, 'products', id);
-    await deleteDoc(productDoc);
+    batch.delete(productDoc);
+    
+    // Also delete product-fabric relationships
+    await deleteProductFabrics(id, batch);
+
+    await batch.commit();
+
     revalidatePath('/products');
   } catch (error) {
     console.error('Error deleting product: ', error);

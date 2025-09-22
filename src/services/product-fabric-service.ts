@@ -7,7 +7,6 @@ import { revalidatePath } from 'next/cache';
 
 const productFabricsCollection = collection(db, 'product_fabrics');
 
-// Helper to convert Firestore doc to ProductFabric type
 const fromFirestore = (doc: any): ProductFabric => {
   const data = doc.data();
   return {
@@ -22,7 +21,6 @@ export async function getProductFabricsForProduct(productId: string): Promise<Pr
     const q = query(productFabricsCollection, where('product_id', '==', productId));
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
-        console.warn(`No product-fabric mapping found for product ${productId}.`);
         return [];
     }
     return snapshot.docs.map(fromFirestore);
@@ -37,4 +35,13 @@ export async function addProductFabrics(productId: string, fabrics: Omit<Product
     const docRef = doc(collection(db, 'product_fabrics'));
     batch.set(docRef, { ...fabric, product_id: productId, createdAt: serverTimestamp() });
   }
+}
+
+
+export async function deleteProductFabrics(productId: string, batch: any) {
+    const q = query(productFabricsCollection, where('product_id', '==', productId));
+    const snapshot = await getDocs(q);
+    snapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
 }

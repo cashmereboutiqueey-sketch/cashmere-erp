@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ColumnDef, Row } from '@tanstack/react-table';
-import { Product, ProductVariant, Fabric } from '@/lib/types';
+import { Product, ProductVariant, Fabric, ProductFabric } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { Badge } from '../ui/badge';
@@ -27,6 +27,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { cn } from '@/lib/utils';
@@ -34,7 +45,8 @@ import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { addProduct } from '@/services/product-service';
+import { addProduct, updateProduct, deleteProduct } from '@/services/product-service';
+import { getProductFabricsForProduct } from '@/services/product-fabric-service';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { ScrollArea } from '../ui/scroll-area';
 import { generateProductDescription } from '@/ai/flows/product-description-generator';
@@ -75,7 +87,6 @@ const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
     const [description, setDescription] = useState('');
     const [open, setOpen] = useState(false);
     
-    // For this demo, we'll just use the first variant's details for generation
     const firstVariant = product.variants[0];
 
     const handleGenerate = async () => {
@@ -134,7 +145,10 @@ const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
 };
 
 
-export const getColumns = (): ColumnDef<Product>[] => [
+export const getColumns = (
+  onEdit: (product: Product) => void,
+  onDelete: (product: Product) => void
+): ColumnDef<Product>[] => [
     {
     id: 'expander',
     header: () => null,
@@ -229,8 +243,8 @@ export const getColumns = (): ColumnDef<Product>[] => [
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Edit</DropdownMenuItem>
-              <DropdownMenuItem>Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete(row.original)} className="text-destructive">Delete</DropdownMenuItem>
               <ProductDescriptionGenerator product={row.original} />
             </DropdownMenuContent>
           </DropdownMenu>
@@ -265,6 +279,7 @@ const productFabricSchema = z.object({
 });
 
 const productSchema = z.object({
+  id: z.string().optional(),
   name: z.string().min(1, "Product name is required"),
   category: z.string().min(1, "Category is required"),
   variants: z.array(variantSchema).min(1, "At least one variant is required"),
@@ -274,20 +289,33 @@ const productSchema = z.object({
 type ProductFormData = z.infer<typeof productSchema>;
 
 
-function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColors: string[] }) {
-  const [open, setOpen] = useState(false);
+function ProductEditDialog({ 
+    product,
+    isOpen,
+    onOpenChange,
+    allSizes,
+    allColors 
+}: { 
+    product: Product | null,
+    isOpen: boolean,
+    onOpenChange: (isOpen: boolean) => void,
+    allSizes: string[],
+    allColors: string[] 
+}) {
   const [availableFabrics, setAvailableFabrics] = useState<Fabric[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const { toast } = useToast();
 
+  const isEditMode = !!product;
+
   const methods = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-    defaultValues: { name: '', category: '', variants: [], fabrics: [] },
+    defaultValues: { id: '', name: '', category: '', variants: [], fabrics: [] },
   });
   const { control, handleSubmit, setValue, watch, reset } = methods;
 
-  const { fields: variantFields } = useFieldArray({ control, name: "variants" });
+  const { fields: variantFields, update: updateVariant } = useFieldArray({ control, name: "variants" });
   const { fields: fabricFields, append: appendFabric, remove: removeFabric } = useFieldArray({ control, name: "fabrics" });
 
   const productName = watch("name");
@@ -301,8 +329,34 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
   }, []);
 
   useEffect(() => {
-    if (!productName || selectedSizes.length === 0 || selectedColors.length === 0) {
-      setValue("variants", []);
+    if (isOpen && product) {
+        reset({
+            id: product.id,
+            name: product.name,
+            category: product.category,
+            variants: product.variants,
+        });
+
+        const sizes = [...new Set(product.variants.map(v => v.size).filter(Boolean))] as string[];
+        const colors = [...new Set(product.variants.map(v => v.color).filter(Boolean))] as string[];
+        setSelectedSizes(sizes);
+        setSelectedColors(colors);
+
+        const fetchProductFabrics = async () => {
+            const fetchedFabrics = await getProductFabricsForProduct(product.id);
+            setValue('fabrics', fetchedFabrics);
+        };
+        fetchProductFabrics();
+    } else if (!isOpen) {
+        reset({ id: '', name: '', category: '', variants: [], fabrics: [] });
+        setSelectedSizes([]);
+        setSelectedColors([]);
+    }
+  }, [isOpen, product, reset, setValue]);
+
+
+  useEffect(() => {
+    if (isEditMode || !productName || selectedSizes.length === 0 || selectedColors.length === 0) {
       return;
     }
 
@@ -325,19 +379,22 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
       })
     );
     setValue("variants", newVariants);
-  }, [selectedSizes, selectedColors, productName, setValue]);
+  }, [selectedSizes, selectedColors, productName, setValue, isEditMode]);
 
   const onSubmit = async (data: ProductFormData) => {
     try {
-      await addProduct(data);
-      toast({ title: "Success", description: "Product added successfully." });
-      setOpen(false);
-      reset();
-      setSelectedSizes([]);
-      setSelectedColors([]);
+      if (isEditMode && data.id) {
+        await updateProduct(data.id, data);
+        toast({ title: "Success", description: "Product updated successfully." });
+      } else {
+        await addProduct(data);
+        toast({ title: "Success", description: "Product added successfully." });
+      }
+      onOpenChange(false);
       window.location.reload();
     } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to add product." });
+      const action = isEditMode ? 'update' : 'add';
+      toast({ variant: "destructive", title: "Error", description: `Failed to ${action} product.` });
     }
   };
   
@@ -347,17 +404,18 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
         setSelectedSizes([]);
         setSelectedColors([]);
     }
-    setOpen(isOpen);
+    onOpenChange(isOpen);
   }
 
   const toggleSelection = (item: string, list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
+    if (isEditMode) return; // Don't allow changing sizes/colors in edit mode to avoid complexity
     setList(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
   };
 
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+       <DialogTrigger asChild>
         <Button size="sm" className="h-8">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Product
@@ -365,9 +423,12 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
       </DialogTrigger>
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Add New Product</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit Product' : 'Add New Product'}</DialogTitle>
           <DialogDescription>
-            Enter product details, define its recipe, and select attributes to generate variants.
+            {isEditMode 
+              ? `Editing ${product?.name}. You can update details and the product recipe.`
+              : 'Enter product details, define its recipe, and select attributes to generate variants.'
+            }
           </DialogDescription>
         </DialogHeader>
         <FormProvider {...methods}>
@@ -425,25 +486,27 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
                 <FormField control={control} name="fabrics" render={() => (<FormItem><FormMessage /></FormItem>)} />
             </div>
 
-              <div className="space-y-2 pt-4">
-                <h3 className="text-lg font-medium">Variant Generation</h3>
-                <div className="space-y-2">
-                    <Label>Sizes</Label>
-                    <div className="flex flex-wrap gap-2">
-                    {allSizes.map(size => (
-                        <Button key={size} type="button" variant={selectedSizes.includes(size) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(size, selectedSizes, setSelectedSizes)}>{size}</Button>
-                    ))}
-                    </div>
+              {!isEditMode && (
+                <div className="space-y-2 pt-4">
+                  <h3 className="text-lg font-medium">Variant Generation</h3>
+                  <div className="space-y-2">
+                      <Label>Sizes</Label>
+                      <div className="flex flex-wrap gap-2">
+                      {allSizes.map(size => (
+                          <Button key={size} type="button" variant={selectedSizes.includes(size) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(size, selectedSizes, setSelectedSizes)}>{size}</Button>
+                      ))}
+                      </div>
+                  </div>
+                  <div className="space-y-2">
+                      <Label>Colors</Label>
+                      <div className="flex flex-wrap gap-2">
+                      {allColors.map(color => (
+                          <Button key={color} type="button" variant={selectedColors.includes(color) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(color, selectedColors, setSelectedColors)}>{color}</Button>
+                      ))}
+                      </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                    <Label>Colors</Label>
-                    <div className="flex flex-wrap gap-2">
-                    {allColors.map(color => (
-                        <Button key={color} type="button" variant={selectedColors.includes(color) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(color, selectedColors, setSelectedColors)}>{color}</Button>
-                    ))}
-                    </div>
-                </div>
-              </div>
+              )}
               
               {variantFields.length > 0 && (
                 <div className="space-y-4 pt-4">
@@ -465,13 +528,19 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
                                 <Badge variant="outline" className="ml-1">{watch(`variants.${index}.color`)}</Badge>
                             </TableCell>
                             <TableCell>
-                                <Input {...control.register(`variants.${index}.sku`)} className="h-8" />
+                                <FormField name={`variants.${index}.sku`} control={control} render={({ field }) => (
+                                    <Input {...field} className="h-8" />
+                                )}/>
                             </TableCell>
                             <TableCell>
-                                <Input type="number" {...control.register(`variants.${index}.price`)} className="h-8" />
+                                <FormField name={`variants.${index}.price`} control={control} render={({ field }) => (
+                                    <Input {...field} type="number" className="h-8" />
+                                )}/>
                             </TableCell>
                             <TableCell>
-                                <Input type="number" {...control.register(`variants.${index}.stock_quantity`)} className="h-8" />
+                                <FormField name={`variants.${index}.stock_quantity`} control={control} render={({ field }) => (
+                                    <Input {...field} type="number" className="h-8" />
+                                )}/>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -486,7 +555,7 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
                 )} />
               </ScrollArea>
               <DialogFooter>
-                <Button type="submit">Add Product & Variants</Button>
+                <Button type="submit">{isEditMode ? 'Save Changes' : 'Add Product'}</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -494,6 +563,45 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
       </DialogContent>
     </Dialog>
   );
+}
+
+function DeleteProductDialog({ product, isOpen, onOpenChange }: { product: Product | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+    const { toast } = useToast();
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = async () => {
+        if (!product) return;
+        setIsDeleting(true);
+        try {
+            await deleteProduct(product.id);
+            toast({ title: "Success", description: "Product deleted successfully." });
+            onOpenChange(false);
+            window.location.reload();
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete product." });
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+
+    return (
+        <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to delete this product?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the product "{product?.name}" and all its associated data.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
+                        {isDeleting ? "Deleting..." : "Delete"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
 }
 
 function ManageAttributesDialog({ allSizes, setAllSizes, allColors, setAllColors }: { allSizes: string[], setAllSizes: (sizes: string[]) => void, allColors: string[], setAllColors: (colors: string[]) => void }) {
@@ -555,7 +663,14 @@ function ManageAttributesDialog({ allSizes, setAllSizes, allColors, setAllColors
 }
 
 
-function ProductsTableToolbar({ allSizes, setAllSizes, allColors, setAllColors }: { allSizes: string[], setAllSizes: (sizes: string[]) => void, allColors: string[], setAllColors: (colors: string[]) => void }) {
+function ProductsTableToolbar({ 
+  onAdd, 
+  allSizes, setAllSizes, allColors, setAllColors 
+}: { 
+  onAdd: () => void,
+  allSizes: string[], setAllSizes: (sizes: string[]) => void, 
+  allColors: string[], setAllColors: (colors: string[]) => void 
+}) {
   return (
     <>
       <Input
@@ -563,7 +678,10 @@ function ProductsTableToolbar({ allSizes, setAllSizes, allColors, setAllColors }
         className="h-8 w-[150px] lg:w-[250px]"
       />
       <div className="ml-auto flex items-center gap-2">
-        <AddProductDialog allSizes={allSizes} allColors={allColors} />
+        <Button size="sm" className="h-8" onClick={onAdd}>
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Add Product
+        </Button>
         <ManageAttributesDialog allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />
       </div>
     </>
@@ -573,7 +691,27 @@ function ProductsTableToolbar({ allSizes, setAllSizes, allColors, setAllColors }
 export function ProductsTable({ data }: ProductsTableProps) {
   const [allSizes, setAllSizes] = useState(INITIAL_SIZES);
   const [allColors, setAllColors] = useState(INITIAL_COLORS);
-  const columns = getColumns();
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  const handleEdit = (product: Product) => {
+    setSelectedProduct(product);
+    setIsEditOpen(true);
+  };
+  
+  const handleDelete = (product: Product) => {
+    setSelectedProduct(product);
+    setIsDeleteOpen(true);
+  };
+
+  const handleAdd = () => {
+    setSelectedProduct(null);
+    setIsEditOpen(true);
+  };
+
+  const columns = getColumns(handleEdit, handleDelete);
   
   const renderSubComponent = React.useCallback(({ row }: { row: Row<Product> }) => {
     return (
@@ -600,12 +738,26 @@ export function ProductsTable({ data }: ProductsTableProps) {
 
 
   return (
+    <>
     <DataTable 
       columns={columns} 
       data={data} 
-      toolbar={<ProductsTableToolbar allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />}
+      toolbar={<ProductsTableToolbar onAdd={handleAdd} allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />}
       getRowCanExpand={(row) => row.original.variants && row.original.variants.length > 0}
       renderSubComponent={renderSubComponent}
     />
+    <ProductEditDialog 
+        product={selectedProduct}
+        isOpen={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        allSizes={allSizes}
+        allColors={allColors}
+    />
+    <DeleteProductDialog
+        product={selectedProduct}
+        isOpen={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+    />
+    </>
   );
 }
