@@ -16,6 +16,17 @@ const fromFirestore = (doc: any): ProductFabric => {
   };
 };
 
+export async function getAllProductFabrics(): Promise<ProductFabric[]> {
+    try {
+        const snapshot = await getDocs(productFabricsCollection);
+        return snapshot.docs.map(fromFirestore);
+    } catch (error) {
+        console.error('Error getting all product-fabric relationships: ', error);
+        return [];
+    }
+}
+
+
 export async function getProductFabricsForProduct(productId: string): Promise<ProductFabric[]> {
   try {
     const q = query(productFabricsCollection, where('product_id', '==', productId));

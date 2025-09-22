@@ -46,7 +46,7 @@ export type Product = {
   category: string;
   created_at: string;
   variants: ProductVariant[];
-  fabrics?: ProductFabric[];
+  fabrics?: (ProductFabric & { name: string })[];
 };
 
 export type ProductFabric = {

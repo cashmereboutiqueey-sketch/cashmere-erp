@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
 import { ProductsTable } from '@/components/products/products-table';
 import { getProducts } from '@/services/product-service';
-import { Product } from '@/lib/types';
+import { getFabrics } from '@/services/fabric-service';
+import { getAllProductFabrics } from '@/services/product-fabric-service';
+import { Product, Fabric, ProductFabric } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProductsPage() {
@@ -12,13 +14,30 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchProductsData = async () => {
       setIsLoading(true);
-      const fetchedProducts = await getProducts();
-      setProducts(fetchedProducts);
+      const [fetchedProducts, allFabrics, allProductFabrics] = await Promise.all([
+        getProducts(),
+        getFabrics(),
+        getAllProductFabrics(),
+      ]);
+
+      const productsWithFabrics = fetchedProducts.map(product => {
+        const recipe = allProductFabrics.filter(pf => pf.product_id === product.id);
+        const resolvedFabrics = recipe.map(pf => {
+          const fabricInfo = allFabrics.find(f => f.id === pf.fabric_id);
+          return {
+            ...pf,
+            name: fabricInfo?.name || 'Unknown Fabric',
+          }
+        });
+        return { ...product, fabrics: resolvedFabrics };
+      });
+      
+      setProducts(productsWithFabrics);
       setIsLoading(false);
     };
-    fetchProducts();
+    fetchProductsData();
   }, []);
 
   return (

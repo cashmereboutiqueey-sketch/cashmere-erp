@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { Button, buttonVariants } from '../ui/button';
+import { buttonVariants, Button } from '../ui/button';
 import { MoreHorizontal, PlusCircle, ChevronDown, ChevronRight, Settings, Trash2 } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import Image from 'next/image';
@@ -36,7 +36,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Label } from '../ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
@@ -53,34 +52,13 @@ import { generateProductDescription } from '@/ai/flows/product-description-gener
 import { getFabrics } from '@/services/fabric-service';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Skeleton } from '../ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
 
 const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
-    const [productFabrics, setProductFabrics] = useState<ProductFabric[]>([]);
-    const [allFabrics, setAllFabrics] = useState<Fabric[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            const [fabricsForProduct, allFabricsData] = await Promise.all([
-                getProductFabricsForProduct(row.original.id),
-                getFabrics()
-            ]);
-            setProductFabrics(fabricsForProduct);
-            setAllFabrics(allFabricsData);
-            setIsLoading(false);
-        };
-        fetchData();
-    }, [row.original.id]);
-
-    const getFabricName = (fabricId: string) => {
-        return allFabrics.find(f => f.id === fabricId)?.name || 'Unknown Fabric';
-    }
-
     return (
         <TableCell colSpan={99} className='p-4 bg-muted/50'>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -124,12 +102,7 @@ const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
                  <div>
                     <h4 className="font-medium mb-2">Product Recipe (Bill of Materials)</h4>
                      <div className="rounded-md border">
-                         {isLoading ? (
-                            <div className="p-4 space-y-2">
-                                <Skeleton className="h-8 w-full" />
-                                <Skeleton className="h-8 w-full" />
-                            </div>
-                         ) : productFabrics.length > 0 ? (
+                         {row.original.fabrics && row.original.fabrics.length > 0 ? (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -138,9 +111,9 @@ const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {productFabrics.map(pf => (
+                                    {row.original.fabrics.map(pf => (
                                         <TableRow key={pf.fabric_id}>
-                                            <TableCell>{getFabricName(pf.fabric_id)}</TableCell>
+                                            <TableCell>{pf.name}</TableCell>
                                             <TableCell className="text-right">{pf.fabric_quantity_meters}m</TableCell>
                                         </TableRow>
                                     ))}
@@ -279,6 +252,38 @@ export const getColumns = (
     ),
     cell: ({ row }) => <Badge variant="outline">{row.original.category}</Badge>,
   },
+   {
+    id: 'fabrics',
+    accessorKey: 'fabrics',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Fabrics Used" />
+    ),
+    cell: ({ row }) => {
+        const fabrics = row.original.fabrics;
+        if (!fabrics || fabrics.length === 0) return <span className="text-muted-foreground text-xs">None</span>;
+        
+        const displayFabrics = fabrics.slice(0, 2);
+        const remainingCount = fabrics.length - displayFabrics.length;
+
+        return (
+            <div className="flex items-center gap-1">
+                {displayFabrics.map(f => <Badge key={f.fabric_id} variant="secondary">{f.name}</Badge>)}
+                {remainingCount > 0 && (
+                     <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <Badge variant="outline">+{remainingCount}</Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                {fabrics.slice(2).map(f => <p key={f.fabric_id}>{f.name}</p>)}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+            </div>
+        );
+    }
+   },
   {
     id: 'price',
     header: ({ column }) => (
