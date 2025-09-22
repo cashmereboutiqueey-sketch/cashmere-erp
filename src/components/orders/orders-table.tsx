@@ -41,6 +41,7 @@ const statusVariantMap: {
   processing: 'secondary',
   completed: 'default',
   cancelled: 'destructive',
+  sold_out: 'destructive',
 };
 
 const paymentStatusVariantMap: {
@@ -51,7 +52,7 @@ const paymentStatusVariantMap: {
   partially_paid: 'secondary',
 };
 
-const statuses: Order['status'][] = ['pending', 'processing', 'completed', 'cancelled'];
+const statuses: Order['status'][] = ['pending', 'processing', 'completed', 'cancelled', 'sold_out'];
 
 export function getColumns(
     onStatusChange: (orderId: string, status: Order['status']) => void,
@@ -90,7 +91,7 @@ export function getColumns(
             ),
             cell: ({ row }) => (
             <Badge variant={statusVariantMap[row.original.status]} className="capitalize">
-                {row.original.status}
+                {row.original.status.replace('_', ' ')}
             </Badge>
             ),
         },
@@ -151,7 +152,7 @@ export function getColumns(
                             <DropdownMenuSubContent>
                                 {statuses.map(status => (
                                     <DropdownMenuItem key={status} onClick={() => onStatusChange(order.id, status)}>
-                                        <span className="capitalize">{status}</span>
+                                        <span className="capitalize">{status.replace('_', ' ')}</span>
                                     </DropdownMenuItem>
                                 ))}
                             </DropdownMenuSubContent>

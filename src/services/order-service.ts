@@ -69,46 +69,55 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
       }
 
       // 2. Process logic: check stock, fabrics, and prepare updates
-      let allItemsInStock = true;
+      let finalOrderStatus: Order['status'] = 'processing';
       const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
       const stockUpdates = new Map<string, { ref: any, newVariants: ProductVariant[] }>();
+
+      // Pre-fetch all unique fabrics to avoid re-fetching inside the loop
+      const allRecipeItems = (await Promise.all(productIds.map(id => getProductFabricsForProduct(id)))).flat();
+      const uniqueFabricIds = [...new Set(allRecipeItems.map(item => item.fabric_id))];
+      const fabricRefs = uniqueFabricIds.map(id => doc(db, 'fabrics', id));
+      const fabricDocs = await Promise.all(fabricRefs.map(ref => transaction.get(ref)));
+      const fabricsMap = new Map<string, Fabric>();
+      fabricDocs.forEach(doc => {
+          if (doc.exists()) {
+              fabricsMap.set(doc.id, {id: doc.id, ...doc.data()} as Fabric);
+          }
+      });
+
 
       for (const item of orderData.items) {
         const productInfo = productsMap.get(item.productId);
         if (!productInfo) throw new Error(`Internal error: Product info for ${item.productId} not found.`);
 
-        // Use the latest version of variants if already in our update map
         const currentVariants = stockUpdates.get(item.productId)?.newVariants || productInfo.data.variants;
-        
         const variantIndex = currentVariants.findIndex(v => v.id === item.variant.id);
         if (variantIndex === -1) throw new Error(`Variant ${item.variant.id} not found for product ${item.productName}`);
         
         const variantToUpdate = currentVariants[variantIndex];
         
         if (variantToUpdate.stock_quantity >= item.quantity) {
-          // Item is in stock, prepare stock deduction
-          const newVariants = [...currentVariants];
-          newVariants[variantIndex] = { ...variantToUpdate, stock_quantity: variantToUpdate.stock_quantity - item.quantity };
-          stockUpdates.set(item.productId, { ref: productInfo.doc.ref, newVariants });
+          if (finalOrderStatus !== 'sold_out') {
+            const newVariants = [...currentVariants];
+            newVariants[variantIndex] = { ...variantToUpdate, stock_quantity: variantToUpdate.stock_quantity - item.quantity };
+            stockUpdates.set(item.productId, { ref: productInfo.doc.ref, newVariants });
+          }
         } else {
-          // Item is out of stock
-          allItemsInStock = false;
-          
-          // Check if we can produce it
+          finalOrderStatus = 'pending';
           const recipe = await getProductFabricsForProduct(productInfo.data.id);
           if (recipe.length === 0) {
-            console.warn(`Product ${productInfo.data.name} is out of stock and has no recipe. It cannot be produced.`);
-            continue; // Move to next item, this one can't be fulfilled
+             console.warn(`Product ${productInfo.data.name} is out of stock and has no recipe.`);
+             finalOrderStatus = 'sold_out';
+             break; // Stop processing further items if one is sold out
           }
 
           let canProduce = true;
           for (const recipeItem of recipe) {
-            const fabricRef = doc(db, 'fabrics', recipeItem.fabric_id);
-            const fabricDoc = await transaction.get(fabricRef); // Must read within transaction
-            if (!fabricDoc.exists() || (fabricDoc.data() as Fabric).length_in_meters < (recipeItem.fabric_quantity_meters * item.quantity)) {
+            const fabric = fabricsMap.get(recipeItem.fabric_id);
+            if (!fabric || fabric.length_in_meters < (recipeItem.fabric_quantity_meters * item.quantity)) {
               canProduce = false;
               console.warn(`Not enough fabric ${recipeItem.fabric_id} to produce ${productInfo.data.name}.`);
-              break; // Stop checking fabrics for this item
+              break;
             }
           }
 
@@ -117,37 +126,40 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
               product_id: item.productId,
               variant_id: item.variant.id,
               required_quantity: item.quantity,
-              sales_order_id: '', // Will be set later
+              sales_order_id: '',
               status: 'pending'
             });
+          } else {
+            finalOrderStatus = 'sold_out';
+            break; // Stop processing items, the order is sold out
           }
         }
       }
       
       // 3. Perform all writes
-      const finalOrderStatus: Order['status'] = allItemsInStock ? 'processing' : 'pending';
-
       const newOrderRef = doc(collection(db, 'orders'));
       transaction.set(newOrderRef, {
         ...orderData,
         status: finalOrderStatus,
         created_at: serverTimestamp(),
       });
-
-      // Apply stock updates
-      stockUpdates.forEach(update => {
-        transaction.update(update.ref, { variants: update.newVariants });
-      });
-
-      // Create production orders
-      productionOrdersToCreate.forEach(poData => {
-        const newProdOrderRef = doc(collection(db, 'production_orders'));
-        transaction.set(newProdOrderRef, {
-          ...poData,
-          sales_order_id: newOrderRef.id, // Link to the new sales order
-          created_at: serverTimestamp()
+      
+      // If the order is sold_out, we don't update stock or create production orders
+      if (finalOrderStatus !== 'sold_out') {
+        stockUpdates.forEach(update => {
+          transaction.update(update.ref, { variants: update.newVariants });
         });
-      });
+
+        productionOrdersToCreate.forEach(poData => {
+          const newProdOrderRef = doc(collection(db, 'production_orders'));
+          transaction.set(newProdOrderRef, {
+            ...poData,
+            sales_order_id: newOrderRef.id,
+            created_at: serverTimestamp()
+          });
+        });
+      }
+
 
       return newOrderRef.id;
     });

@@ -67,7 +67,7 @@ export type Order = {
   id: string;
   customer_id: string;
   customer?: Customer;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'sold_out';
   source: 'social' | 'shopify' | 'store';
   payment_status: 'paid' | 'unpaid' | 'partially_paid';
   payment_method?: 'cash' | 'card' | 'online';
