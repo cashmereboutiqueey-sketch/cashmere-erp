@@ -1,3 +1,4 @@
+
 import { FinancialSummaryCards } from '@/components/finance/financial-summary-cards';
 import { AddExpenseDialog } from '@/components/finance/add-expense-dialog';
 import { ProfitLossChart } from '@/components/finance/profit-loss-chart';
@@ -6,6 +7,7 @@ import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
 import { ChartOfAccounts } from '@/components/finance/chart-of-accounts';
 import { JournalVoucherDialog } from '@/components/finance/journal-voucher-dialog';
 import { Separator } from '@/components/ui/separator';
+import { BankDepositDialog } from '@/components/finance/bank-deposit-dialog';
 
 export default function FinancePage() {
   return (
@@ -13,6 +15,7 @@ export default function FinancePage() {
       <PageHeader>
         <PageHeaderHeading>Finance Dashboard</PageHeaderHeading>
         <div className="ml-auto flex items-center gap-2">
+            <BankDepositDialog />
             <JournalVoucherDialog />
             <AddExpenseDialog />
         </div>

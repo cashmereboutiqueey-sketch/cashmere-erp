@@ -26,7 +26,8 @@ import { capitalize } from 'string-ts';
 
 // Mock data for now. This will be replaced with a service call.
 const mockAccounts: Account[] = [
-    { id: '1', name: 'Cash', code: '1010', type: 'asset', balance: 50000 },
+    { id: '1', name: 'Cash on Hand', code: '1010', type: 'asset', balance: 50000 },
+    { id: '9', name: 'Bank Account', code: '1020', type: 'asset', balance: 150000 },
     { id: '2', name: 'Accounts Receivable', code: '1200', type: 'asset', balance: 15000 },
     { id: '3', name: 'Inventory', code: '1400', type: 'asset', balance: 75000 },
     { id: '4', name: 'Accounts Payable', code: '2010', type: 'liability', balance: 20000 },

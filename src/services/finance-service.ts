@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from './firebase';
@@ -9,7 +10,7 @@ import type { DateRange } from 'react-day-picker';
 const expensesCollection = collection(db, 'expenses');
 
 // Simplified journal entry logger
-const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
+export const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
     console.log(`-- JOURNAL ENTRY: ${description} --`);
     entries.forEach(entry => {
         console.log(`  ${entry.account}: Debit: ${entry.debit || 0}, Credit: ${entry.credit || 0}`);
