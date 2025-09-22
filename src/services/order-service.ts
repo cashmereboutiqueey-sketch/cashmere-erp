@@ -51,41 +51,54 @@ export async function getOrders(): Promise<Order[]> {
 export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'customer'>) {
   try {
     const newOrderId = await runTransaction(db, async (transaction) => {
-        // 1. Create the new order document
-        const newOrderRef = doc(collection(db, "orders"));
-        transaction.set(newOrderRef, {
-            ...orderData,
-            created_at: serverTimestamp(),
-        });
-
-        if (!orderData.items) return newOrderRef.id;
-
-        // 2. Update stock for each item in the order
+      // READ PHASE: Read all product documents first.
+      const productDocs = new Map<string, { doc: any, data: Product }>();
+      if (orderData.items) {
         for (const item of orderData.items) {
-            const productRef = doc(db, 'products', item.productId);
-            const productDoc = await transaction.get(productRef);
+          const productRef = doc(db, 'products', item.productId);
+          const productDoc = await transaction.get(productRef);
+          if (!productDoc.exists()) {
+            throw new Error(`Product with ID ${item.productId} not found.`);
+          }
+          productDocs.set(item.productId, { doc: productDoc, data: productDoc.data() as Product });
+        }
+      }
 
-            if (!productDoc.exists()) {
-                throw new Error(`Product with ID ${item.productId} not found.`);
-            }
+      // WRITE PHASE: Now perform all writes.
+      const newOrderRef = doc(collection(db, 'orders'));
+      transaction.set(newOrderRef, {
+        ...orderData,
+        created_at: serverTimestamp(),
+      });
 
-            const product = productDoc.data() as Product;
-            const variantIndex = product.variants.findIndex(v => v.id === item.variant.id);
+      if (!orderData.items) return newOrderRef.id;
 
-            if (variantIndex === -1) {
-                throw new Error(`Variant with SKU ${item.variant.sku} not found in product ${product.name}.`);
-            }
+      // Update stock for each item in the order
+      for (const item of orderData.items) {
+        const productInfo = productDocs.get(item.productId);
+        if (!productInfo) {
+          // This should not happen if the read phase was successful
+          throw new Error(`Product data for ID ${item.productId} was not pre-fetched.`);
+        }
+        
+        const product = { ...productInfo.data }; // Create a mutable copy
+        const productRef = doc(db, 'products', item.productId);
+        const variantIndex = product.variants.findIndex(v => v.id === item.variant.id);
 
-            const newStock = product.variants[variantIndex].stock_quantity - item.quantity;
-            if (newStock < 0) {
-                throw new Error(`Not enough stock for ${product.name} - ${item.variant.sku}. Required: ${item.quantity}, Available: ${product.variants[variantIndex].stock_quantity}`);
-            }
-
-            product.variants[variantIndex].stock_quantity = newStock;
-            transaction.update(productRef, { variants: product.variants });
+        if (variantIndex === -1) {
+          throw new Error(`Variant with SKU ${item.variant.sku} not found in product ${product.name}.`);
         }
 
-        return newOrderRef.id;
+        const newStock = product.variants[variantIndex].stock_quantity - item.quantity;
+        if (newStock < 0) {
+          throw new Error(`Not enough stock for ${product.name} - ${item.variant.sku}. Required: ${item.quantity}, Available: ${product.variants[variantIndex].stock_quantity}`);
+        }
+
+        product.variants[variantIndex].stock_quantity = newStock;
+        transaction.update(productRef, { variants: product.variants });
+      }
+
+      return newOrderRef.id;
     });
 
     revalidatePath('/orders');
