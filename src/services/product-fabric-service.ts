@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, query, where, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, serverTimestamp, writeBatch, doc } from 'firebase/firestore';
 import { ProductFabric } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
@@ -30,11 +30,6 @@ export async function getProductFabricsForProduct(productId: string): Promise<Pr
     console.error('Error getting product-fabric relationship: ', error);
     return [];
   }
-}
-
-export async function addProductFabric(data: Omit<ProductFabric, 'id'>, batch: any) {
-    const docRef = doc(collection(db, 'product_fabrics'));
-    batch.set(docRef, { ...data, createdAt: serverTimestamp() });
 }
 
 export async function addProductFabrics(productId: string, fabrics: Omit<ProductFabric, 'product_id'>[], batch: any) {
