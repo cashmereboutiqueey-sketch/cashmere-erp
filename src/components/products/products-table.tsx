@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, Row } from '@tanstack/react-table';
 import { Product, ProductVariant } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
@@ -28,7 +28,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { cn } from '@/lib/utils';
 import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
@@ -37,6 +36,8 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addProduct } from '@/services/product-service';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
+import { ScrollArea } from '../ui/scroll-area';
+import { generateProductDescription } from '@/ai/flows/product-description-generator';
 
 
 const findImage = (id: string) =>
@@ -66,8 +67,72 @@ const VariantRow = ({ variant }: { variant: ProductVariant }) => {
   );
 };
 
+const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
+    const { toast } = useToast();
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [description, setDescription] = useState('');
+    const [open, setOpen] = useState(false);
+    
+    // For this demo, we'll just use the first variant's details for generation
+    const firstVariant = product.variants[0];
 
-export const columns: ColumnDef<Product>[] = [
+    const handleGenerate = async () => {
+        if (!firstVariant) {
+             toast({ variant: "destructive", title: "No variants found for this product." });
+             return;
+        }
+
+        setIsGenerating(true);
+        setDescription('');
+        try {
+            const result = await generateProductDescription({
+                name: product.name,
+                category: product.category,
+                fabricCode: "F001" // Note: This is hardcoded as product-fabric relation is not yet defined
+            });
+            setDescription(result.description);
+        } catch (e) {
+            toast({ variant: "destructive", title: "Failed to generate description." });
+        } finally {
+            setIsGenerating(false);
+        }
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Generate Description</DropdownMenuItem>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Generate Product Description for {product.name}</DialogTitle>
+                     <DialogDescription>
+                        Use AI to generate a compelling product description.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4 space-y-4">
+                     {description ? (
+                         <div className="prose prose-sm text-sm text-muted-foreground border rounded-md p-4 bg-muted/50">
+                             <p>{description}</p>
+                         </div>
+                     ) : (
+                        <div className="flex items-center justify-center h-24 border rounded-md bg-muted/50">
+                            <p className="text-sm text-muted-foreground">
+                                {isGenerating ? "Generating..." : "Click the button to generate a description."}
+                            </p>
+                        </div>
+                     )}
+                     <Button onClick={handleGenerate} disabled={isGenerating}>
+                        {isGenerating ? "Generating..." : "Generate with AI"}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+};
+
+
+export const getColumns = (): ColumnDef<Product>[] => [
     {
     id: 'expander',
     header: () => null,
@@ -164,7 +229,7 @@ export const columns: ColumnDef<Product>[] = [
             <DropdownMenuContent align="end">
               <DropdownMenuItem>Edit</DropdownMenuItem>
               <DropdownMenuItem>Delete</DropdownMenuItem>
-              <DropdownMenuItem>Generate Description</DropdownMenuItem>
+              <ProductDescriptionGenerator product={row.original} />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -453,8 +518,9 @@ function ProductsTableToolbar({ allSizes, setAllSizes, allColors, setAllColors }
 export function ProductsTable({ data }: ProductsTableProps) {
   const [allSizes, setAllSizes] = useState(INITIAL_SIZES);
   const [allColors, setAllColors] = useState(INITIAL_COLORS);
+  const columns = getColumns();
   
-  const renderSubComponent = React.useCallback(({ row }: { row: Row<Product> }) => {
+  const renderSubComponent = React.useCallback(({ row }: { row: Product }) => {
     return (
         <TableCell colSpan={columns.length} className='p-0 bg-muted/50'>
           <Table>
@@ -483,7 +549,7 @@ export function ProductsTable({ data }: ProductsTableProps) {
       columns={columns} 
       data={data} 
       toolbar={<ProductsTableToolbar allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />}
-      getRowCanExpand={() => true}
+      getRowCanExpand={(row) => row.original.variants && row.original.variants.length > 0}
       renderSubComponent={renderSubComponent}
     />
   );
