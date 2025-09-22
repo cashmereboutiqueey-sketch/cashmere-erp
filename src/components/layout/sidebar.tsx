@@ -14,6 +14,7 @@ import {
   BarChart,
   DollarSign,
   MonitorPlay,
+  Package,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -61,7 +62,7 @@ const allMenuItems = [
   {
     href: '/shipping',
     label: 'Shipping',
-    icon: Truck,
+    icon: Package,
     roles: ['admin', 'sales', 'warehouse_manager'],
   },
   {

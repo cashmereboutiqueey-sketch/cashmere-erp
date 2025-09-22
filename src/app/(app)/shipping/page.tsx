@@ -1,35 +1,70 @@
 'use client';
 
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
-import { ShippingTable } from '@/components/shipping/shipping-table';
+import { ShippingDashboard } from '@/components/shipping/shipping-dashboard';
 import { getOrders } from '@/services/order-service';
-import { Order } from '@/lib/types';
+import { getCustomers } from '@/services/customer-service';
+import { Order, Customer } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
+export type ShippableCustomer = {
+  customer: Customer;
+  orders: Order[];
+}
+
 export default function ShippingPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [shippableCustomers, setShippableCustomers] = useState<ShippableCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
-        const fetchedOrders = await getOrders();
-        setOrders(fetchedOrders);
+        const [fetchedOrders, fetchedCustomers] = await Promise.all([
+            getOrders(),
+            getCustomers(),
+        ]);
+        
+        const shippableOrders = fetchedOrders.filter(o => 
+            (o.status === 'processing' || o.status === 'completed') &&
+            (o.shipping_status === 'ready_to_ship' || o.shipping_status === 'ready_for_pickup')
+        );
+        
+        const customersWithShippableOrders = shippableOrders.reduce((acc, order) => {
+            if (!order.customer_id) return acc;
+
+            if (!acc[order.customer_id]) {
+                const customer = fetchedCustomers.find(c => c.id === order.customer_id);
+                if (customer) {
+                    acc[order.customer_id] = {
+                        customer,
+                        orders: []
+                    };
+                }
+            }
+            if (acc[order.customer_id]) {
+                acc[order.customer_id].orders.push(order);
+            }
+            return acc;
+        }, {} as Record<string, ShippableCustomer>);
+
+
+        setShippableCustomers(Object.values(customersWithShippableOrders));
+
       } catch (error) {
-        console.error('Failed to fetch orders:', error);
+        console.error('Failed to fetch shipping data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchOrders();
+    fetchData();
   }, []);
 
   return (
     <>
       <PageHeader>
-        <PageHeaderHeading>Shipping & Fulfillment</PageHeaderHeading>
+        <PageHeaderHeading>Shipping Dashboard</PageHeaderHeading>
       </PageHeader>
       <div className="p-4 lg:p-6">
         {isLoading ? (
@@ -37,14 +72,14 @@ export default function ShippingPage() {
             <Skeleton className="h-10 w-full" />
             <div className="rounded-md border">
               <div className="space-y-2 p-4">
-                {[...Array(10)].map((_, i) => (
+                {[...Array(5)].map((_, i) => (
                   <Skeleton key={i} className="h-12 w-full" />
                 ))}
               </div>
             </div>
           </div>
         ) : (
-          <ShippingTable data={orders} />
+          <ShippingDashboard data={shippableCustomers} />
         )}
       </div>
     </>
