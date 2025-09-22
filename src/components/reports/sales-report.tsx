@@ -45,10 +45,9 @@ export function SalesReport() {
 
 
   useEffect(() => {
-    setDate({
-      from: subDays(new Date(), 29),
-      to: new Date(),
-    });
+    const today = new Date();
+    const from = subDays(today, 29);
+    setDate({ from, to: today });
     
     const fetchData = async () => {
         setIsLoading(true);

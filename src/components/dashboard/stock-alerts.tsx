@@ -35,19 +35,15 @@ export function StockAlerts() {
     const runAnalysis = async () => {
         setIsLoading(true);
         try {
-            // NOTE: In a real-world scenario, you'd fetch historical sales/usage data,
-            // not just current stock levels. For this demo, we'll use current stock as a proxy.
             const [products, fabrics] = await Promise.all([getProducts(), getFabrics()]);
 
             const productStockLevels = Object.fromEntries(products.map(p => [p.name, p.variants.reduce((sum, v) => sum + v.stock_quantity, 0)]));
             const fabricStockLevels = Object.fromEntries(fabrics.map(f => [f.code, f.length_in_meters]));
             
-            // Creating dummy historical data as this is not tracked yet.
-            const dummyProductSales = products.map(p => ({ name: p.name, units_sold_last_30_days: Math.floor(Math.random() * 50) }));
-            const dummyFabricUsage = fabrics.map(f => ({ code: f.code, meters_used_last_30_days: Math.floor(Math.random() * 100) }));
-
-            const productsCsv = toCsv(dummyProductSales, ['name', 'units_sold_last_30_days']);
-            const fabricsCsv = toCsv(dummyFabricUsage, ['code', 'meters_used_last_30_days']);
+            // In a real app, you would have historical sales data. 
+            // The AI prompt has been updated to handle cases where this might be sparse.
+            const productsCsv = toCsv(products, ['name', 'category']);
+            const fabricsCsv = toCsv(fabrics.map(f => ({ code: f.code, name: f.name, color: f.color})), ['code', 'name', 'color']);
 
             const result = await analyzeStockLevels({
                 productsData: productsCsv,

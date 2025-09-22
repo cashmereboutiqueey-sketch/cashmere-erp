@@ -86,7 +86,7 @@ export function InventoryReport() {
                     <TableCell className="text-right">
                        <Badge
                         variant={
-                          product.stock_quantity < product.min_stock_level
+                          product.stock_quantity < product.min_stock_level && product.min_stock_level > 0
                             ? 'destructive'
                             : 'outline'
                         }
@@ -123,7 +123,7 @@ export function InventoryReport() {
                     <TableCell className="text-right">
                        <Badge
                         variant={
-                          fabric.length_in_meters < fabric.min_stock_level
+                          fabric.length_in_meters < fabric.min_stock_level && fabric.min_stock_level > 0
                             ? 'destructive'
                             : 'outline'
                         }
