@@ -4,9 +4,12 @@ import { initializeApp, getApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  // Your web app's Firebase configuration will be populated here by Firebase Studio.
-  // If you are seeing this message in your local development environment,
-  // you may need to run the `firebase apps:sdkconfig web` command from the Firebase CLI.
+  "projectId": "studio-7227648350-99b40",
+  "appId": "1:87931520084:web:2e189c322a386b649419c1",
+  "apiKey": "AIzaSyAAdYOcnrxlwxZWP8qgDjky76CKw3nJKNc",
+  "authDomain": "studio-7227648350-99b40.firebaseapp.com",
+  "measurementId": "",
+  "messagingSenderId": "87931520084"
 };
 
 // Initialize Firebase
