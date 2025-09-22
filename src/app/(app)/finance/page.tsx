@@ -3,15 +3,16 @@ import { AddExpenseDialog } from '@/components/finance/add-expense-dialog';
 import { ProfitLossChart } from '@/components/finance/profit-loss-chart';
 import { RecentTransactions } from '@/components/finance/recent-transactions';
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { ChartOfAccounts } from '@/components/finance/chart-of-accounts';
+import { JournalVoucherDialog } from '@/components/finance/journal-voucher-dialog';
 
 export default function FinancePage() {
   return (
     <>
       <PageHeader>
         <PageHeaderHeading>Finance Dashboard</PageHeaderHeading>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+            <JournalVoucherDialog />
             <AddExpenseDialog />
         </div>
       </PageHeader>
@@ -24,6 +25,9 @@ export default function FinancePage() {
           <div className="lg:col-span-2">
             <RecentTransactions />
           </div>
+        </div>
+        <div>
+          <ChartOfAccounts />
         </div>
       </div>
     </>
