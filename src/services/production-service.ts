@@ -1,13 +1,14 @@
 'use server';
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, getDoc, query, orderBy, runTransaction } from 'firebase/firestore';
-import { ProductionOrder, Product, ProductVariant, Fabric } from '@/lib/types';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, getDoc, query, orderBy, runTransaction, where } from 'firebase/firestore';
+import { ProductionOrder, Product, ProductVariant, Fabric, ProductFabric } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { getProductFabricsForProduct } from './product-fabric-service';
 
 const productionOrdersCollection = collection(db, 'production_orders');
 const fabricsCollection = collection(db, 'fabrics');
+const productFabricsCollection = collection(db, 'product_fabrics');
 
 const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
   const data = docSnap.data();
@@ -78,19 +79,29 @@ export async function updateProductionOrderStatus(id: string, status: Production
             throw new Error("Production order not found.");
         }
         
-        const productionOrder = await fromFirestore(orderDoc);
-        
-        // Update the status of the production order
-        transaction.update(orderDocRef, {
-            status: status,
-            updatedAt: serverTimestamp()
-        });
+        const productionOrder = orderDoc.data() as Omit<ProductionOrder, 'id' | 'created_at'>;
+        const currentStatus = productionOrder.status;
 
-        // If status is 'done', deduct fabric
+        // Prevent re-processing a 'done' order or deducting fabric multiple times
+        if (currentStatus === 'done' && status === 'done') {
+            console.log("Order is already done. No action taken.");
+            return;
+        }
+        
+        // If status is changing to 'done', deduct fabric
         if (status === 'done' && productionOrder.product_id) {
-            const productFabrics = await getProductFabricsForProduct(productionOrder.product_id);
+            const productFabricsQuery = query(productFabricsCollection, where('product_id', '==', productionOrder.product_id));
+            const productFabricsSnapshot = await getDocs(productFabricsQuery); // This is now a regular query, not inside transaction.get
             
-            for (const pf of productFabrics) {
+            if (productFabricsSnapshot.empty) {
+                throw new Error(`No recipe found for product ID ${productionOrder.product_id}. Cannot deduct fabric.`);
+            }
+
+            const fabricUpdates: {ref: any, newStock: number, name: string, needed: number, available: number}[] = [];
+
+            // Read all fabric stocks first
+            for(const pfDoc of productFabricsSnapshot.docs) {
+                const pf = pfDoc.data() as ProductFabric;
                 const totalFabricNeeded = pf.fabric_quantity_meters * productionOrder.required_quantity;
                 const fabricDocRef = doc(db, 'fabrics', pf.fabric_id);
                 const fabricDoc = await transaction.get(fabricDocRef);
@@ -101,18 +112,36 @@ export async function updateProductionOrderStatus(id: string, status: Production
                 
                 const fabricData = fabricDoc.data() as Fabric;
                 const newStock = fabricData.length_in_meters - totalFabricNeeded;
-                
-                if (newStock < 0) {
-                    throw new Error(`Not enough stock for fabric ${fabricData.name}. Required: ${totalFabricNeeded}m, Available: ${fabricData.length_in_meters}m`);
-                }
 
-                transaction.update(fabricDocRef, { length_in_meters: newStock });
+                if (newStock < 0) {
+                     throw new Error(`Not enough stock for fabric ${fabricData.name}. Required: ${totalFabricNeeded}m, Available: ${fabricData.length_in_meters}m`);
+                }
+                
+                fabricUpdates.push({
+                    ref: fabricDocRef,
+                    newStock: newStock,
+                    name: fabricData.name,
+                    needed: totalFabricNeeded,
+                    available: fabricData.length_in_meters
+                });
+            }
+
+            // Perform all fabric updates
+            for (const update of fabricUpdates) {
+                transaction.update(update.ref, { length_in_meters: update.newStock });
             }
         }
+        
+        // Finally, update the status of the production order
+        transaction.update(orderDocRef, {
+            status: status,
+            updatedAt: serverTimestamp()
+        });
     });
 
     revalidatePath('/production');
     revalidatePath('/fabrics');
+    revalidatePath('/dashboard');
   } catch (error) {
     console.error('Error updating production order status: ', error);
     throw new Error(`Could not update production order status. ${error instanceof Error ? error.message : ''}`);
