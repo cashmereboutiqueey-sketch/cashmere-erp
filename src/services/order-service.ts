@@ -2,7 +2,7 @@
 
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction } from 'firebase/firestore';
-import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder } from '@/lib/types';
+import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVariant } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { getProductFabricsForProduct } from './product-fabric-service';
 
@@ -59,32 +59,44 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
       }
 
       const productDocs = new Map<string, { doc: any, data: Product }>();
-      for (const item of orderData.items) {
-        const productRef = doc(db, 'products', item.productId);
+      const productRefs = orderData.items.map(item => doc(db, 'products', item.productId));
+      // Firestore transactions require `getAll` which is not available in the web SDK,
+      // so we have to fetch one by one. This is a limitation we accept for now.
+      for (let i = 0; i < orderData.items.length; i++) {
+        const item = orderData.items[i];
+        const productRef = productRefs[i];
         const productDoc = await transaction.get(productRef);
         if (!productDoc.exists()) throw new Error(`Product with ID ${item.productId} not found.`);
         productDocs.set(item.productId, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
       }
 
       let finalOrderStatus: Order['status'] = 'pending';
-      let allItemsInStock = true;
       const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
+      const stockUpdates = new Map<string, ProductVariant[]>();
 
       for (const item of orderData.items) {
         const productInfo = productDocs.get(item.productId);
         if (!productInfo) throw new Error('Internal error: Product info not found in transaction map.');
-        const productData = productInfo.data;
-
-        const variant = productData.variants.find(v => v.id === item.variant.id);
-        if (!variant) throw new Error(`Variant not found for product ${item.productName}`);
         
-        if (variant.stock_quantity < item.quantity) {
-          allItemsInStock = false;
-          // Item is out of stock, check fabric availability.
-          const recipe = await getProductFabricsForProduct(productData.id);
+        const currentVariants = productInfo.data.variants;
+        const variantToUpdate = currentVariants.find(v => v.id === item.variant.id);
+        
+        if (!variantToUpdate) throw new Error(`Variant not found for product ${item.productName}`);
+        
+        if (variantToUpdate.stock_quantity >= item.quantity) {
+          // Item is in stock, prepare stock update
+          const updatedVariants = currentVariants.map(v => 
+            v.id === item.variant.id 
+              ? { ...v, stock_quantity: v.stock_quantity - item.quantity } 
+              : v
+          );
+          stockUpdates.set(item.productId, updatedVariants);
+        } else {
+          // Item is out of stock, try to produce it
+          const recipe = await getProductFabricsForProduct(productInfo.data.id);
           if (recipe.length === 0) {
-            console.warn(`Product ${productData.name} has no recipe. It cannot be produced.`);
-            continue; 
+            console.warn(`Product ${productInfo.data.name} is out of stock and has no recipe. It cannot be produced.`);
+            continue;
           }
 
           let canProduce = true;
@@ -93,23 +105,24 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
             const fabricDoc = await transaction.get(fabricRef);
             if (!fabricDoc.exists() || (fabricDoc.data() as Fabric).length_in_meters < (recipeItem.fabric_quantity_meters * item.quantity)) {
               canProduce = false;
-              console.warn(`Not enough fabric ${recipeItem.fabric_id} to produce ${productData.name}.`);
+              console.warn(`Not enough fabric ${recipeItem.fabric_id} to produce ${productInfo.data.name}.`);
               break;
             }
           }
+
           if (canProduce) {
             productionOrdersToCreate.push({
               product_id: item.productId,
               variant_id: item.variant.id,
               required_quantity: item.quantity,
-              sales_order_id: '', // Will be set after order is created
+              sales_order_id: '',
               status: 'pending'
             });
           }
         }
       }
 
-      if (allItemsInStock) {
+      if (stockUpdates.size === orderData.items.length) {
         finalOrderStatus = 'processing';
       }
 
@@ -121,23 +134,13 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         created_at: serverTimestamp(),
       });
 
-      // Update stock for all items
-      for (const item of orderData.items) {
-          const productInfo = productDocs.get(item.productId);
-          if (!productInfo) continue;
-          
-          const variantInStock = productInfo.data.variants.find(v => v.id === item.variant.id)?.stock_quantity ?? 0;
-          if (variantInStock >= item.quantity) {
-            const productRef = doc(db, 'products', item.productId);
-            const newVariants = productInfo.data.variants.map(v => 
-              v.id === item.variant.id 
-                ? { ...v, stock_quantity: v.stock_quantity - item.quantity } 
-                : v
-            );
-            transaction.update(productRef, { variants: newVariants });
-          }
+      // Apply stock updates
+      for (const [productId, updatedVariants] of stockUpdates.entries()) {
+        const productRef = doc(db, 'products', productId);
+        transaction.update(productRef, { variants: updatedVariants });
       }
 
+      // Create production orders
       for (const poData of productionOrdersToCreate) {
         const newProdOrderRef = doc(collection(db, 'production_orders'));
         transaction.set(newProdOrderRef, {
@@ -162,6 +165,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
     throw new Error('Could not add order. ' + (error instanceof Error ? error.message : ''));
   }
 }
+
 
 export async function addPaymentToOrder(orderId: string, amount: number) {
     try {
