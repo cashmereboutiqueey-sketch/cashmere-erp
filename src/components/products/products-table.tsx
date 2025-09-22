@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
+import { Button, buttonVariants } from '../ui/button';
 import { MoreHorizontal, PlusCircle, ChevronDown, ChevronRight, Settings, Trash2 } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import Image from 'next/image';
