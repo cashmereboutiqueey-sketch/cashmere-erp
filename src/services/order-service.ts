@@ -1,11 +1,12 @@
 'use server';
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc } from 'firebase/firestore';
-import { Order, Customer } from '@/lib/types';
+import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction } from 'firebase/firestore';
+import { Order, Customer, Product } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 const ordersCollection = collection(db, 'orders');
+const productsCollection = collection(db, 'products');
 
 const fromFirestore = async (doc: any): Promise<Order> => {
   const data = doc.data();
@@ -49,17 +50,56 @@ export async function getOrders(): Promise<Order[]> {
 
 export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'customer'>) {
   try {
-    const docRef = await addDoc(ordersCollection, {
-      ...orderData,
-      created_at: serverTimestamp(),
+    const newOrderId = await runTransaction(db, async (transaction) => {
+        // 1. Create the new order document
+        const newOrderRef = doc(collection(db, "orders"));
+        transaction.set(newOrderRef, {
+            ...orderData,
+            created_at: serverTimestamp(),
+        });
+
+        // 2. Find which products need to be updated
+        const productUpdates = new Map<string, { productRef: any, product: Product }>();
+        for (const item of orderData.items || []) {
+            const productsSnapshot = await getDocs(query(productsCollection, where('variants', 'array-contains', item.variant)));
+            if (!productsSnapshot.empty) {
+                const productDoc = productsSnapshot.docs[0];
+                if (!productUpdates.has(productDoc.id)) {
+                    productUpdates.set(productDoc.id, {
+                        productRef: productDoc.ref,
+                        product: { id: productDoc.id, ...productDoc.data() } as Product,
+                    });
+                }
+            }
+        }
+        
+        // 3. Update stock quantities for each product
+        for (const item of orderData.items || []) {
+            for (const [productId, { product, productRef }] of productUpdates.entries()) {
+                const variantIndex = product.variants.findIndex(v => v.id === item.variant.id);
+                if (variantIndex > -1) {
+                    const newStock = product.variants[variantIndex].stock_quantity - item.quantity;
+                    if (newStock < 0) {
+                        throw new Error(`Not enough stock for ${product.name} - ${item.variant.sku}.`);
+                    }
+                    product.variants[variantIndex].stock_quantity = newStock;
+                    transaction.update(productRef, { variants: product.variants });
+                    break; 
+                }
+            }
+        }
+        return newOrderRef.id;
     });
+
     revalidatePath('/orders');
     revalidatePath('/pos');
     revalidatePath('/dashboard');
-    return docRef.id;
+    revalidatePath('/products');
+
+    return newOrderId;
   } catch (error) {
-    console.error('Error adding order: ', error);
-    throw new Error('Could not add order');
+    console.error('Error adding order and updating stock: ', error);
+    throw new Error('Could not add order. ' + (error instanceof Error ? error.message : ''));
   }
 }
 
@@ -79,12 +119,39 @@ export async function updateOrderStatus(id: string, status: Order['status']) {
 }
 
 export async function deleteOrder(id: string) {
-  try {
-    const orderDoc = doc(db, 'orders', id);
-    await deleteDoc(orderDoc);
-    revalidatePath('/orders');
-  } catch (error) {
-    console.error('Error deleting order: ', error);
-    throw new Error('Could not delete order');
-  }
+    const orderDocRef = doc(db, 'orders', id);
+    try {
+        await runTransaction(db, async (transaction) => {
+            const orderDoc = await transaction.get(orderDocRef);
+            if (!orderDoc.exists()) {
+                throw new Error("Order does not exist!");
+            }
+            const orderData = orderDoc.data() as Order;
+
+            // Optional: Re-stock items when an order is deleted.
+            if (orderData.items) {
+                 for (const item of orderData.items) {
+                    const productsSnapshot = await getDocs(query(productsCollection, where('variants', 'array-contains', item.variant)));
+                     if (!productsSnapshot.empty) {
+                        const productDoc = productsSnapshot.docs[0];
+                        const product = { id: productDoc.id, ...productDoc.data() } as Product;
+                        const variantIndex = product.variants.findIndex(v => v.id === item.variant.id);
+                        if(variantIndex > -1) {
+                            product.variants[variantIndex].stock_quantity += item.quantity;
+                            transaction.update(productDoc.ref, { variants: product.variants });
+                        }
+                    }
+                }
+            }
+            
+            transaction.delete(orderDocRef);
+        });
+
+        revalidatePath('/orders');
+        revalidatePath('/products');
+
+    } catch (error) {
+        console.error("Error deleting order: ", error);
+        throw new Error("Could not delete order");
+    }
 }
