@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -14,12 +17,59 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserPlus } from 'lucide-react';
+import { addCustomer } from '@/services/customer-service';
+import { useToast } from '@/hooks/use-toast';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
+
+
+const customerSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  email: z.string().email({ message: "Invalid email address." }),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+});
+
+type CustomerFormData = z.infer<typeof customerSchema>;
+
 
 export function AddCustomerDialog() {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  const form = useForm<CustomerFormData>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+    },
+  });
+
+  const onSubmit = async (data: CustomerFormData) => {
+    try {
+      await addCustomer(data);
+      toast({
+        title: 'Success',
+        description: 'New customer has been added.',
+      });
+      setOpen(false);
+      form.reset();
+      // You might want to trigger a re-fetch of customers on the parent page
+      window.location.reload();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to add customer.',
+      });
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) form.reset();
+    }}>
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
           <UserPlus className="mr-2 h-4 w-4" />
@@ -33,38 +83,68 @@ export function AddCustomerDialog() {
             Enter the details for the new customer.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
-            <Input id="name" className="col-span-3" placeholder="e.g., Alia Hassan" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="email" className="text-right">
-              Email
-            </Label>
-            <Input id="email" type="email" className="col-span-3" placeholder="e.g., a.hassan@example.com" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="phone" className="text-right">
-              Phone
-            </Label>
-            <Input id="phone" className="col-span-3" placeholder="e.g., 555-123-4567" />
-          </div>
-           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="address" className="text-right">
-              Address
-            </Label>
-            <Input id="address" className="col-span-3" placeholder="e.g., 123 Main St, Anytown, USA" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={() => setOpen(false)}>Add Customer</Button>
-        </DialogFooter>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="col-span-3" placeholder="e.g., Alia Hassan" />
+                  </FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Email</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="email" className="col-span-3" placeholder="e.g., a.hassan@example.com" />
+                  </FormControl>
+                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Phone</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="col-span-3" placeholder="e.g., 555-123-4567" />
+                  </FormControl>
+                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Address</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="col-span-3" placeholder="e.g., 123 Main St, Anytown, USA" />
+                  </FormControl>
+                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? 'Adding...' : 'Add Customer'}
+                </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
 }
-
-    

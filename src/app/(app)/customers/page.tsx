@@ -1,21 +1,35 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CustomersTable } from '@/components/customers/customers-table';
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
-import { mockCustomers, mockOrders } from '@/lib/data';
+import { mockOrders } from '@/lib/data';
 import { Customer, Order } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { getCustomers } from '@/services/customer-service';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CustomersPage() {
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    mockCustomers[0]
-  );
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      setIsLoading(true);
+      const fetchedCustomers = await getCustomers();
+      setCustomers(fetchedCustomers);
+      if (fetchedCustomers.length > 0) {
+        setSelectedCustomer(fetchedCustomers[0]);
+      }
+      setIsLoading(false);
+    };
+    fetchCustomers();
+  }, []);
 
   const customerOrders = selectedCustomer
     ? mockOrders.filter((order) => order.customer_id === selectedCustomer.id)
@@ -49,18 +63,37 @@ export default function CustomersPage() {
       </PageHeader>
       <div className="grid md:grid-cols-3 gap-4 p-4 lg:p-6 flex-1">
         <div className="md:col-span-1">
-          <CustomersTable
-            data={mockCustomers}
-            onRowClick={setSelectedCustomer}
-            selectedCustomerId={selectedCustomer?.id}
-          />
+            {isLoading ? (
+                <div className="space-y-4">
+                    <Skeleton className="h-8 w-full" />
+                    <div className="rounded-md border">
+                        <div className="space-y-4 p-4">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                    <Skeleton className="h-10 w-10 rounded-full" />
+                                    <div className='space-y-2'>
+                                        <Skeleton className="h-4 w-[150px]" />
+                                        <Skeleton className="h-3 w-[100px]" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <CustomersTable
+                    data={customers}
+                    onRowClick={setSelectedCustomer}
+                    selectedCustomerId={selectedCustomer?.id}
+                />
+            )}
         </div>
         <div className="md:col-span-2">
           {selectedCustomer ? (
             <Card className="h-full">
               <CardHeader className="flex flex-row items-start gap-4 space-y-0">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedCustomer.avatarUrl} />
+                  {selectedCustomer.avatarUrl && <AvatarImage src={selectedCustomer.avatarUrl} />}
                   <AvatarFallback>{selectedCustomer.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="grid gap-1">
@@ -126,8 +159,12 @@ export default function CustomersPage() {
           ) : (
             <div className="flex items-center justify-center h-full rounded-lg border border-dashed shadow-sm">
                 <div className="text-center">
-                    <h3 className="text-2xl font-bold tracking-tight">Select a Customer</h3>
-                    <p className="text-sm text-muted-foreground">Click on a customer to view their details and order history.</p>
+                    <h3 className="text-2xl font-bold tracking-tight">
+                        {isLoading ? 'Loading Customers...' : 'No Customers Found'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                        {isLoading ? 'Please wait while we fetch your data.' : 'Add a new customer to get started.'}
+                    </p>
                 </div>
             </div>
           )}
