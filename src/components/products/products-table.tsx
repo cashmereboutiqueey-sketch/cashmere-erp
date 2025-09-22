@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { ColumnDef, Row } from '@tanstack/react-table';
-import { Product, ProductVariant } from '@/lib/types';
+import { Product, ProductVariant, Fabric } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { Badge } from '../ui/badge';
@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
-import { MoreHorizontal, PlusCircle, ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, ChevronDown, ChevronRight, Settings, Trash2 } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -38,6 +38,8 @@ import { addProduct } from '@/services/product-service';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { ScrollArea } from '../ui/scroll-area';
 import { generateProductDescription } from '@/ai/flows/product-description-generator';
+import { getFabrics } from '@/services/fabric-service';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 
 const findImage = (id: string) =>
@@ -257,10 +259,16 @@ const variantSchema = z.object({
     color: z.string().optional(),
 });
 
+const productFabricSchema = z.object({
+  fabric_id: z.string().min(1, "Fabric is required."),
+  fabric_quantity_meters: z.preprocess((val) => Number(val), z.number().min(0.1, "Quantity must be greater than 0.")),
+});
+
 const productSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   category: z.string().min(1, "Category is required"),
   variants: z.array(variantSchema).min(1, "At least one variant is required"),
+  fabrics: z.array(productFabricSchema).min(1, "At least one fabric is required for the recipe."),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -268,22 +276,29 @@ type ProductFormData = z.infer<typeof productSchema>;
 
 function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColors: string[] }) {
   const [open, setOpen] = useState(false);
+  const [availableFabrics, setAvailableFabrics] = useState<Fabric[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const { toast } = useToast();
 
   const methods = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-    defaultValues: { name: '', category: '', variants: [] },
+    defaultValues: { name: '', category: '', variants: [], fabrics: [] },
   });
   const { control, handleSubmit, setValue, watch, reset } = methods;
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "variants",
-  });
+  const { fields: variantFields } = useFieldArray({ control, name: "variants" });
+  const { fields: fabricFields, append: appendFabric, remove: removeFabric } = useFieldArray({ control, name: "fabrics" });
 
   const productName = watch("name");
+
+  useEffect(() => {
+    const fetchFabricsData = async () => {
+        const fabrics = await getFabrics();
+        setAvailableFabrics(fabrics);
+    }
+    fetchFabricsData();
+  }, []);
 
   useEffect(() => {
     if (!productName || selectedSizes.length === 0 || selectedColors.length === 0) {
@@ -348,16 +363,17 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
           Add Product
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Add New Product</DialogTitle>
           <DialogDescription>
-            Enter product details and select attributes to generate variants.
+            Enter product details, define its recipe, and select attributes to generate variants.
           </DialogDescription>
         </DialogHeader>
         <FormProvider {...methods}>
           <Form {...methods}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <ScrollArea className="h-[60vh] p-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={control} name="name" render={({ field }) => (
                   <FormItem>
@@ -374,42 +390,82 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
                   </FormItem>
                 )} />
               </div>
-              <div className="space-y-2">
-                <Label>Sizes</Label>
-                <div className="flex flex-wrap gap-2">
-                  {allSizes.map(size => (
-                    <Button key={size} type="button" variant={selectedSizes.includes(size) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(size, selectedSizes, setSelectedSizes)}>{size}</Button>
-                  ))}
+
+            <div className="space-y-2 pt-4">
+                <h3 className="text-lg font-medium">Product Recipe (Bill of Materials)</h3>
+                 {fabricFields.map((field, index) => (
+                    <div key={field.id} className="flex items-end gap-2 p-2 rounded-md border">
+                        <FormField control={control} name={`fabrics.${index}.fabric_id`} render={({ field }) => (
+                            <FormItem className="flex-1">
+                                <FormLabel>Fabric</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger><SelectValue placeholder="Select a fabric" /></SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {availableFabrics.map(fabric => <SelectItem key={fabric.id} value={fabric.id}>{fabric.name} ({fabric.color})</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                         <FormField control={control} name={`fabrics.${index}.fabric_quantity_meters`} render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Meters/pc</FormLabel>
+                                <FormControl><Input {...field} type="number" step="0.1" placeholder="e.g., 3.5" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeFabric(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                    </div>
+                ))}
+                 <Button type="button" size="sm" variant="outline" onClick={() => appendFabric({ fabric_id: '', fabric_quantity_meters: 0 })}>
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Fabric to Recipe
+                </Button>
+                <FormField control={control} name="fabrics" render={() => (<FormItem><FormMessage /></FormItem>)} />
+            </div>
+
+              <div className="space-y-2 pt-4">
+                <h3 className="text-lg font-medium">Variant Generation</h3>
+                <div className="space-y-2">
+                    <Label>Sizes</Label>
+                    <div className="flex flex-wrap gap-2">
+                    {allSizes.map(size => (
+                        <Button key={size} type="button" variant={selectedSizes.includes(size) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(size, selectedSizes, setSelectedSizes)}>{size}</Button>
+                    ))}
+                    </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Colors</Label>
-                <div className="flex flex-wrap gap-2">
-                  {allColors.map(color => (
-                    <Button key={color} type="button" variant={selectedColors.includes(color) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(color, selectedColors, setSelectedColors)}>{color}</Button>
-                  ))}
+                <div className="space-y-2">
+                    <Label>Colors</Label>
+                    <div className="flex flex-wrap gap-2">
+                    {allColors.map(color => (
+                        <Button key={color} type="button" variant={selectedColors.includes(color) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(color, selectedColors, setSelectedColors)}>{color}</Button>
+                    ))}
+                    </div>
                 </div>
               </div>
               
-              {fields.length > 0 && (
-                <div className="space-y-4">
+              {variantFields.length > 0 && (
+                <div className="space-y-4 pt-4">
                   <h3 className="text-lg font-medium">Generated Variants</h3>
-                  <ScrollArea className="h-64">
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead>Variant</TableHead>
                           <TableHead>SKU</TableHead>
                           <TableHead>Price</TableHead>
                           <TableHead>Stock</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {fields.map((field, index) => (
+                        {variantFields.map((field, index) => (
                           <TableRow key={field.id}>
                             <TableCell>
                                 <Badge variant="outline">{watch(`variants.${index}.size`)}</Badge>
                                 <Badge variant="outline" className="ml-1">{watch(`variants.${index}.color`)}</Badge>
-                                <Input {...control.register(`variants.${index}.sku`)} className="mt-1 h-8" />
+                            </TableCell>
+                            <TableCell>
+                                <Input {...control.register(`variants.${index}.sku`)} className="h-8" />
                             </TableCell>
                             <TableCell>
                                 <Input type="number" {...control.register(`variants.${index}.price`)} className="h-8" />
@@ -421,7 +477,6 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
                         ))}
                       </TableBody>
                     </Table>
-                  </ScrollArea>
                 </div>
               )}
                <FormField control={control} name="variants" render={() => (
@@ -429,7 +484,7 @@ function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColo
                     <FormMessage />
                   </FormItem>
                 )} />
-
+              </ScrollArea>
               <DialogFooter>
                 <Button type="submit">Add Product & Variants</Button>
               </DialogFooter>
@@ -520,7 +575,7 @@ export function ProductsTable({ data }: ProductsTableProps) {
   const [allColors, setAllColors] = useState(INITIAL_COLORS);
   const columns = getColumns();
   
-  const renderSubComponent = React.useCallback(({ row }: { row: Product }) => {
+  const renderSubComponent = React.useCallback(({ row }: { row: Row<Product> }) => {
     return (
         <TableCell colSpan={columns.length} className='p-0 bg-muted/50'>
           <Table>
@@ -541,7 +596,7 @@ export function ProductsTable({ data }: ProductsTableProps) {
           </Table>
         </TableCell>
     );
-  }, []);
+  }, [columns.length]);
 
 
   return (

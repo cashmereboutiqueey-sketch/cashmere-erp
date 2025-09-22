@@ -2,8 +2,9 @@
 
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Product, ProductVariant } from '@/lib/types';
+import { Product, ProductFabric } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
+import { addProductFabrics } from './product-fabric-service';
 
 const productsCollection = collection(db, 'products');
 
@@ -28,7 +29,7 @@ export async function getProducts(): Promise<Product[]> {
   }
 }
 
-export async function addProduct(productData: Omit<Product, 'id' | 'created_at'>) {
+export async function addProduct(productData: Omit<Product, 'id' | 'created_at'> & { fabrics: Omit<ProductFabric, 'product_id'>[] }) {
   try {
     const batch = writeBatch(db);
     
@@ -38,17 +39,23 @@ export async function addProduct(productData: Omit<Product, 'id' | 'created_at'>
         id: doc(collection(db, 'products')).id // Generate a new unique ID
     }));
 
-    const docRef = doc(productsCollection);
-    batch.set(docRef, {
-      ...productData,
+    const newProductRef = doc(productsCollection);
+    batch.set(newProductRef, {
+      name: productData.name,
+      category: productData.category,
       variants: variantsWithIds,
       created_at: serverTimestamp(),
     });
 
+    // Add product-fabric relationships
+    if (productData.fabrics && productData.fabrics.length > 0) {
+        await addProductFabrics(newProductRef.id, productData.fabrics, batch);
+    }
+
     await batch.commit();
 
     revalidatePath('/products');
-    return docRef.id;
+    return newProductRef.id;
   } catch (error) {
     console.error('Error adding product: ', error);
     throw new Error('Could not add product');
