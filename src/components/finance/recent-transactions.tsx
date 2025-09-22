@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -13,10 +16,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockOrders, mockPayables, mockExpenses } from '@/lib/data';
+import { mockPayables, mockExpenses } from '@/lib/data';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import { capitalize } from 'string-ts';
+import { Order } from '@/lib/types';
+import { getOrders } from '@/services/order-service';
+import { Skeleton } from '../ui/skeleton';
+
 
 type Transaction = {
     id: string;
@@ -27,7 +34,20 @@ type Transaction = {
 }
 
 export function RecentTransactions() {
-    const revenueTransactions: Transaction[] = mockOrders
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchOrders = async () => {
+            setIsLoading(true);
+            const fetchedOrders = await getOrders();
+            setOrders(fetchedOrders);
+            setIsLoading(false);
+        };
+        fetchOrders();
+    }, []);
+
+    const revenueTransactions: Transaction[] = orders
         .filter(o => o.status === 'completed')
         .map(order => ({
             id: order.id,
@@ -74,30 +94,44 @@ export function RecentTransactions() {
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[340px]">
-            <Table>
-            <TableHeader>
-                <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {allTransactions.map((transaction) => (
-                <TableRow key={transaction.id}>
-                    <TableCell>
-                        <div className="font-medium">{transaction.description}</div>
-                        <div className="text-sm text-muted-foreground">{new Date(transaction.date).toLocaleDateString()}</div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <Badge variant={transaction.type === 'revenue' ? 'default': 'destructive'}>
-                            {transaction.type === 'revenue' ? '+' : '-'}
-                            {formatCurrency(transaction.amount)}
-                        </Badge>
-                    </TableCell>
-                </TableRow>
-                ))}
-            </TableBody>
-            </Table>
+            {isLoading ? (
+                <div className="space-y-4">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                            <div>
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-3 w-16 mt-1" />
+                            </div>
+                            <Skeleton className="h-6 w-20 rounded-full" />
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {allTransactions.map((transaction) => (
+                    <TableRow key={transaction.id}>
+                        <TableCell>
+                            <div className="font-medium">{transaction.description}</div>
+                            <div className="text-sm text-muted-foreground">{new Date(transaction.date).toLocaleDateString()}</div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <Badge variant={transaction.type === 'revenue' ? 'default': 'destructive'}>
+                                {transaction.type === 'revenue' ? '+' : '-'}
+                                {formatCurrency(transaction.amount)}
+                            </Badge>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            )}
         </ScrollArea>
       </CardContent>
     </Card>

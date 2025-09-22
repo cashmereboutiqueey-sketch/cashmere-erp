@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,13 +18,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockOrders, mockOrderItems, mockProducts } from '@/lib/data';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Order, Product, ProductVariant, OrderItem } from '@/lib/types';
+import { Order, Product, ProductVariant } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { getOrders } from '@/services/order-service';
+import { getProducts } from '@/services/product-service';
+import { Skeleton } from '../ui/skeleton';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -38,15 +39,31 @@ type ProductSalesData = {
 
 export function SalesReport() {
   const [date, setDate] = useState<DateRange | undefined>();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
 
   useEffect(() => {
     setDate({
       from: subDays(new Date(), 29),
       to: new Date(),
     });
+    
+    const fetchData = async () => {
+        setIsLoading(true);
+        const [fetchedOrders, fetchedProducts] = await Promise.all([
+            getOrders(),
+            getProducts()
+        ]);
+        setOrders(fetchedOrders);
+        setProducts(fetchedProducts);
+        setIsLoading(false);
+    };
+    fetchData();
   }, []);
 
-  const filteredOrders = mockOrders.filter((order) => {
+  const filteredOrders = orders.filter((order) => {
     if (!date?.from || !date?.to) return true;
     const orderDate = new Date(order.created_at);
     return orderDate >= date.from && orderDate <= date.to;
@@ -55,17 +72,13 @@ export function SalesReport() {
   const completedOrders = filteredOrders.filter(o => o.status === 'completed');
 
   const productSales = completedOrders.reduce((acc, order) => {
-    const itemsInOrder = mockOrderItems.filter(item => item.order_id === order.id);
-    
-    itemsInOrder.forEach(item => {
+    order.items?.forEach(item => {
       let product: Product | undefined;
-      let variant: ProductVariant | undefined;
 
-      for (const p of mockProducts) {
-        const v = p.variants.find(v => v.id === item.product_id);
+      for (const p of products) {
+        const v = p.variants.find(v => v.id === item.variant.id);
         if (v) {
           product = p;
-          variant = v;
           break;
         }
       }
@@ -79,7 +92,7 @@ export function SalesReport() {
           };
         }
         acc[product.id].unitsSold += item.quantity;
-        acc[product.id].totalRevenue += item.subtotal;
+        acc[product.id].totalRevenue += item.quantity * item.variant.price;
       }
     });
     return acc;
@@ -141,94 +154,109 @@ export function SalesReport() {
         </Popover>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-              }).format(totalRevenue)}
+       {isLoading ? (
+        <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-3">
+                <Card><CardHeader><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-6 w-32" /><Skeleton className="h-3 w-40 mt-1" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-6 w-32" /><Skeleton className="h-3 w-40 mt-1" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-4 w-24" /></CardHeader><CardContent><Skeleton className="h-6 w-32" /><Skeleton className="h-3 w-40 mt-1" /></CardContent></Card>
             </div>
-            <p className="text-xs text-muted-foreground">
-              From completed orders in selected period
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Units Sold</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalUnitsSold}</div>
-             <p className="text-xs text-muted-foreground">
-              In selected period
-            </p>
-          </CardContent>
-        </Card>
-         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Best Seller</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold truncate">{bestSeller?.product.name || 'N/A'}</div>
-            <p className="text-xs text-muted-foreground">
-              Top product by revenue in period
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div>
-        <h3 className="text-lg font-medium mb-2">Sales by Product</h3>
-        <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product</TableHead>
-              <TableHead className="text-right">Units Sold</TableHead>
-              <TableHead className="text-right">Total Revenue</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {productSalesArray.length > 0 ? (
-              productSalesArray.map(({ product, unitsSold, totalRevenue }) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">
-                     <div className="flex items-center gap-2">
-                        <Image
-                            src={findImage(product.id) || "https://picsum.photos/seed/placeholder/40/40"}
-                            alt={product.name}
-                            width={40}
-                            height={40}
-                            className="rounded-md"
-                        />
-                        <span className="font-medium">{product.name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">{unitsSold}</TableCell>
-                  <TableCell className="text-right">
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                    }).format(totalRevenue)}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center">
-                  No sales found for the selected period.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            <div className="rounded-md border p-4 space-y-2">
+                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+            </div>
         </div>
-      </div>
+      ) : (
+      <>
+        <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">
+                {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                }).format(totalRevenue)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                From completed orders in selected period
+                </p>
+            </CardContent>
+            </Card>
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Units Sold</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{totalUnitsSold}</div>
+                <p className="text-xs text-muted-foreground">
+                In selected period
+                </p>
+            </CardContent>
+            </Card>
+            <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Best Seller</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold truncate">{bestSeller?.product.name || 'N/A'}</div>
+                <p className="text-xs text-muted-foreground">
+                Top product by revenue in period
+                </p>
+            </CardContent>
+            </Card>
+        </div>
+
+        <div>
+            <h3 className="text-lg font-medium mb-2">Sales by Product</h3>
+            <div className="rounded-md border">
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead className="text-right">Units Sold</TableHead>
+                <TableHead className="text-right">Total Revenue</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {productSalesArray.length > 0 ? (
+                productSalesArray.map(({ product, unitsSold, totalRevenue }) => (
+                    <TableRow key={product.id}>
+                    <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                            <Image
+                                src={findImage(product.id) || "https://picsum.photos/seed/placeholder/40/40"}
+                                alt={product.name}
+                                width={40}
+                                height={40}
+                                className="rounded-md"
+                            />
+                            <span className="font-medium">{product.name}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell className="text-right">{unitsSold}</TableCell>
+                    <TableCell className="text-right">
+                        {new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        }).format(totalRevenue)}
+                    </TableCell>
+                    </TableRow>
+                ))
+                ) : (
+                <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                    No sales found for the selected period.
+                    </TableCell>
+                </TableRow>
+                )}
+            </TableBody>
+            </Table>
+            </div>
+        </div>
+      </>
+      )}
     </div>
   );
 }

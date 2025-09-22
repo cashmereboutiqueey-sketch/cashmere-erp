@@ -14,7 +14,6 @@ import { Button } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
-import { mockSuppliers } from '@/lib/data';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +31,13 @@ import {
 } from '@/components/ui/select';
 import { Label } from '../ui/label';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useToast } from '@/hooks/use-toast';
+import { addFabric } from '@/services/fabric-service';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
+
 
 type FabricWithSupplier = Fabric & { supplier?: Supplier };
 
@@ -91,7 +97,7 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
       <DataTableColumnHeader column={column} title="Cost/meter" />
     ),
     cell: ({ row }) => {
-       const amount = parseFloat(row.getValue('price_per_meter'));
+       const amount = parseFloat(row.getValue('price_per_meter') as any);
         const formatted = new Intl.NumberFormat('en-US', {
             style: 'currency',
             currency: 'USD',
@@ -100,7 +106,7 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
     },
   },
   {
-    accessorKey: 'supplier',
+    accessorKey: 'supplier.name',
     header: 'Supplier',
     cell: ({ row }) => {
       return <div>{row.original.supplier?.name || 'N/A'}</div>;
@@ -135,13 +141,61 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
 
 interface FabricsTableProps {
   data: FabricWithSupplier[];
+  suppliers: Supplier[];
 }
 
-function AddFabricDialog() {
+const fabricSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  code: z.string().min(1, "Code is required"),
+  color: z.string().min(1, "Color is required"),
+  length_in_meters: z.preprocess(val => Number(val), z.number().min(0)),
+  price_per_meter: z.preprocess(val => Number(val), z.number().min(0)),
+  min_stock_level: z.preprocess(val => Number(val), z.number().min(0)),
+  supplier_id: z.string().min(1, "Supplier is required"),
+});
+
+type FabricFormData = z.infer<typeof fabricSchema>;
+
+function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  const form = useForm<FabricFormData>({
+    resolver: zodResolver(fabricSchema),
+    defaultValues: {
+      name: '',
+      code: '',
+      color: '',
+      length_in_meters: 0,
+      price_per_meter: 0,
+      min_stock_level: 0,
+      supplier_id: '',
+    },
+  });
+
+  const onSubmit = async (data: FabricFormData) => {
+    try {
+      await addFabric(data);
+      toast({
+        title: 'Success',
+        description: 'New fabric has been added.',
+      });
+      setOpen(false);
+      form.reset();
+      window.location.reload(); 
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to add fabric.',
+      });
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) form.reset();
+    }}>
       <DialogTrigger asChild>
         <Button size="sm" className="h-8">
           <PlusCircle className="mr-2 h-4 w-4" />
@@ -152,70 +206,123 @@ function AddFabricDialog() {
         <DialogHeader>
           <DialogTitle>Add New Fabric</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
-            <Input id="name" className="col-span-3" placeholder="e.g., Silk" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="code" className="text-right">
-              Code
-            </Label>
-            <Input id="code" className="col-span-3" placeholder="e.g., F007" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="color" className="text-right">
-              Color
-            </Label>
-            <Input id="color" className="col-span-3" placeholder="e.g., Emerald Green" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="stock" className="text-right">
-              Initial Stock (m)
-            </Label>
-            <Input id="stock" type="number" className="col-span-3" placeholder="e.g., 100" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="supplier" className="text-right">
-              Supplier
-            </Label>
-            <Select>
-              <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a supplier" />
-              </SelectTrigger>
-              <SelectContent>
-                {mockSuppliers.map((supplier) => (
-                  <SelectItem key={supplier.id} value={supplier.id}>
-                    {supplier.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="price" className="text-right">
-              Price/meter
-            </Label>
-            <Input id="price" type="number" className="col-span-3" placeholder="e.g., 25.50" />
-          </div>
-           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="min-stock" className="text-right">
-              Min. Stock (m)
-            </Label>
-            <Input id="min-stock" type="number" className="col-span-3" placeholder="e.g., 20" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={() => setOpen(false)}>Add Fabric</Button>
-        </DialogFooter>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+             <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="col-span-3" placeholder="e.g., Silk" />
+                  </FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="code"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Code</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="col-span-3" placeholder="e.g., F007" />
+                  </FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="color"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Color</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="col-span-3" placeholder="e.g., Emerald Green" />
+                  </FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="length_in_meters"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Initial Stock (m)</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="number" className="col-span-3" placeholder="e.g., 100" />
+                  </FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="price_per_meter"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Price/meter</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="number" className="col-span-3" placeholder="e.g., 25.50" />
+                  </FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="min_stock_level"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Min. Stock (m)</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="number" className="col-span-3" placeholder="e.g., 20" />
+                  </FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="supplier_id"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Supplier</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select a supplier" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {suppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? 'Adding...' : 'Add Fabric'}
+                </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
 }
 
-function FabricsTableToolbar() {
+function FabricsTableToolbar({ suppliers }: { suppliers: Supplier[] }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -224,7 +331,7 @@ function FabricsTableToolbar() {
         className="h-8 w-[150px] lg:w-[250px]"
       />
       <div className="ml-auto flex items-center gap-2">
-        <AddFabricDialog />
+        <AddFabricDialog suppliers={suppliers} />
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline" className="h-8">
@@ -246,7 +353,7 @@ function FabricsTableToolbar() {
                     <SelectValue placeholder="Select a supplier" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mockSuppliers.map((supplier) => (
+                    {suppliers.map((supplier) => (
                       <SelectItem key={supplier.id} value={supplier.id}>
                         {supplier.name}
                       </SelectItem>
@@ -285,8 +392,8 @@ function FabricsTableToolbar() {
   );
 }
 
-export function FabricsTable({ data }: FabricsTableProps) {
+export function FabricsTable({ data, suppliers }: FabricsTableProps) {
   return (
-    <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar />} />
+    <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar suppliers={suppliers} />} />
   );
 }

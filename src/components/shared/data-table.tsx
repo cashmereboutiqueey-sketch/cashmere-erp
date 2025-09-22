@@ -16,6 +16,7 @@ import {
   getExpandedRowModel,
   useReactTable,
   Row,
+  ExpandedState,
 } from '@tanstack/react-table';
 
 import {
@@ -35,6 +36,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   toolbar?: React.ReactNode;
   renderSubComponent?: (props: { row: Row<TData> }) => React.ReactElement;
+  getRowCanExpand?: (row: Row<TData>) => boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -42,6 +44,7 @@ export function DataTable<TData, TValue>({
   data,
   toolbar,
   renderSubComponent,
+  getRowCanExpand
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
@@ -49,7 +52,7 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>([]);
   const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [expanded, setExpanded] = React.useState({});
+  const [expanded, setExpanded] = React.useState<ExpandedState>({});
 
   const table = useReactTable({
     data,
@@ -74,6 +77,7 @@ export function DataTable<TData, TValue>({
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getExpandedRowModel: getExpandedRowModel(),
+    getRowCanExpand,
   });
 
   return (

@@ -74,6 +74,10 @@ export type Order = {
   payment_status: 'paid' | 'unpaid';
   total_amount: number;
   created_at: string;
+  items?: {
+      variant: ProductVariant;
+      quantity: number;
+  }[]
 };
 
 export type OrderItem = {
@@ -88,7 +92,10 @@ export type OrderItem = {
 export type ProductionOrder = {
   id: string;
   product_id: string;
+  variant_id: string;
   product?: Product;
+  variant?: ProductVariant;
+  sales_order_id?: string | null;
   required_quantity: number;
   status: 'pending' | 'in_progress' | 'done';
   created_at: string;

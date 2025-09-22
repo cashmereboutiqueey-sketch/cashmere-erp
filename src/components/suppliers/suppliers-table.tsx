@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { Supplier, Payable } from '@/lib/types';
+import { Supplier } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import {
@@ -14,17 +14,19 @@ import { Button } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
-import { mockPayables } from '@/lib/data';
+import { addSupplier } from '@/services/supplier-service';
+import { useToast } from '@/hooks/use-toast';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
+
 
 type SupplierWithPayables = Supplier & {
   amount_owed: number;
 };
-
-const calculateAmountOwed = (supplierId: string): number => {
-  return mockPayables
-    .filter(p => p.supplier_id === supplierId && p.status === 'unpaid')
-    .reduce((total, p) => total + p.amount, 0);
-}
 
 export const columns: ColumnDef<SupplierWithPayables>[] = [
   {
@@ -103,8 +105,97 @@ export const columns: ColumnDef<SupplierWithPayables>[] = [
 ];
 
 interface SuppliersTableProps {
-  data: Supplier[];
+  data: SupplierWithPayables[];
 }
+
+
+const supplierSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
+  email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
+  phone: z.string().optional(),
+});
+
+type SupplierFormData = z.infer<typeof supplierSchema>;
+
+
+function AddSupplierDialog() {
+  const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  const form = useForm<SupplierFormData>({
+    resolver: zodResolver(supplierSchema),
+    defaultValues: { name: '', email: '', phone: '' },
+  });
+
+  const onSubmit = async (data: SupplierFormData) => {
+    try {
+      await addSupplier(data);
+      toast({
+        title: 'Success',
+        description: 'New supplier has been added.',
+      });
+      setOpen(false);
+      form.reset();
+      window.location.reload();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to add supplier.',
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) form.reset();
+    }}>
+      <DialogTrigger asChild>
+         <Button size="sm" className="h-8 ml-auto">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Supplier
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Add New Supplier</DialogTitle>
+          <DialogDescription>Enter the details for the new supplier.</DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+            <FormField control={form.control} name="name" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Name</FormLabel>
+                  <FormControl><Input {...field} className="col-span-3" /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+            )}/>
+             <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Email</FormLabel>
+                  <FormControl><Input {...field} type="email" className="col-span-3" /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+            )}/>
+             <FormField control={form.control} name="phone" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Phone</FormLabel>
+                  <FormControl><Input {...field} className="col-span-3" /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+            )}/>
+            <DialogFooter>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? 'Adding...' : 'Add Supplier'}
+                </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function SuppliersTableToolbar() {
   return (
@@ -113,18 +204,13 @@ function SuppliersTableToolbar() {
         placeholder="Filter suppliers..."
         className="h-8 w-[150px] lg:w-[250px]"
       />
-      <Button size="sm" className="h-8 ml-auto">
-        <PlusCircle className="mr-2 h-4 w-4" />
-        Add Supplier
-      </Button>
+      <div className="ml-auto">
+        <AddSupplierDialog />
+      </div>
     </>
   );
 }
 
 export function SuppliersTable({ data }: SuppliersTableProps) {
-    const dataWithPayables = data.map(supplier => ({
-        ...supplier,
-        amount_owed: calculateAmountOwed(supplier.id),
-    }))
-  return <DataTable columns={columns} data={dataWithPayables} toolbar={<SuppliersTableToolbar />} />;
+  return <DataTable columns={columns} data={data} toolbar={<SuppliersTableToolbar />} />;
 }

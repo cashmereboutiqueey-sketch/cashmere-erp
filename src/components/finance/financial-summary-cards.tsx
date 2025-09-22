@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -5,10 +8,27 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { DollarSign, TrendingUp, TrendingDown, CircleDollarSign, Landmark } from 'lucide-react';
-import { mockOrders, mockPayables, mockExpenses } from '@/lib/data';
+import { getOrders } from '@/services/order-service';
+import { Order } from '@/lib/types';
+// TODO: Replace with services
+import { mockPayables, mockExpenses } from '@/lib/data';
+import { Skeleton } from '../ui/skeleton';
 
 export function FinancialSummaryCards() {
-    const totalRevenue = mockOrders
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchOrders = async () => {
+            setIsLoading(true);
+            const fetchedOrders = await getOrders();
+            setOrders(fetchedOrders);
+            setIsLoading(false);
+        };
+        fetchOrders();
+    }, []);
+
+    const totalRevenue = orders
         .filter(order => order.status === 'completed')
         .reduce((sum, order) => sum + order.total_amount, 0);
 
@@ -33,6 +53,28 @@ export function FinancialSummaryCards() {
             currency: 'USD',
         }).format(amount);
     }
+    
+    const CardSkeleton = () => (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+                <Skeleton className="h-7 w-28" />
+                <Skeleton className="h-3 w-32 mt-1" />
+            </CardContent>
+        </Card>
+    );
+
+    if(isLoading) {
+        return (
+            <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3 xl:grid-cols-6">
+                {[...Array(6)].map((_, i) => <CardSkeleton key={i} />)}
+            </div>
+        );
+    }
+
 
   return (
     <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3 xl:grid-cols-6">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { Product, ProductVariant } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
@@ -28,10 +28,16 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { cn } from '@/lib/utils';
+import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useToast } from '@/hooks/use-toast';
+import { addProduct } from '@/services/product-service';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
+
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -66,19 +72,20 @@ export const columns: ColumnDef<Product>[] = [
     id: 'expander',
     header: () => null,
     cell: ({ row }) => {
+      const canExpand = row.original.variants && row.original.variants.length > 0;
       return (
         <div className="flex items-center">
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => row.toggleSelected(!row.getIsSelected())}>
-              {row.getIsSelected() ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              <span className="sr-only">Toggle variants</span>
-            </Button>
-          </CollapsibleTrigger>
+            {canExpand && (
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => row.toggleExpanded(!row.getIsExpanded())}>
+                    {row.getIsExpanded() ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    <span className="sr-only">Toggle variants</span>
+                </Button>
+            )}
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
-            className="ml-2"
+            className={cn(!canExpand && "ml-8")}
           />
         </div>
       );
@@ -121,6 +128,7 @@ export const columns: ColumnDef<Product>[] = [
     ),
     cell: ({ row }) => {
       const prices = row.original.variants.map(v => v.price);
+      if(prices.length === 0) return 'N/A';
       const min = Math.min(...prices);
       const max = Math.max(...prices);
       const format = (amount: number) => new Intl.NumberFormat('en-US', {
@@ -144,7 +152,6 @@ export const columns: ColumnDef<Product>[] = [
   {
     id: 'actions',
     cell: ({ row }) => {
-      const product = row.original;
       return (
         <div className="text-right">
           <DropdownMenu>
@@ -173,127 +180,197 @@ interface ProductsTableProps {
 const INITIAL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 const INITIAL_COLORS = ["Black", "White", "Gray", "Navy", "Beige", "Gold", "Rose Gold", "Blue"];
 
+const variantSchema = z.object({
+    id: z.string().optional(),
+    sku: z.string().min(1, "SKU is required"),
+    price: z.preprocess((val) => Number(val), z.number().min(0)),
+    cost: z.preprocess((val) => Number(val), z.number().min(0)),
+    stock_quantity: z.preprocess((val) => Number(val), z.number().min(0)),
+    showroom_quantity: z.preprocess((val) => Number(val), z.number().min(0)),
+    min_stock_level: z.preprocess((val) => Number(val), z.number().min(0)),
+    size: z.string().optional(),
+    color: z.string().optional(),
+});
+
+const productSchema = z.object({
+  name: z.string().min(1, "Product name is required"),
+  category: z.string().min(1, "Category is required"),
+  variants: z.array(variantSchema).min(1, "At least one variant is required"),
+});
+
+type ProductFormData = z.infer<typeof productSchema>;
+
+
 function AddProductDialog({ allSizes, allColors }: { allSizes: string[], allColors: string[] }) {
   const [open, setOpen] = useState(false);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const skuInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const methods = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: { name: '', category: '', variants: [] },
+  });
+  const { control, handleSubmit, setValue, watch, reset } = methods;
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "variants",
+  });
+
+  const productName = watch("name");
 
   useEffect(() => {
-    if (open) {
-      setTimeout(() => {
-        skuInputRef.current?.focus();
-      }, 100);
-    } else {
+    if (!productName || selectedSizes.length === 0 || selectedColors.length === 0) {
+      setValue("variants", []);
+      return;
+    }
+
+    const newVariants = selectedSizes.flatMap(size => 
+      selectedColors.map(color => {
+        const namePart = productName.slice(0, 3).toUpperCase();
+        const sizePart = size.slice(0, 2).toUpperCase();
+        const colorPart = color.slice(0, 3).toUpperCase();
+        const sku = `SKU-${namePart}-${sizePart}-${colorPart}`;
+        return {
+          sku,
+          price: 0,
+          cost: 0,
+          stock_quantity: 0,
+          showroom_quantity: 0,
+          min_stock_level: 0,
+          size,
+          color
+        };
+      })
+    );
+    setValue("variants", newVariants);
+  }, [selectedSizes, selectedColors, productName, setValue]);
+
+  const onSubmit = async (data: ProductFormData) => {
+    try {
+      await addProduct(data);
+      toast({ title: "Success", description: "Product added successfully." });
+      setOpen(false);
+      reset();
+      setSelectedSizes([]);
+      setSelectedColors([]);
+      window.location.reload();
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to add product." });
+    }
+  };
+  
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+        reset();
         setSelectedSizes([]);
         setSelectedColors([]);
     }
-  }, [open]);
+    setOpen(isOpen);
+  }
 
-  const toggleSize = (size: string) => {
-    setSelectedSizes(prev => 
-      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
-    );
+  const toggleSelection = (item: string, list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setList(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
   };
 
-  const toggleColor = (color: string) => {
-    setSelectedColors(prev => 
-      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
-    );
-  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm" className="h-8">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add Product
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add New Product</DialogTitle>
           <DialogDescription>
-            Enter product details and select the sizes and colors to generate variants.
+            Enter product details and select attributes to generate variants.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="sku" className="text-right">
-              SKU / Code
-            </Label>
-            <Input id="sku" ref={skuInputRef} className="col-span-3" placeholder="Scan or enter SKU" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
-            <Input id="name" className="col-span-3" placeholder="e.g., Silk Abaya" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="category" className="text-right">
-              Category
-            </Label>
-            <Input id="category" className="col-span-3" placeholder="e.g., Abayas" />
-          </div>
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">
-              Sizes
-            </Label>
-            <div className="col-span-3 flex flex-wrap gap-2">
-              {allSizes.map(size => (
-                <Button 
-                  key={size} 
-                  variant={selectedSizes.includes(size) ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={() => toggleSize(size)}
-                  className="h-8"
-                >
-                  {size}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-start gap-4">
-            <Label className="text-right pt-2">
-              Colors
-            </Label>
-            <div className="col-span-3 flex flex-wrap gap-2">
-              {allColors.map(color => (
-                 <Button 
-                  key={color} 
-                  variant={selectedColors.includes(color) ? 'secondary' : 'outline'}
-                  size="sm"
-                  onClick={() => toggleColor(color)}
-                   className="h-8"
-                >
-                  {color}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="price" className="text-right">
-              Price
-            </Label>
-            <Input id="price" type="number" className="col-span-3" placeholder="e.g., 150.00" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="stock" className="text-right">
-              Initial Stock
-            </Label>
-            <Input id="stock" type="number" className="col-span-3" placeholder="e.g., 50" />
-          </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="min-stock" className="text-right">
-             Min. Stock
-            </Label>
-            <Input id="min-stock" type="number" className="col-span-3" placeholder="e.g., 10" />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={() => setOpen(false)}>Add Product</Button>
-        </DialogFooter>
+        <FormProvider {...methods}>
+          <Form {...methods}>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <FormField control={control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Product Name</FormLabel>
+                    <FormControl><Input {...field} placeholder="e.g., Silk Abaya" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={control} name="category" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <FormControl><Input {...field} placeholder="e.g., Abayas" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+              <div className="space-y-2">
+                <Label>Sizes</Label>
+                <div className="flex flex-wrap gap-2">
+                  {allSizes.map(size => (
+                    <Button key={size} type="button" variant={selectedSizes.includes(size) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(size, selectedSizes, setSelectedSizes)}>{size}</Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Colors</Label>
+                <div className="flex flex-wrap gap-2">
+                  {allColors.map(color => (
+                    <Button key={color} type="button" variant={selectedColors.includes(color) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(color, selectedColors, setSelectedColors)}>{color}</Button>
+                  ))}
+                </div>
+              </div>
+              
+              {fields.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Generated Variants</h3>
+                  <ScrollArea className="h-64">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>SKU</TableHead>
+                          <TableHead>Price</TableHead>
+                          <TableHead>Stock</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {fields.map((field, index) => (
+                          <TableRow key={field.id}>
+                            <TableCell>
+                                <Badge variant="outline">{watch(`variants.${index}.size`)}</Badge>
+                                <Badge variant="outline" className="ml-1">{watch(`variants.${index}.color`)}</Badge>
+                                <Input {...control.register(`variants.${index}.sku`)} className="mt-1 h-8" />
+                            </TableCell>
+                            <TableCell>
+                                <Input type="number" {...control.register(`variants.${index}.price`)} className="h-8" />
+                            </TableCell>
+                            <TableCell>
+                                <Input type="number" {...control.register(`variants.${index}.stock_quantity`)} className="h-8" />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
+              )}
+               <FormField control={control} name="variants" render={() => (
+                  <FormItem>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+
+              <DialogFooter>
+                <Button type="submit">Add Product & Variants</Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </FormProvider>
       </DialogContent>
     </Dialog>
   );
@@ -377,9 +454,9 @@ export function ProductsTable({ data }: ProductsTableProps) {
   const [allSizes, setAllSizes] = useState(INITIAL_SIZES);
   const [allColors, setAllColors] = useState(INITIAL_COLORS);
   
-  const renderSubComponent = React.useCallback(({ row }: { row: any }) => {
+  const renderSubComponent = React.useCallback(({ row }: { row: Row<Product> }) => {
     return (
-        <td colSpan={columns.length} className='p-0'>
+        <TableCell colSpan={columns.length} className='p-0 bg-muted/50'>
           <Table>
             <TableHeader>
               <TableRow>
@@ -396,7 +473,7 @@ export function ProductsTable({ data }: ProductsTableProps) {
               ))}
             </TableBody>
           </Table>
-        </td>
+        </TableCell>
     );
   }, []);
 
@@ -406,6 +483,7 @@ export function ProductsTable({ data }: ProductsTableProps) {
       columns={columns} 
       data={data} 
       toolbar={<ProductsTableToolbar allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />}
+      getRowCanExpand={() => true}
       renderSubComponent={renderSubComponent}
     />
   );

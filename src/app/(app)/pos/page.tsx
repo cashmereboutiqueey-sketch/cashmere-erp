@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,18 +18,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockProducts, mockFabrics, mockProductFabrics, mockCustomers } from '@/lib/data';
-import { Product, Customer, ProductVariant } from '@/lib/types';
+import { Product, Customer, ProductVariant, Order } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { PlusCircle, ShoppingCart, Trash2, Search, UserPlus, X } from 'lucide-react';
+import { PlusCircle, ShoppingCart, Trash2, Search, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AddCustomerDialog } from '@/components/customers/add-customer-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { getProducts } from '@/services/product-service';
+import { getCustomers } from '@/services/customer-service';
+import { addOrder } from '@/services/order-service';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 type CartItem = {
   product: Product;
@@ -43,17 +44,36 @@ const findImage = (id: string) =>
 
 export default function PosPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [source, setSource] = useState('store');
   const [sku, setSku] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
-  // State for variant selection dialog
   const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
   const [selectedProductForVariant, setSelectedProductForVariant] = useState<Product | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      const [fetchedProducts, fetchedCustomers] = await Promise.all([
+        getProducts(),
+        getCustomers(),
+      ]);
+      setProducts(fetchedProducts);
+      setCustomers(fetchedCustomers);
+      setIsLoading(false);
+    };
+    fetchData();
+  }, []);
+
 
   const handleSkuSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -62,7 +82,7 @@ export default function PosPage() {
     let foundProduct: Product | undefined;
     let foundVariant: ProductVariant | undefined;
 
-    for (const p of mockProducts) {
+    for (const p of products) {
       const v = p.variants.find(va => va.sku.toLowerCase() === sku.toLowerCase());
       if (v) {
         foundProduct = p;
@@ -116,75 +136,61 @@ export default function PosPage() {
       )
     );
   };
-
-  const checkAvailability = () => {
+  
+  const handlePlaceOrder = async () => {
     if (cart.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Cart is empty',
-        description: 'Please add products to the cart first.',
-      });
+      toast({ variant: 'destructive', title: 'Cart is empty' });
       return;
     }
-    
-    let alertMessages: string[] = [];
+    if (!selectedCustomer) {
+      toast({ variant: 'destructive', title: 'Please select a customer' });
+      return;
+    }
 
-    cart.forEach(item => {
-        const { product, variant, quantity } = item;
-        if (variant.stock_quantity >= quantity) {
-            // Sufficient stock
-        } else {
-            const fabricsNeeded = mockProductFabrics.filter(pf => pf.product_id === variant.id);
-            if (fabricsNeeded.length > 0) {
-                let canManufacture = true;
-                fabricsNeeded.forEach(pf => {
-                    const fabric = mockFabrics.find(f => f.id === pf.fabric_id);
-                    if (!fabric || fabric.length_in_meters < pf.fabric_quantity_meters * quantity) {
-                        canManufacture = false;
-                        const required = pf.fabric_quantity_meters * quantity;
-                        const available = fabric?.length_in_meters || 0;
-                        alertMessages.push(`${product.name} (${variant.size || ''} ${variant.color || ''}): Needs ${required}m of ${fabric?.name}, but only ${available}m available.`);
-                    }
-                });
-                if (!canManufacture) {
-                    toast({
-                        variant: 'destructive',
-                        title: 'Insufficient Fabric',
-                        description: `Not enough fabric to produce ${product.name}. Check alerts for details.`,
-                    });
-                } else {
-                     toast({
-                        title: 'Production Required',
-                        description: `Sufficient fabric available to produce ${product.name}.`,
-                    });
-                }
-            } else {
-                alertMessages.push(`${product.name} is out of stock and fabric information is unavailable.`);
-                toast({
-                    variant: 'destructive',
-                    title: 'Out of Stock',
-                    description: `${product.name} is totally sold out.`,
-                });
-            }
-        }
-    });
+    try {
+      const newOrder: Omit<Order, 'id' | 'created_at' | 'customer'> & { items: Omit<CartItem, 'product'>[] } = {
+        customer_id: selectedCustomer.id,
+        status: 'pending',
+        source: source as Order['source'],
+        payment_status: 'unpaid',
+        total_amount: total,
+        items: cart.map(({variant, quantity}) => ({
+          variant,
+          quantity
+        }))
+      };
 
-    if (alertMessages.length > 0) {
-        // Display all alerts
-    } else {
-         toast({
-            title: 'Inventory Check Complete',
-            description: 'All items are available or can be produced.',
-        });
+      const orderId = await addOrder(newOrder);
+      
+      toast({
+        title: 'Order Placed!',
+        description: `Order ${orderId} has been successfully created.`,
+      });
+
+      // Reset state
+      setCart([]);
+      setSelectedCustomer(null);
+      setCustomerSearch('');
+
+      // Redirect to orders page
+      router.push('/orders');
+
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error placing order',
+        description: 'There was a problem creating the order. Please try again.',
+      });
     }
   };
+
 
   const total = cart.reduce(
     (acc, item) => acc + item.variant.price * item.quantity,
     0
   );
 
-  const filteredCustomers = customerSearch ? mockCustomers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.email.toLowerCase().includes(customerSearch.toLowerCase())) : [];
+  const filteredCustomers = customerSearch ? customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.email.toLowerCase().includes(customerSearch.toLowerCase())) : [];
 
   const getProductPriceRange = (product: Product) => {
     const prices = product.variants.map(v => v.price);
@@ -256,32 +262,48 @@ export default function PosPage() {
                   onChange={(e) => setSku(e.target.value)}
                   placeholder="Scan product barcode..."
                   className="w-full bg-background pl-8"
+                  disabled={isLoading}
                 />
               </div>
             </form>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[600px]">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {mockProducts.map((product) => (
-                  <Card key={product.id} className="overflow-hidden">
-                    <Image
-                      src={findImage(product.id) || "https://picsum.photos/seed/placeholder/200/200"}
-                      alt={product.name}
-                      width={200}
-                      height={200}
-                      className="w-full h-auto object-cover"
-                    />
-                    <div className="p-2">
-                      <h3 className="text-sm font-medium truncate">{product.name}</h3>
-                      <p className="text-xs text-muted-foreground">{getProductPriceRange(product)}</p>
-                      <Button size="sm" className="w-full mt-2" onClick={() => handleOpenVariantDialog(product)}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+              {isLoading ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {[...Array(8)].map((_, i) => (
+                    <Card key={i} className="overflow-hidden">
+                      <Skeleton className="w-full h-48" />
+                      <div className="p-2 space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                        <Skeleton className="h-8 w-full" />
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {products.map((product) => (
+                    <Card key={product.id} className="overflow-hidden">
+                      <Image
+                        src={findImage(product.id) || "https://picsum.photos/seed/placeholder/200/200"}
+                        alt={product.name}
+                        width={200}
+                        height={200}
+                        className="w-full h-auto object-cover"
+                      />
+                      <div className="p-2">
+                        <h3 className="text-sm font-medium truncate">{product.name}</h3>
+                        <p className="text-xs text-muted-foreground">{getProductPriceRange(product)}</p>
+                        <Button size="sm" className="w-full mt-2" onClick={() => handleOpenVariantDialog(product)}>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </ScrollArea>
           </CardContent>
         </Card>
@@ -314,9 +336,10 @@ export default function PosPage() {
                         onChange={(e) => setCustomerSearch(e.target.value)}
                         placeholder="Search for a customer..."
                         className="w-full bg-background pl-8"
+                        disabled={isLoading}
                         />
                     </div>
-                    {filteredCustomers.length > 0 && (
+                    {customerSearch && filteredCustomers.length > 0 && (
                         <Card className="absolute z-10 w-full mt-1 max-h-48 overflow-y-auto">
                             <CardContent className="p-2">
                                 {filteredCustomers.map(c => (
@@ -395,7 +418,7 @@ export default function PosPage() {
                 <span>Total</span>
                 <span>${total.toFixed(2)}</span>
             </div>
-            <Button className="w-full" onClick={checkAvailability}>Check Availability & Place Order</Button>
+            <Button className="w-full" onClick={handlePlaceOrder} disabled={cart.length === 0 || !selectedCustomer}>Place Order</Button>
           </CardFooter>
         </Card>
       </div>
@@ -448,5 +471,3 @@ export default function PosPage() {
     </>
   );
 }
-
-    

@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { ProductionOrder, Product, Fabric, ProductFabric, OrderItem, Order } from '@/lib/types';
+import { ProductionOrder, Product, Fabric, Order, OrderItem, ProductVariant } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { Badge } from '../ui/badge';
@@ -9,17 +9,16 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
   DropdownMenuPortal,
+  DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Button } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { mockProductFabrics, mockFabrics, mockProducts, mockOrders, mockOrderItems } from '@/lib/data';
 import {
   Dialog,
   DialogContent,
@@ -39,6 +38,8 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useState } from 'react';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
+import { addProductionOrder, updateProductionOrderStatus } from '@/services/production-service';
+import { useToast } from '@/hooks/use-toast';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -51,7 +52,9 @@ const statusVariantMap: {
   done: 'default',
 };
 
-export const columns: ColumnDef<ProductionOrder>[] = [
+const statuses: ProductionOrder['status'][] = ['pending', 'in_progress', 'done'];
+
+export const getColumns = (onStatusChange: (orderId: string, status: ProductionOrder['status']) => void): ColumnDef<ProductionOrder>[] => [
   {
     accessorKey: 'product',
     header: ({ column }) => (
@@ -59,6 +62,7 @@ export const columns: ColumnDef<ProductionOrder>[] = [
     ),
     cell: ({ row }) => {
       const product = row.original.product;
+      const variant = row.original.variant;
       if (!product) return null;
       const imageUrl =
         findImage(product.id) ||
@@ -72,7 +76,10 @@ export const columns: ColumnDef<ProductionOrder>[] = [
             height={40}
             className="rounded-md"
           />
-          <span className="font-medium">{product.name}</span>
+          <div>
+            <span className="font-medium">{product.name}</span>
+            {variant && <div className="text-sm text-muted-foreground">{variant.color} {variant.size}</div>}
+          </div>
         </div>
       );
     },
@@ -98,31 +105,9 @@ export const columns: ColumnDef<ProductionOrder>[] = [
     ),
   },
   {
-    id: 'fabrics',
-    header: 'Fabrics Required',
-    cell: ({ row }) => {
-      const productFabrics = mockProductFabrics.filter(
-        (pf) => pf.product_id === row.original.product_id
-      );
-      if (productFabrics.length === 0) return 'N/A';
-
-      const totalQuantity = row.original.required_quantity;
-
-      return (
-        <ul className="list-disc list-inside text-sm">
-          {productFabrics.map((pf) => {
-            const fabric = mockFabrics.find((f) => f.id === pf.fabric_id);
-            if (!fabric) return null;
-            const requiredAmount = pf.fabric_quantity_meters * totalQuantity;
-            return (
-              <li key={fabric.id}>
-                {fabric.name} ({fabric.code}): {requiredAmount}m
-              </li>
-            );
-          })}
-        </ul>
-      );
-    },
+    id: 'source_order',
+    header: 'Source',
+    accessorFn: (row) => row.sales_order_id ? `Order #${row.sales_order_id.slice(0,4)}` : 'For Stock',
   },
   {
     accessorKey: 'created_at',
@@ -151,9 +136,11 @@ export const columns: ColumnDef<ProductionOrder>[] = [
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
-                    <DropdownMenuItem>Pending</DropdownMenuItem>
-                    <DropdownMenuItem>In Progress</DropdownMenuItem>
-                    <DropdownMenuItem>Done</DropdownMenuItem>
+                    {statuses.map(status => (
+                      <DropdownMenuItem key={status} onClick={() => onStatusChange(order.id, status)}>
+                          <span className="capitalize">{status.replace('_', ' ')}</span>
+                      </DropdownMenuItem>
+                    ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
@@ -168,40 +155,110 @@ export const columns: ColumnDef<ProductionOrder>[] = [
 
 interface ProductionOrdersTableProps {
   data: ProductionOrder[];
+  products: Product[];
+  salesOrders: Order[];
 }
 
-function AddProductionOrderDialog() {
+function AddProductionOrderDialog({ products, salesOrders }: { products: Product[], salesOrders: Order[] }) {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+
   const [orderType, setOrderType] = useState('stock');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedSalesOrder, setSelectedSalesOrder] = useState<Order | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [quantity, setQuantity] = useState(1);
 
-  const pendingSalesOrders = mockOrders.filter(o => o.status === 'pending' || o.status === 'processing');
+  const pendingSalesOrders = salesOrders.filter(o => o.status === 'pending' || o.status === 'processing');
 
-  const handleOrderChange = (orderId: string) => {
-    const order = mockOrders.find(o => o.id === orderId);
-    setSelectedOrder(order || null);
-    setSelectedProduct(null); 
+  const handleOrderTypeChange = (type: string) => {
+    setOrderType(type);
+    setSelectedSalesOrder(null);
+    setSelectedProduct(null);
+    setSelectedVariant(null);
+    setQuantity(1);
+  }
+
+  const handleSalesOrderChange = (orderId: string) => {
+    const order = salesOrders.find(o => o.id === orderId);
+    setSelectedSalesOrder(order || null);
+    setSelectedProduct(null);
+    setSelectedVariant(null);
     setQuantity(1);
   };
+  
+  const getProductsForOrder = (orderId: string): {product: Product, variant: ProductVariant}[] => {
+      const order = salesOrders.find(o => o.id === orderId);
+      if (!order || !order.items) return [];
 
-  const handleProductChange = (productId: string) => {
-      const product = mockProducts.find(p => p.id === productId);
-      setSelectedProduct(product || null);
-      if (selectedOrder) {
-          const orderItem = mockOrderItems.find(item => item.order_id === selectedOrder.id && item.product_id === productId);
-          if (orderItem) {
-              setQuantity(orderItem.quantity);
+      return order.items.map(item => {
+          for (const p of products) {
+            const v = p.variants.find(va => va.id === item.variant.id);
+            if(v) return { product: p, variant: v };
           }
+          return null;
+      }).filter(item => item !== null) as {product: Product, variant: ProductVariant}[];
+  }
+  
+  const handleProductVariantChange = (variantId: string) => {
+    if (orderType === 'order' && selectedSalesOrder) {
+      const { product, variant } = getProductsForOrder(selectedSalesOrder.id).find(p => p.variant.id === variantId) || {};
+      setSelectedProduct(product || null);
+      setSelectedVariant(variant || null);
+      const orderItem = selectedSalesOrder.items?.find(i => i.variant.id === variantId);
+      setQuantity(orderItem?.quantity || 1);
+    } else {
+      for (const p of products) {
+        const v = p.variants.find(va => va.id === variantId);
+        if (v) {
+          setSelectedProduct(p);
+          setSelectedVariant(v);
+          break;
+        }
       }
+    }
   }
+  
+  const handleSubmit = async () => {
+    if (!selectedProduct || !selectedVariant || quantity <= 0) {
+      toast({ variant: 'destructive', title: 'Invalid Selections', description: 'Please select a product, variant, and quantity.' });
+      return;
+    }
+    
+    try {
+      const productionOrderData = {
+        product_id: selectedProduct.id,
+        variant_id: selectedVariant.id,
+        sales_order_id: orderType === 'order' && selectedSalesOrder ? selectedSalesOrder.id : null,
+        required_quantity: quantity,
+        status: 'pending' as ProductionOrder['status'],
+      };
 
-  const getProductsForOrder = (orderId: string): Product[] => {
-      const orderItems = mockOrderItems.filter(item => item.order_id === orderId);
-      const productIds = orderItems.map(item => item.product_id);
-      return mockProducts.filter(p => productIds.includes(p.id));
+      await addProductionOrder(productionOrderData);
+      toast({ title: 'Success', description: 'Production order created.' });
+      setOpen(false);
+      window.location.reload();
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to create production order.' });
+    }
   }
+  
+  const renderProductVariantOptions = () => {
+    if (orderType === 'order' && selectedSalesOrder) {
+      return getProductsForOrder(selectedSalesOrder.id).map(({ product, variant }) => (
+        <SelectItem key={variant.id} value={variant.id}>
+          {product.name} - {variant.size} {variant.color}
+        </SelectItem>
+      ));
+    }
+    return products.flatMap(product => 
+      product.variants.map(variant => (
+        <SelectItem key={variant.id} value={variant.id}>
+          {product.name} - {variant.size} {variant.color}
+        </SelectItem>
+      ))
+    );
+  };
 
 
   return (
@@ -221,7 +278,7 @@ function AddProductionOrderDialog() {
               <Label className="text-right">Type</Label>
                <RadioGroup
                 value={orderType}
-                onValueChange={setOrderType}
+                onValueChange={handleOrderTypeChange}
                 className="col-span-3 flex gap-4"
               >
                 <div className="flex items-center space-x-2">
@@ -239,14 +296,14 @@ function AddProductionOrderDialog() {
                 <Label htmlFor="sales-order" className="text-right">
                   Sales Order
                 </Label>
-                <Select onValueChange={handleOrderChange}>
+                <Select onValueChange={handleSalesOrderChange}>
                   <SelectTrigger className="col-span-3">
                     <SelectValue placeholder="Select an order" />
                   </SelectTrigger>
                   <SelectContent>
                     {pendingSalesOrders.map((order) => (
                       <SelectItem key={order.id} value={order.id}>
-                        {order.id} - {order.customer?.name}
+                        #{order.id.slice(0,4)}... - {order.customer?.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -257,22 +314,12 @@ function AddProductionOrderDialog() {
             <Label htmlFor="product" className="text-right">
               Product
             </Label>
-            <Select onValueChange={handleProductChange} value={selectedProduct?.id || ''}>
+            <Select onValueChange={handleProductVariantChange} value={selectedVariant?.id || ''} disabled={(orderType === 'order' && !selectedSalesOrder)}>
               <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a product" />
+                <SelectValue placeholder="Select a product variant" />
               </SelectTrigger>
               <SelectContent>
-                {(orderType === 'order' && selectedOrder) ? 
-                    getProductsForOrder(selectedOrder.id).map((product) => (
-                         <SelectItem key={product.id} value={product.id}>
-                            {product.name}
-                        </SelectItem>
-                    ))
-                : mockProducts.map((product) => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {product.name}
-                  </SelectItem>
-                ))}
+                {renderProductVariantOptions()}
               </SelectContent>
             </Select>
           </div>
@@ -280,18 +327,18 @@ function AddProductionOrderDialog() {
             <Label htmlFor="quantity" className="text-right">
               Quantity
             </Label>
-            <Input id="quantity" type="number" className="col-span-3" placeholder="e.g., 25" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} />
+            <Input id="quantity" type="number" className="col-span-3" placeholder="e.g., 25" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} disabled={orderType === 'order'} />
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => setOpen(false)}>Create Order</Button>
+          <Button onClick={handleSubmit}>Create Order</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-function ProductionOrdersToolbar() {
+function ProductionOrdersToolbar({ products, salesOrders }: { products: Product[], salesOrders: Order[] }) {
   return (
     <>
       <Input
@@ -299,12 +346,33 @@ function ProductionOrdersToolbar() {
         className="h-8 w-[150px] lg:w-[250px]"
       />
       <div className="ml-auto flex items-center gap-2">
-        <AddProductionOrderDialog />
+        <AddProductionOrderDialog products={products} salesOrders={salesOrders} />
       </div>
     </>
   );
 }
 
-export function ProductionOrdersTable({ data }: ProductionOrdersTableProps) {
-  return <DataTable columns={columns} data={data} toolbar={<ProductionOrdersToolbar />} />;
+export function ProductionOrdersTable({ data, products, salesOrders }: ProductionOrdersTableProps) {
+  const { toast } = useToast();
+  
+  const handleStatusChange = async (orderId: string, status: ProductionOrder['status']) => {
+    try {
+      await updateProductionOrderStatus(orderId, status);
+      toast({
+        title: 'Success',
+        description: `Production order status updated to ${status.replace('_', ' ')}.`,
+      });
+      window.location.reload();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to update order status.',
+      });
+    }
+  };
+
+  const columns = getColumns(handleStatusChange);
+
+  return <DataTable columns={columns} data={data} toolbar={<ProductionOrdersToolbar products={products} salesOrders={salesOrders} />} />;
 }
