@@ -24,13 +24,18 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 
 export function Header() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [notificationCount, setNotificationCount] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -46,7 +51,7 @@ export function Header() {
       <ThemeToggle />
       <Button variant="ghost" size="icon" className="relative">
         <Bell className="h-5 w-5" />
-        {notificationCount > 0 && (
+        {isClient && notificationCount > 0 && (
           <Badge
             variant="destructive"
             className="absolute -top-1 -right-1 h-4 w-4 justify-center rounded-full p-0 text-[10px]"
