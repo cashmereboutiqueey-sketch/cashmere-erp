@@ -23,12 +23,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 
-
-type SupplierWithPayables = Supplier & {
-  amount_owed: number;
-};
-
-export const columns: ColumnDef<SupplierWithPayables>[] = [
+export const columns: ColumnDef<Supplier>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -67,20 +62,6 @@ export const columns: ColumnDef<SupplierWithPayables>[] = [
     ),
   },
   {
-    accessorKey: 'amount_owed',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Amount Owed" />
-    ),
-    cell: ({ row }) => {
-        const amount = parseFloat(row.getValue('amount_owed'));
-        const formatted = new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD',
-        }).format(amount);
-        return <div className="font-medium">{formatted}</div>;
-    }
-  },
-  {
     id: 'actions',
     cell: ({ row }) => {
       return (
@@ -105,7 +86,7 @@ export const columns: ColumnDef<SupplierWithPayables>[] = [
 ];
 
 interface SuppliersTableProps {
-  data: SupplierWithPayables[];
+  data: Supplier[];
 }
 
 

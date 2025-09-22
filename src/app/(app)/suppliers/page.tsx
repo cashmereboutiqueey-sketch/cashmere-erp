@@ -6,8 +6,6 @@ import { getSuppliers } from '@/services/supplier-service';
 import { Supplier } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-// TODO: Integrate payables from a service
-import { mockPayables } from '@/lib/data';
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -22,17 +20,6 @@ export default function SuppliersPage() {
     };
     fetchSuppliers();
   }, []);
-
-  const calculateAmountOwed = (supplierId: string): number => {
-    return mockPayables
-      .filter((p) => p.supplier_id === supplierId && p.status === 'unpaid')
-      .reduce((total, p) => total + p.amount, 0);
-  };
-
-  const suppliersWithPayables = suppliers.map((supplier) => ({
-    ...supplier,
-    amount_owed: calculateAmountOwed(supplier.id),
-  }));
 
   return (
     <>
@@ -55,7 +42,7 @@ export default function SuppliersPage() {
                 </div>
             </div>
         ) : (
-            <SuppliersTable data={suppliersWithPayables} />
+            <SuppliersTable data={suppliers} />
         )}
       </div>
     </>

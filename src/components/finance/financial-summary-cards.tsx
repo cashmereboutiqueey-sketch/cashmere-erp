@@ -9,42 +9,43 @@ import {
 } from '@/components/ui/card';
 import { DollarSign, TrendingUp, TrendingDown, CircleDollarSign, Landmark } from 'lucide-react';
 import { getOrders } from '@/services/order-service';
-import { Order } from '@/lib/types';
-// TODO: Replace with services
-import { mockPayables, mockExpenses } from '@/lib/data';
+import { getExpenses } from '@/services/finance-service';
+import { Order, Expense } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 
 export function FinancialSummaryCards() {
     const [orders, setOrders] = useState<Order[]>([]);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchOrders = async () => {
+        const fetchData = async () => {
             setIsLoading(true);
-            const fetchedOrders = await getOrders();
+            const [fetchedOrders, fetchedExpenses] = await Promise.all([
+                getOrders(),
+                getExpenses()
+            ]);
             setOrders(fetchedOrders);
+            setExpenses(fetchedExpenses);
             setIsLoading(false);
         };
-        fetchOrders();
+        fetchData();
     }, []);
 
     const totalRevenue = orders
         .filter(order => order.status === 'completed')
         .reduce((sum, order) => sum + order.total_amount, 0);
 
-    const costOfGoodsSold = mockPayables
-        .filter(p => p.status === 'paid')
-        .reduce((sum, p) => sum + p.amount, 0);
+    const costOfGoodsSold = expenses
+        .filter(e => e.category === 'cogs')
+        .reduce((sum, e) => sum + e.amount, 0);
     
     const grossProfit = totalRevenue - costOfGoodsSold;
 
-    const accountsPayable = mockPayables
-        .filter(p => p.status === 'unpaid')
-        .reduce((sum, p) => sum + p.amount, 0);
-
-    const totalExpenses = mockExpenses
+    const totalExpenses = expenses
+        .filter(e => e.category !== 'cogs')
         .reduce((sum, expense) => sum + expense.amount, 0);
-
+    
     const netProfit = grossProfit - totalExpenses;
 
     const formatCurrency = (amount: number) => {
@@ -69,15 +70,15 @@ export function FinancialSummaryCards() {
 
     if(isLoading) {
         return (
-            <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3 xl:grid-cols-6">
-                {[...Array(6)].map((_, i) => <CardSkeleton key={i} />)}
+            <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
+                {[...Array(5)].map((_, i) => <CardSkeleton key={i} />)}
             </div>
         );
     }
 
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3 xl:grid-cols-6">
+    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
       <Card className="shadow-sm xl:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -95,7 +96,7 @@ export function FinancialSummaryCards() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(costOfGoodsSold)}</div>
-          <p className="text-xs text-muted-foreground">Paid supplier bills</p>
+          <p className="text-xs text-muted-foreground">From supplier bills</p>
         </CardContent>
       </Card>
        <Card className="shadow-sm xl:col-span-1">
@@ -110,7 +111,7 @@ export function FinancialSummaryCards() {
       </Card>
       <Card className="shadow-sm xl:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+          <CardTitle className="text-sm font-medium">OpEx</CardTitle>
           <Landmark className="h-4 w-4 text-amber-500" />
         </CardHeader>
         <CardContent>
@@ -125,17 +126,7 @@ export function FinancialSummaryCards() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(netProfit)}</div>
-           <p className="text-xs text-muted-foreground">Gross Profit - Expenses</p>
-        </CardContent>
-      </Card>
-      <Card className="shadow-sm xl:col-span-1" >
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Accounts Payable</CardTitle>
-          <CircleDollarSign className="h-4 w-4 text-amber-500" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{formatCurrency(accountsPayable)}</div>
-          <p className="text-xs text-muted-foreground">Owed to suppliers</p>
+           <p className="text-xs text-muted-foreground">Gross Profit - OpEx</p>
         </CardContent>
       </Card>
     </div>

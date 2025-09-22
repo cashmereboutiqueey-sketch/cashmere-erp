@@ -16,12 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { mockPayables, mockExpenses } from '@/lib/data';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
 import { capitalize } from 'string-ts';
-import { Order } from '@/lib/types';
+import { Order, Expense } from '@/lib/types';
 import { getOrders } from '@/services/order-service';
+import { getExpenses } from '@/services/finance-service';
 import { Skeleton } from '../ui/skeleton';
 
 
@@ -35,49 +35,44 @@ type Transaction = {
 
 export function RecentTransactions() {
     const [orders, setOrders] = useState<Order[]>([]);
+    const [expenses, setExpenses] = useState<Expense[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchOrders = async () => {
+        const fetchData = async () => {
             setIsLoading(true);
-            const fetchedOrders = await getOrders();
+            const [fetchedOrders, fetchedExpenses] = await Promise.all([
+                getOrders(),
+                getExpenses()
+            ]);
             setOrders(fetchedOrders);
+            setExpenses(fetchedExpenses);
             setIsLoading(false);
         };
-        fetchOrders();
+        fetchData();
     }, []);
 
     const revenueTransactions: Transaction[] = orders
         .filter(o => o.status === 'completed')
         .map(order => ({
             id: order.id,
-            description: `Order ${order.id}`,
+            description: `Order #${order.id.slice(0,4)}...`,
             amount: order.total_amount,
             type: 'revenue',
             date: order.created_at,
         }));
-    
-    const cogsTransactions: Transaction[] = mockPayables
-        .filter(p => p.status === 'paid')
-        .map(payable => ({
-            id: `payable-${payable.id}`,
-            description: `Payment to supplier for PO #${payable.id.slice(0,4)}`,
-            amount: payable.amount,
-            type: 'expense',
-            date: payable.due_date,
-        }));
 
-    const expenseTransactions: Transaction[] = mockExpenses.map(expense => ({
+    const expenseTransactions: Transaction[] = expenses.map(expense => ({
         id: `expense-${expense.id}`,
-        description: capitalize(expense.category),
+        description: expense.note || capitalize(expense.category),
         amount: expense.amount,
         type: 'expense',
         date: expense.created_at,
     }));
 
-    const allTransactions = [...revenueTransactions, ...cogsTransactions, ...expenseTransactions]
+    const allTransactions = [...revenueTransactions, ...expenseTransactions]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 15);
+        .slice(0, 20);
     
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {

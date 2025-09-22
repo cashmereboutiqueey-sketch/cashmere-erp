@@ -121,7 +121,7 @@ export type Transaction = {
 
 export type Expense = {
   id: string;
-  category: string;
+  category: 'cogs' | 'marketing' | 'rent' | 'salaries' | 'utilities' | 'other';
   amount: number;
   supplier_id?: string;
   note?: string;
