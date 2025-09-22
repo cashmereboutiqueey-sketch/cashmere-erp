@@ -59,6 +59,12 @@ const allMenuItems = [
     roles: ['admin', 'sales'],
   },
   {
+    href: '/shipping',
+    label: 'Shipping',
+    icon: Truck,
+    roles: ['admin', 'sales', 'warehouse_manager'],
+  },
+  {
     href: '/products',
     label: 'Products',
     icon: Box,

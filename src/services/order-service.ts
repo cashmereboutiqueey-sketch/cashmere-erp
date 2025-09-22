@@ -3,7 +3,7 @@
 
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction, deleteDoc, where, Timestamp } from 'firebase/firestore';
-import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVariant, OrderFulfillmentType, ProductFabric } from '@/lib/types';
+import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVariant, OrderFulfillmentType, ProductFabric, ShippingStatus } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { getProductFabricsForProduct } from './product-fabric-service';
 import type { DateRange } from 'react-day-picker';
@@ -43,6 +43,7 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
     created_at: data.created_at.toDate().toISOString(),
     items: data.items,
     fulfillment_type: data.fulfillment_type,
+    shipping_status: data.shipping_status,
   };
 };
 
@@ -131,16 +132,19 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
 
           const recipe = productFabricsMap.get(item.productId);
           if (!recipe || recipe.length === 0) {
+            finalOrderStatus = 'sold_out';
             throw new Error(`Cannot produce "${item.productName}": No recipe found.`);
           }
 
           for (const recipeItem of recipe) {
             const fabric = allFabricsMap.get(recipeItem.fabric_id);
             if (!fabric) {
+              finalOrderStatus = 'sold_out';
               throw new Error(`Cannot produce "${item.productName}": Recipe fabric ID ${recipeItem.fabric_id} not found.`);
             }
             const requiredFabric = recipeItem.fabric_quantity_meters * item.quantity;
             if (fabric.length_in_meters < requiredFabric) {
+              finalOrderStatus = 'sold_out';
               throw new Error(`Cannot produce "${item.productName}": Not enough ${fabric.name} fabric. Required: ${requiredFabric}m, Available: ${fabric.length_in_meters}m.`);
             }
           }
@@ -162,6 +166,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         ...orderData,
         status: finalOrderStatus,
         fulfillment_type: finalFulfillmentType,
+        shipping_status: finalOrderStatus === 'processing' ? 'ready_to_ship' : 'pending',
         created_at: serverTimestamp(),
       });
       
@@ -260,6 +265,21 @@ export async function updateOrderStatus(id: string, status: Order['status']) {
   } catch (error) {
     console.error('Error updating order status: ', error);
     throw new Error('Could not update order status');
+  }
+}
+
+export async function updateOrderShipping(id: string, shippingStatus: ShippingStatus) {
+  try {
+    const orderDocRef = doc(db, 'orders', id);
+    await updateDoc(orderDocRef, {
+      shipping_status: shippingStatus,
+      updatedAt: serverTimestamp(),
+    });
+    revalidatePath('/shipping');
+    revalidatePath('/orders');
+  } catch (error) {
+    console.error('Error updating order shipping status: ', error);
+    throw new Error('Could not update order shipping status');
   }
 }
 

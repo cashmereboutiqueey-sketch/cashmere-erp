@@ -65,6 +65,16 @@ export type OrderItem = {
 
 export type OrderFulfillmentType = 'from_stock' | 'make_to_order';
 
+export type ShippingStatus = 
+    | 'pending'
+    | 'ready_for_pickup'
+    | 'ready_to_ship'
+    | 'assigned_to_carrier_a'
+    | 'assigned_to_carrier_b'
+    | 'shipped'
+    | 'delivered'
+    | 'picked_up';
+
 export type Order = {
   id: string;
   customer_id: string;
@@ -78,6 +88,7 @@ export type Order = {
   created_at: string;
   items?: OrderItem[];
   fulfillment_type?: OrderFulfillmentType;
+  shipping_status?: ShippingStatus;
 };
 
 export type ProductionOrder = {
