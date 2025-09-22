@@ -32,6 +32,7 @@ import { getCustomers } from '@/services/customer-service';
 import { addOrder } from '@/services/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type CartItem = {
   productId: string;
@@ -43,6 +44,8 @@ type CartItem = {
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
 
+export type OrderFulfillmentType = 'from_stock' | 'make_to_order';
+
 export default function PosPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -52,6 +55,7 @@ export default function PosPage() {
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [source, setSource] = useState<Order['source']>('store');
+  const [fulfillmentType, setFulfillmentType] = useState<OrderFulfillmentType>('from_stock');
   const [sku, setSku] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -180,6 +184,7 @@ export default function PosPage() {
         amount_paid: amountPaid,
         total_amount: total,
         items: cart,
+        fulfillment_type: fulfillmentType,
       };
 
       const orderId = await addOrder(newOrder);
@@ -380,20 +385,36 @@ export default function PosPage() {
                     <AddCustomerDialog />
                 </div>
             )}
-            
-             <div className="grid gap-2">
-              <Label htmlFor="source">Order Source</Label>
-              <Select value={source} onValueChange={(v) => setSource(v as Order['source'])}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select order source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="store">In-Store</SelectItem>
-                  <SelectItem value="shopify">Shopify</SelectItem>
-                  <SelectItem value="social">Social Media</SelectItem>
-                </SelectContent>
-              </Select>
+
+            <div className="grid grid-cols-2 gap-4">
+                 <div className="grid gap-2">
+                    <Label htmlFor="source">Order Source</Label>
+                    <Select value={source} onValueChange={(v) => setSource(v as Order['source'])}>
+                        <SelectTrigger>
+                        <SelectValue placeholder="Select order source" />
+                        </SelectTrigger>
+                        <SelectContent>
+                        <SelectItem value="store">In-Store</SelectItem>
+                        <SelectItem value="shopify">Shopify</SelectItem>
+                        <SelectItem value="social">Social Media</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="fulfillment">Fulfillment</Label>
+                    <RadioGroup value={fulfillmentType} onValueChange={(v) => setFulfillmentType(v as OrderFulfillmentType)} className="flex items-center space-x-2 pt-2">
+                        <div className="flex items-center space-x-1">
+                            <RadioGroupItem value="from_stock" id="from_stock" />
+                            <Label htmlFor="from_stock" className="text-sm font-normal">From Stock</Label>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                            <RadioGroupItem value="make_to_order" id="make_to_order" />
+                            <Label htmlFor="make_to_order" className="text-sm font-normal">Make to Order</Label>
+                        </div>
+                    </RadioGroup>
+                </div>
             </div>
+            
             <Separator />
             <ScrollArea className="h-[350px]">
               {cart.length > 0 ? (

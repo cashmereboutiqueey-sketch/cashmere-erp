@@ -3,11 +3,12 @@
 
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction, deleteDoc, where, Timestamp } from 'firebase/firestore';
-import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVariant } from '@/lib/types';
+import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVariant, OrderFulfillmentType } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { getProductFabricsForProduct } from './product-fabric-service';
 import type { DateRange } from 'react-day-picker';
 
+const ordersCollection = collection(db, 'orders');
 
 // Simplified journal entry logger
 const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
@@ -41,6 +42,7 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
     total_amount: data.total_amount,
     created_at: data.created_at.toDate().toISOString(),
     items: data.items,
+    fulfillment_type: data.fulfillment_type,
   };
 };
 
@@ -77,7 +79,11 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         throw new Error('Order must have items.');
       }
 
-      // 1. Read all necessary data first
+      const fulfillmentType = orderData.fulfillment_type || 'from_stock';
+      let finalOrderStatus: Order['status'] = 'processing';
+      const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
+      const stockUpdates = new Map<string, { ref: any, newVariants: ProductVariant[] }>();
+
       const productIds = [...new Set(orderData.items.map(item => item.productId))];
       const productRefs = productIds.map(id => doc(db, 'products', id));
       const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
@@ -88,76 +94,37 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         productsMap.set(productDoc.id, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
       }
 
-      // 2. Process logic: check stock, fabrics, and prepare updates
-      let finalOrderStatus: Order['status'] = 'processing';
-      const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
-      const stockUpdates = new Map<string, { ref: any, newVariants: ProductVariant[] }>();
-
-      // Pre-fetch all unique fabrics to avoid re-fetching inside the loop
-      const allRecipeItems = (await Promise.all(productIds.map(id => getProductFabricsForProduct(id)))).flat();
-      const uniqueFabricIds = [...new Set(allRecipeItems.map(item => item.fabric_id))];
-      const fabricRefs = uniqueFabricIds.map(id => doc(db, 'fabrics', id));
-      const fabricDocs = await Promise.all(fabricRefs.map(ref => transaction.get(ref)));
-      const fabricsMap = new Map<string, Fabric>();
-      fabricDocs.forEach(doc => {
-          if (doc.exists()) {
-              fabricsMap.set(doc.id, {id: doc.id, ...doc.data()} as Fabric);
-          }
-      });
-
-
-      for (const item of orderData.items) {
-        const productInfo = productsMap.get(item.productId);
-        if (!productInfo) throw new Error(`Internal error: Product info for ${item.productId} not found.`);
-
-        const currentVariants = stockUpdates.get(item.productId)?.newVariants || productInfo.data.variants;
-        const variantIndex = currentVariants.findIndex(v => v.id === item.variant.id);
-        if (variantIndex === -1) throw new Error(`Variant ${item.variant.id} not found for product ${item.productName}`);
-        
-        const variantToUpdate = currentVariants[variantIndex];
-        
-        if (variantToUpdate.stock_quantity >= item.quantity) {
-          if (finalOrderStatus !== 'sold_out') {
-            const newVariants = [...currentVariants];
-            newVariants[variantIndex] = { ...variantToUpdate, stock_quantity: variantToUpdate.stock_quantity - item.quantity };
-            stockUpdates.set(item.productId, { ref: productInfo.doc.ref, newVariants });
-          }
-        } else {
-          finalOrderStatus = 'pending';
-          // This part has been modified to use the pre-fetched recipe data
-          const recipe = allRecipeItems.filter(r => r.product_id === productInfo.data.id);
-          if (recipe.length === 0) {
-             console.warn(`Product ${productInfo.data.name} is out of stock and has no recipe.`);
-             finalOrderStatus = 'sold_out';
-             break; // Stop processing further items if one is sold out
-          }
-
-          let canProduce = true;
-          for (const recipeItem of recipe) {
-            const fabric = fabricsMap.get(recipeItem.fabric_id);
-            if (!fabric || fabric.length_in_meters < (recipeItem.fabric_quantity_meters * item.quantity)) {
-              canProduce = false;
-              console.warn(`Not enough fabric ${recipeItem.fabric_id} to produce ${productInfo.data.name}.`);
-              break;
-            }
-          }
-
-          if (canProduce) {
-            productionOrdersToCreate.push({
+      if (fulfillmentType === 'make_to_order') {
+        finalOrderStatus = 'pending';
+        for (const item of orderData.items) {
+           productionOrdersToCreate.push({
               product_id: item.productId,
               variant_id: item.variant.id,
               required_quantity: item.quantity,
-              sales_order_id: '',
+              sales_order_id: '', // Will be set later
               status: 'pending'
             });
-          } else {
-            finalOrderStatus = 'sold_out';
-            break; // Stop processing items, the order is sold out
-          }
+        }
+      } else { // 'from_stock'
+         for (const item of orderData.items) {
+            const productInfo = productsMap.get(item.productId);
+            if (!productInfo) throw new Error(`Internal error: Product info for ${item.productId} not found.`);
+
+            const currentVariants = stockUpdates.get(item.productId)?.newVariants || productInfo.data.variants;
+            const variantIndex = currentVariants.findIndex(v => v.id === item.variant.id);
+            if (variantIndex === -1) throw new Error(`Variant ${item.variant.id} not found for product ${item.productName}`);
+            
+            const variantToUpdate = currentVariants[variantIndex];
+            
+            if (variantToUpdate.stock_quantity < item.quantity) {
+              throw new Error(`Not enough stock for ${item.productName} (${item.variant.size}/${item.variant.color}). Required: ${item.quantity}, Available: ${variantToUpdate.stock_quantity}. Use 'Make to Order' instead.`);
+            }
+            const newVariants = [...currentVariants];
+            newVariants[variantIndex] = { ...variantToUpdate, stock_quantity: variantToUpdate.stock_quantity - item.quantity };
+            stockUpdates.set(item.productId, { ref: productInfo.doc.ref, newVariants });
         }
       }
-      
-      // 3. Perform all writes
+
       const newOrderRef = doc(collection(db, 'orders'));
       transaction.set(newOrderRef, {
         ...orderData,
@@ -165,39 +132,33 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         created_at: serverTimestamp(),
       });
       
-      // If the order is sold_out, we don't update stock or create production orders
-      if (finalOrderStatus !== 'sold_out') {
-        stockUpdates.forEach(update => {
-          transaction.update(update.ref, { variants: update.newVariants });
-        });
+      stockUpdates.forEach(update => {
+        transaction.update(update.ref, { variants: update.newVariants });
+      });
 
-        productionOrdersToCreate.forEach(poData => {
-          const newProdOrderRef = doc(collection(db, 'production_orders'));
-          transaction.set(newProdOrderRef, {
-            ...poData,
-            sales_order_id: newOrderRef.id,
-            created_at: serverTimestamp()
-          });
+      productionOrdersToCreate.forEach(poData => {
+        const newProdOrderRef = doc(collection(db, 'production_orders'));
+        transaction.set(newProdOrderRef, {
+          ...poData,
+          sales_order_id: newOrderRef.id,
+          created_at: serverTimestamp()
         });
+      });
 
-        // Auto-posting to GL
-        logJournalEntry(`Sale - Order ${newOrderRef.id.slice(0,5)}`, [
-            { account: 'Accounts Receivable', debit: orderData.total_amount },
-            { account: 'Sales Revenue', credit: orderData.total_amount },
-        ]);
-        if (orderData.amount_paid && orderData.amount_paid > 0) {
-            logJournalEntry(`Payment - Order ${newOrderRef.id.slice(0,5)}`, [
-                { account: 'Cash', debit: orderData.amount_paid },
-                { account: 'Accounts Receivable', credit: orderData.amount_paid },
-            ]);
-        }
+      logJournalEntry(`Sale - Order ${newOrderRef.id.slice(0,5)}`, [
+          { account: 'Accounts Receivable', debit: orderData.total_amount },
+          { account: 'Sales Revenue', credit: orderData.total_amount },
+      ]);
+      if (orderData.amount_paid && orderData.amount_paid > 0) {
+          logJournalEntry(`Payment - Order ${newOrderRef.id.slice(0,5)}`, [
+              { account: 'Cash', debit: orderData.amount_paid },
+              { account: 'Accounts Receivable', credit: orderData.amount_paid },
+          ]);
       }
-
 
       return newOrderRef.id;
     });
 
-    // 4. Revalidate paths
     revalidatePath('/orders');
     revalidatePath('/pos');
     revalidatePath('/dashboard');
@@ -277,7 +238,7 @@ export async function deleteOrder(id: string) {
             }
             const orderData = await fromFirestore(orderDoc);
 
-            if (orderData.items) {
+            if (orderData.items && orderData.fulfillment_type !== 'make_to_order') {
                  for (const item of orderData.items) {
                     const productRef = doc(db, 'products', item.productId);
                     const productDoc = await transaction.get(productRef);
@@ -318,5 +279,4 @@ export async function deleteOrder(id: string) {
         throw new Error("Could not delete order");
     }
 }
-const ordersCollection = collection(db, 'orders');
     

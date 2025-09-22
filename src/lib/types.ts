@@ -63,6 +63,8 @@ export type OrderItem = {
     quantity: number;
 }
 
+export type OrderFulfillmentType = 'from_stock' | 'make_to_order';
+
 export type Order = {
   id: string;
   customer_id: string;
@@ -75,6 +77,7 @@ export type Order = {
   total_amount: number;
   created_at: string;
   items?: OrderItem[];
+  fulfillment_type?: OrderFulfillmentType;
 };
 
 export type ProductionOrder = {
