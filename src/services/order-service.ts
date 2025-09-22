@@ -2,7 +2,7 @@
 
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction } from 'firebase/firestore';
-import { Order, Customer, Product } from '@/lib/types';
+import { Order, Customer, Product, OrderItem } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 const ordersCollection = collection(db, 'orders');
@@ -58,36 +58,33 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
             created_at: serverTimestamp(),
         });
 
-        // 2. Find which products need to be updated
-        const productUpdates = new Map<string, { productRef: any, product: Product }>();
-        for (const item of orderData.items || []) {
-            const productsSnapshot = await getDocs(query(productsCollection, where('variants', 'array-contains', item.variant)));
-            if (!productsSnapshot.empty) {
-                const productDoc = productsSnapshot.docs[0];
-                if (!productUpdates.has(productDoc.id)) {
-                    productUpdates.set(productDoc.id, {
-                        productRef: productDoc.ref,
-                        product: { id: productDoc.id, ...productDoc.data() } as Product,
-                    });
-                }
+        if (!orderData.items) return newOrderRef.id;
+
+        // 2. Update stock for each item in the order
+        for (const item of orderData.items) {
+            const productRef = doc(db, 'products', item.productId);
+            const productDoc = await transaction.get(productRef);
+
+            if (!productDoc.exists()) {
+                throw new Error(`Product with ID ${item.productId} not found.`);
             }
-        }
-        
-        // 3. Update stock quantities for each product
-        for (const item of orderData.items || []) {
-            for (const [productId, { product, productRef }] of productUpdates.entries()) {
-                const variantIndex = product.variants.findIndex(v => v.id === item.variant.id);
-                if (variantIndex > -1) {
-                    const newStock = product.variants[variantIndex].stock_quantity - item.quantity;
-                    if (newStock < 0) {
-                        throw new Error(`Not enough stock for ${product.name} - ${item.variant.sku}.`);
-                    }
-                    product.variants[variantIndex].stock_quantity = newStock;
-                    transaction.update(productRef, { variants: product.variants });
-                    break; 
-                }
+
+            const product = productDoc.data() as Product;
+            const variantIndex = product.variants.findIndex(v => v.id === item.variant.id);
+
+            if (variantIndex === -1) {
+                throw new Error(`Variant with SKU ${item.variant.sku} not found in product ${product.name}.`);
             }
+
+            const newStock = product.variants[variantIndex].stock_quantity - item.quantity;
+            if (newStock < 0) {
+                throw new Error(`Not enough stock for ${product.name} - ${item.variant.sku}. Required: ${item.quantity}, Available: ${product.variants[variantIndex].stock_quantity}`);
+            }
+
+            product.variants[variantIndex].stock_quantity = newStock;
+            transaction.update(productRef, { variants: product.variants });
         }
+
         return newOrderRef.id;
     });
 
@@ -131,14 +128,14 @@ export async function deleteOrder(id: string) {
             // Optional: Re-stock items when an order is deleted.
             if (orderData.items) {
                  for (const item of orderData.items) {
-                    const productsSnapshot = await getDocs(query(productsCollection, where('variants', 'array-contains', item.variant)));
-                     if (!productsSnapshot.empty) {
-                        const productDoc = productsSnapshot.docs[0];
-                        const product = { id: productDoc.id, ...productDoc.data() } as Product;
+                    const productRef = doc(db, 'products', item.productId);
+                    const productDoc = await transaction.get(productRef);
+                    if (productDoc.exists()) {
+                        const product = productDoc.data() as Product;
                         const variantIndex = product.variants.findIndex(v => v.id === item.variant.id);
                         if(variantIndex > -1) {
                             product.variants[variantIndex].stock_quantity += item.quantity;
-                            transaction.update(productDoc.ref, { variants: product.variants });
+                            transaction.update(productRef, { variants: product.variants });
                         }
                     }
                 }

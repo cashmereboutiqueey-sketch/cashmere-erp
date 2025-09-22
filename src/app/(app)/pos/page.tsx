@@ -34,7 +34,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 
 type CartItem = {
-  product: Product;
+  productId: string;
+  productName: string;
   variant: ProductVariant;
   quantity: number;
 };
@@ -115,7 +116,12 @@ export default function PosPage() {
             : item
         );
       }
-      return [...prevCart, { product, variant, quantity: 1 }];
+      return [...prevCart, { 
+        productId: product.id,
+        productName: product.name,
+        variant, 
+        quantity: 1 
+      }];
     });
   };
 
@@ -148,16 +154,13 @@ export default function PosPage() {
     }
 
     try {
-      const newOrder: Omit<Order, 'id' | 'created_at' | 'customer'> & { items: Omit<CartItem, 'product'>[] } = {
+      const newOrder: Omit<Order, 'id' | 'created_at' | 'customer'> = {
         customer_id: selectedCustomer.id,
         status: 'pending',
         source: source as Order['source'],
         payment_status: 'unpaid',
         total_amount: total,
-        items: cart.map(({variant, quantity}) => ({
-          variant,
-          quantity
-        }))
+        items: cart,
       };
 
       const orderId = await addOrder(newOrder);
@@ -176,10 +179,11 @@ export default function PosPage() {
       router.push('/orders');
 
     } catch (error) {
+      console.error(error);
       toast({
         variant: 'destructive',
         title: 'Error placing order',
-        description: 'There was a problem creating the order. Please try again.',
+        description: error instanceof Error ? error.message : 'There was a problem creating the order. Please try again.',
       });
     }
   };
@@ -374,14 +378,14 @@ export default function PosPage() {
                 cart.map((item) => (
                   <div key={item.variant.id} className="flex items-center gap-4 py-2">
                     <Image
-                      src={findImage(item.product.id) || "https://picsum.photos/seed/placeholder/40/40"}
-                      alt={item.product.name}
+                      src={findImage(item.productId) || "https://picsum.photos/seed/placeholder/40/40"}
+                      alt={item.productName}
                       width={40}
                       height={40}
                       className="rounded-md"
                     />
                     <div className="flex-1">
-                      <p className="font-medium text-sm">{item.product.name}</p>
+                      <p className="font-medium text-sm">{item.productName}</p>
                       <p className="text-xs text-muted-foreground">
                         {item.variant.size && `${item.variant.size}, `}{item.variant.color && `${item.variant.color}, `}{item.variant.price.toFixed(2)}
                       </p>

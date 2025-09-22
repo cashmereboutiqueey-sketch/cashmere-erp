@@ -66,6 +66,13 @@ export type Fabric = {
   min_stock_level: number;
 };
 
+export type OrderItem = {
+    productId: string;
+    productName: string;
+    variant: ProductVariant;
+    quantity: number;
+}
+
 export type Order = {
   id: string;
   customer_id: string;
@@ -75,19 +82,7 @@ export type Order = {
   payment_status: 'paid' | 'unpaid';
   total_amount: number;
   created_at: string;
-  items?: {
-      variant: ProductVariant;
-      quantity: number;
-  }[]
-};
-
-export type OrderItem = {
-  id: string;
-  order_id: string;
-  product_id: string;
-  quantity: number;
-  price: number;
-  subtotal: number;
+  items?: OrderItem[];
 };
 
 export type ProductionOrder = {
