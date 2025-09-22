@@ -56,17 +56,6 @@ export type ProductFabric = {
   fabric_quantity_meters: number;
 };
 
-export type Fabric = {
-  id: string;
-  name: string;
-  code: string;
-  color: string;
-  length_in_meters: number;
-  supplier_id: string;
-  price_per_meter: number;
-  min_stock_level: number;
-};
-
 export type OrderItem = {
     productId: string;
     productName: string;

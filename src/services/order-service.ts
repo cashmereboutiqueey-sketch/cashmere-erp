@@ -16,7 +16,7 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
   if (data.customer_id) {
     const customerDocSnap = await getDoc(doc(db, 'customers', data.customer_id));
     if (customerDocSnap.exists()) {
-      customerData = { id: customerDocSnap.id, ...customerDocSnap.data() } as Customer;
+      customerData = { id: customerDocSnap.id, ...customerDocSnap.data(), created_at: customerDocSnap.data().created_at?.toDate()?.toISOString() || new Date().toISOString() } as Customer;
     }
   }
 
@@ -57,61 +57,58 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         throw new Error('Order must have items.');
       }
 
+      // 1. Read all necessary data first
       const productIds = [...new Set(orderData.items.map(item => item.productId))];
       const productRefs = productIds.map(id => doc(db, 'products', id));
       const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
       
       const productsMap = new Map<string, { doc: any, data: Product }>();
-      productDocs.forEach(productDoc => {
-        if (!productDoc.exists()) {
-          throw new Error(`Product with ID ${productDoc.id} not found.`);
-        }
+      for (const productDoc of productDocs) {
+        if (!productDoc.exists()) throw new Error(`Product with ID ${productDoc.id} not found.`);
         productsMap.set(productDoc.id, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
-      });
+      }
 
+      // 2. Process logic: check stock, fabrics, and prepare updates
       let allItemsInStock = true;
       const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
-      const productUpdates = new Map<string, { ref: any, newVariants: ProductVariant[] }>();
+      const stockUpdates = new Map<string, { ref: any, newVariants: ProductVariant[] }>();
 
       for (const item of orderData.items) {
         const productInfo = productsMap.get(item.productId);
-        if (!productInfo) {
-          throw new Error(`Internal error: Product info for ${item.productId} not found.`);
-        }
+        if (!productInfo) throw new Error(`Internal error: Product info for ${item.productId} not found.`);
 
-        let currentVariants = productInfo.data.variants;
-        if (productUpdates.has(item.productId)) {
-          currentVariants = productUpdates.get(item.productId)!.newVariants;
-        }
+        // Use the latest version of variants if already in our update map
+        const currentVariants = stockUpdates.get(item.productId)?.newVariants || productInfo.data.variants;
         
         const variantIndex = currentVariants.findIndex(v => v.id === item.variant.id);
-        if (variantIndex === -1) {
-          throw new Error(`Variant ${item.variant.id} not found for product ${item.productName}`);
-        }
+        if (variantIndex === -1) throw new Error(`Variant ${item.variant.id} not found for product ${item.productName}`);
         
         const variantToUpdate = currentVariants[variantIndex];
         
         if (variantToUpdate.stock_quantity >= item.quantity) {
+          // Item is in stock, prepare stock deduction
           const newVariants = [...currentVariants];
           newVariants[variantIndex] = { ...variantToUpdate, stock_quantity: variantToUpdate.stock_quantity - item.quantity };
-          productUpdates.set(item.productId, { ref: productInfo.doc.ref, newVariants });
+          stockUpdates.set(item.productId, { ref: productInfo.doc.ref, newVariants });
         } else {
+          // Item is out of stock
           allItemsInStock = false;
           
+          // Check if we can produce it
           const recipe = await getProductFabricsForProduct(productInfo.data.id);
           if (recipe.length === 0) {
             console.warn(`Product ${productInfo.data.name} is out of stock and has no recipe. It cannot be produced.`);
-            continue; 
+            continue; // Move to next item, this one can't be fulfilled
           }
 
           let canProduce = true;
           for (const recipeItem of recipe) {
             const fabricRef = doc(db, 'fabrics', recipeItem.fabric_id);
-            const fabricDoc = await transaction.get(fabricRef);
+            const fabricDoc = await transaction.get(fabricRef); // Must read within transaction
             if (!fabricDoc.exists() || (fabricDoc.data() as Fabric).length_in_meters < (recipeItem.fabric_quantity_meters * item.quantity)) {
               canProduce = false;
               console.warn(`Not enough fabric ${recipeItem.fabric_id} to produce ${productInfo.data.name}.`);
-              break;
+              break; // Stop checking fabrics for this item
             }
           }
 
@@ -120,13 +117,14 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
               product_id: item.productId,
               variant_id: item.variant.id,
               required_quantity: item.quantity,
-              sales_order_id: '',
+              sales_order_id: '', // Will be set later
               status: 'pending'
             });
           }
         }
       }
       
+      // 3. Perform all writes
       const finalOrderStatus: Order['status'] = allItemsInStock ? 'processing' : 'pending';
 
       const newOrderRef = doc(collection(db, 'orders'));
@@ -136,15 +134,17 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         created_at: serverTimestamp(),
       });
 
-      productUpdates.forEach(update => {
+      // Apply stock updates
+      stockUpdates.forEach(update => {
         transaction.update(update.ref, { variants: update.newVariants });
       });
 
+      // Create production orders
       productionOrdersToCreate.forEach(poData => {
         const newProdOrderRef = doc(collection(db, 'production_orders'));
         transaction.set(newProdOrderRef, {
           ...poData,
-          sales_order_id: newOrderRef.id,
+          sales_order_id: newOrderRef.id, // Link to the new sales order
           created_at: serverTimestamp()
         });
       });
@@ -152,6 +152,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
       return newOrderRef.id;
     });
 
+    // 4. Revalidate paths
     revalidatePath('/orders');
     revalidatePath('/pos');
     revalidatePath('/dashboard');
