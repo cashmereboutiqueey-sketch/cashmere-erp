@@ -8,8 +8,8 @@ import { revalidatePath } from 'next/cache';
 const ordersCollection = collection(db, 'orders');
 const productsCollection = collection(db, 'products');
 
-const fromFirestore = async (doc: any): Promise<Order> => {
-  const data = doc.data();
+const fromFirestore = async (docSnap: any): Promise<Order> => {
+  const data = docSnap.data();
   
   let customerData: Customer | undefined = undefined;
   if (data.customer_id) {
@@ -20,7 +20,7 @@ const fromFirestore = async (doc: any): Promise<Order> => {
   }
 
   return {
-    id: doc.id,
+    id: docSnap.id,
     customer_id: data.customer_id,
     customer: customerData,
     status: data.status,
