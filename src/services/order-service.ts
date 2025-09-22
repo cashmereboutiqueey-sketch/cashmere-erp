@@ -54,49 +54,58 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
   try {
     const newOrderId = await runTransaction(db, async (transaction) => {
       // --- READ PHASE ---
-      if (!orderData.items) {
+      if (!orderData.items || orderData.items.length === 0) {
         throw new Error('Order must have items.');
       }
 
-      const productDocs = new Map<string, { doc: any, data: Product }>();
-      const productRefs = orderData.items.map(item => doc(db, 'products', item.productId));
-      for (let i = 0; i < orderData.items.length; i++) {
-        const item = orderData.items[i];
-        if (!productDocs.has(item.productId)) {
-          const productRef = doc(db, 'products', item.productId);
-          const productDoc = await transaction.get(productRef);
-          if (!productDoc.exists()) throw new Error(`Product with ID ${item.productId} not found.`);
-          productDocs.set(item.productId, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
+      // 1. Fetch all unique product documents in the order
+      const productIds = [...new Set(orderData.items.map(item => item.productId))];
+      const productRefs = productIds.map(id => doc(db, 'products', id));
+      const productDocs = await Promise.all(productRefs.map(ref => transaction.get(ref)));
+      
+      const productsMap = new Map<string, { doc: any, data: Product }>();
+      for (const productDoc of productDocs) {
+        if (!productDoc.exists()) {
+          throw new Error(`Product with ID ${productDoc.id} not found.`);
         }
+        productsMap.set(productDoc.id, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
       }
 
       let allItemsInStock = true;
       const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
-      const stockUpdates = new Map<string, ProductVariant[]>();
+      const productStockUpdates = new Map<string, ProductVariant[]>();
 
+      // 2. Process each item, check stock, and prepare updates
       for (const item of orderData.items) {
-        const productInfo = productDocs.get(item.productId);
-        if (!productInfo) throw new Error('Internal error: Product info not found in transaction map.');
-        
-        // Use the latest variant data from the stockUpdates map if available, otherwise use original
-        const currentVariants = stockUpdates.get(item.productId) || productInfo.data.variants;
+        const productInfo = productsMap.get(item.productId);
+        if (!productInfo) {
+          throw new Error(`Internal error: Product info for ${item.productId} not found in transaction map.`);
+        }
+
+        // Use the latest variant data from our updates map, or the original if not yet updated
+        const currentVariants = productStockUpdates.get(item.productId) || productInfo.data.variants;
         const variantToUpdate = currentVariants.find(v => v.id === item.variant.id);
         
-        if (!variantToUpdate) throw new Error(`Variant not found for product ${item.productName}`);
-        
+        if (!variantToUpdate) {
+          throw new Error(`Variant ${item.variant.id} not found for product ${item.productName}`);
+        }
+
         if (variantToUpdate.stock_quantity >= item.quantity) {
+          // Item is in stock, prepare stock deduction
           const updatedVariants = currentVariants.map(v => 
             v.id === item.variant.id 
               ? { ...v, stock_quantity: v.stock_quantity - item.quantity } 
               : v
           );
-          stockUpdates.set(item.productId, updatedVariants);
+          productStockUpdates.set(item.productId, updatedVariants);
         } else {
+          // Item is out of stock, flag for production
           allItemsInStock = false;
+          
           const recipe = await getProductFabricsForProduct(productInfo.data.id);
           if (recipe.length === 0) {
             console.warn(`Product ${productInfo.data.name} is out of stock and has no recipe. It cannot be produced.`);
-            continue;
+            continue; // Move to the next item
           }
 
           let canProduce = true;
@@ -115,7 +124,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
               product_id: item.productId,
               variant_id: item.variant.id,
               required_quantity: item.quantity,
-              sales_order_id: '',
+              sales_order_id: '', // Will be set later with the new order ID
               status: 'pending'
             });
           }
@@ -125,6 +134,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
       const finalOrderStatus: Order['status'] = allItemsInStock ? 'processing' : 'pending';
 
       // --- WRITE PHASE ---
+      // 3. Create the new order document
       const newOrderRef = doc(collection(db, 'orders'));
       transaction.set(newOrderRef, {
         ...orderData,
@@ -132,18 +142,18 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         created_at: serverTimestamp(),
       });
 
-      // Apply stock updates for all processed items
-      for (const [productId, updatedVariants] of stockUpdates.entries()) {
+      // 4. Apply all prepared stock updates
+      for (const [productId, updatedVariants] of productStockUpdates.entries()) {
         const productRef = doc(db, 'products', productId);
         transaction.update(productRef, { variants: updatedVariants });
       }
 
-      // Create production orders
+      // 5. Create all necessary production orders
       for (const poData of productionOrdersToCreate) {
         const newProdOrderRef = doc(collection(db, 'production_orders'));
         transaction.set(newProdOrderRef, {
           ...poData,
-          sales_order_id: newOrderRef.id,
+          sales_order_id: newOrderRef.id, // Link to the newly created order
           created_at: serverTimestamp()
         });
       }
