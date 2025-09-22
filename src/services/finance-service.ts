@@ -8,6 +8,16 @@ import type { DateRange } from 'react-day-picker';
 
 const expensesCollection = collection(db, 'expenses');
 
+// Simplified journal entry logger
+const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
+    console.log(`-- JOURNAL ENTRY: ${description} --`);
+    entries.forEach(entry => {
+        console.log(`  ${entry.account}: Debit: ${entry.debit || 0}, Credit: ${entry.credit || 0}`);
+    });
+    console.log('------------------------------------');
+}
+
+
 const fromFirestore = (doc: any): Expense => {
   const data = doc.data();
   return {
@@ -44,6 +54,21 @@ export async function addExpense(expenseData: Omit<Expense, 'id' | 'created_at'>
       ...expenseData,
       created_at: serverTimestamp(),
     });
+    
+    // Auto-posting to GL
+    if (expenseData.category === 'cogs') {
+        logJournalEntry(`Purchase - ${expenseData.note || 'Supplier Bill'}`, [
+            { account: 'Cost of Goods Sold', debit: expenseData.amount },
+            { account: 'Accounts Payable', credit: expenseData.amount },
+        ]);
+    } else {
+         logJournalEntry(`Expense - ${expenseData.note || expenseData.category}`, [
+            { account: `${expenseData.category} Expense`, debit: expenseData.amount },
+            { account: 'Cash', credit: expenseData.amount },
+        ]);
+    }
+
+
     revalidatePath('/finance');
     revalidatePath('/reports');
     return docRef.id;

@@ -9,6 +9,15 @@ import { getProductFabricsForProduct } from './product-fabric-service';
 const ordersCollection = collection(db, 'orders');
 const productsCollection = collection(db, 'products');
 
+// Simplified journal entry logger
+const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
+    console.log(`-- JOURNAL ENTRY: ${description} --`);
+    entries.forEach(entry => {
+        console.log(`  ${entry.account}: Debit: ${entry.debit || 0}, Credit: ${entry.credit || 0}`);
+    });
+    console.log('------------------------------------');
+}
+
 const fromFirestore = async (docSnap: any): Promise<Order> => {
   const data = docSnap.data();
   
@@ -158,6 +167,18 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
             created_at: serverTimestamp()
           });
         });
+
+        // Auto-posting to GL
+        logJournalEntry(`Sale - Order ${newOrderRef.id.slice(0,5)}`, [
+            { account: 'Accounts Receivable', debit: orderData.total_amount },
+            { account: 'Sales Revenue', credit: orderData.total_amount },
+        ]);
+        if (orderData.amount_paid && orderData.amount_paid > 0) {
+            logJournalEntry(`Payment - Order ${newOrderRef.id.slice(0,5)}`, [
+                { account: 'Cash', debit: orderData.amount_paid },
+                { account: 'Accounts Receivable', credit: orderData.amount_paid },
+            ]);
+        }
       }
 
 
@@ -170,6 +191,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
     revalidatePath('/dashboard');
     revalidatePath('/products');
     revalidatePath('/production');
+    revalidatePath('/finance');
 
     return newOrderId;
   } catch (error) {
@@ -201,6 +223,12 @@ export async function addPaymentToOrder(orderId: string, amount: number) {
                 payment_status: newPaymentStatus,
                 updatedAt: serverTimestamp(),
             });
+
+            // Auto-posting to GL
+            logJournalEntry(`Payment - Order ${orderId.slice(0,5)}`, [
+                { account: 'Cash', debit: amount },
+                { account: 'Accounts Receivable', credit: amount },
+            ]);
         });
 
         revalidatePath('/orders');
@@ -254,10 +282,24 @@ export async function deleteOrder(id: string) {
             }
             
             transaction.delete(orderDocRef);
+
+            // Auto-posting for reversal
+            logJournalEntry(`Reversal - Deleted Order ${id.slice(0,5)}`, [
+                { account: 'Sales Revenue', debit: orderData.total_amount },
+                { account: 'Accounts Receivable', credit: orderData.total_amount },
+            ]);
+            if (orderData.amount_paid && orderData.amount_paid > 0) {
+                 logJournalEntry(`Reversal - Payment for Deleted Order ${id.slice(0,5)}`, [
+                    { account: 'Accounts Receivable', debit: orderData.amount_paid },
+                    { account: 'Cash', credit: orderData.amount_paid },
+                ]);
+            }
+
         });
 
         revalidatePath('/orders');
         revalidatePath('/products');
+        revalidatePath('/finance');
 
     } catch (error) {
         console.error("Error deleting order: ", error);
