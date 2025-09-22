@@ -2,13 +2,12 @@
 'use server';
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction, deleteDoc, where, Timestamp } from 'firebase/firestore';
 import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVariant } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { getProductFabricsForProduct } from './product-fabric-service';
+import type { DateRange } from 'react-day-picker';
 
-const ordersCollection = collection(db, 'orders');
-const productsCollection = collection(db, 'products');
 
 // Simplified journal entry logger
 const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
@@ -45,12 +44,23 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
   };
 };
 
-export async function getOrders(): Promise<Order[]> {
+export async function getOrders(dateRange?: DateRange): Promise<Order[]> {
   try {
-    const q = query(ordersCollection, orderBy('created_at', 'desc'));
+    let q;
+    if (dateRange?.from && dateRange?.to) {
+        q = query(
+            ordersCollection,
+            where('created_at', '>=', Timestamp.fromDate(dateRange.from)),
+            where('created_at', '<=', Timestamp.fromDate(dateRange.to)),
+            orderBy('created_at', 'desc')
+        );
+    } else {
+        q = query(ordersCollection, orderBy('created_at', 'desc'));
+    }
+
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
-        console.log('No orders found.');
+        console.log('No orders found for the specified criteria.');
         return [];
     }
     return Promise.all(snapshot.docs.map(docSnap => fromFirestore(docSnap)));
