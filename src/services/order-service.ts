@@ -124,7 +124,8 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
           }
         } else {
           finalOrderStatus = 'pending';
-          const recipe = await getProductFabricsForProduct(productInfo.data.id);
+          // This part has been modified to use the pre-fetched recipe data
+          const recipe = allRecipeItems.filter(r => r.product_id === productInfo.data.id);
           if (recipe.length === 0) {
              console.warn(`Product ${productInfo.data.name} is out of stock and has no recipe.`);
              finalOrderStatus = 'sold_out';
@@ -317,3 +318,5 @@ export async function deleteOrder(id: string) {
         throw new Error("Could not delete order");
     }
 }
+const ordersCollection = collection(db, 'orders');
+    
