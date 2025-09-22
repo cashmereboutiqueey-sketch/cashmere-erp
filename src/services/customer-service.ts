@@ -18,6 +18,8 @@ const fromFirestore = (doc: any): Customer => {
     address: data.address,
     avatarUrl: data.avatarUrl,
     notes: data.notes,
+    // Safely convert timestamp if it exists
+    created_at: data.created_at?.toDate().toISOString() || new Date().toISOString(),
   };
 };
 
@@ -31,11 +33,11 @@ export async function getCustomers(): Promise<Customer[]> {
   }
 }
 
-export async function addCustomer(customerData: Omit<Customer, 'id'>) {
+export async function addCustomer(customerData: Omit<Customer, 'id' | 'created_at'>) {
   try {
     const docRef = await addDoc(customersCollection, {
       ...customerData,
-      createdAt: serverTimestamp(),
+      created_at: serverTimestamp(),
     });
     revalidatePath('/customers');
     revalidatePath('/pos');

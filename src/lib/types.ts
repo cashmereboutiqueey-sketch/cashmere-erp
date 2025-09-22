@@ -17,6 +17,7 @@ export type Customer = {
   address?: string;
   notes?: string;
   avatarUrl?: string;
+  created_at: string;
 };
 
 export type Supplier = {
