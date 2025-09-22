@@ -60,17 +60,17 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
 
       const productDocs = new Map<string, { doc: any, data: Product }>();
       const productRefs = orderData.items.map(item => doc(db, 'products', item.productId));
-      // Firestore transactions require `getAll` which is not available in the web SDK,
-      // so we have to fetch one by one. This is a limitation we accept for now.
       for (let i = 0; i < orderData.items.length; i++) {
         const item = orderData.items[i];
-        const productRef = productRefs[i];
-        const productDoc = await transaction.get(productRef);
-        if (!productDoc.exists()) throw new Error(`Product with ID ${item.productId} not found.`);
-        productDocs.set(item.productId, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
+        if (!productDocs.has(item.productId)) {
+          const productRef = doc(db, 'products', item.productId);
+          const productDoc = await transaction.get(productRef);
+          if (!productDoc.exists()) throw new Error(`Product with ID ${item.productId} not found.`);
+          productDocs.set(item.productId, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
+        }
       }
 
-      let finalOrderStatus: Order['status'] = 'pending';
+      let allItemsInStock = true;
       const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
       const stockUpdates = new Map<string, ProductVariant[]>();
 
@@ -78,13 +78,13 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         const productInfo = productDocs.get(item.productId);
         if (!productInfo) throw new Error('Internal error: Product info not found in transaction map.');
         
-        const currentVariants = productInfo.data.variants;
+        // Use the latest variant data from the stockUpdates map if available, otherwise use original
+        const currentVariants = stockUpdates.get(item.productId) || productInfo.data.variants;
         const variantToUpdate = currentVariants.find(v => v.id === item.variant.id);
         
         if (!variantToUpdate) throw new Error(`Variant not found for product ${item.productName}`);
         
         if (variantToUpdate.stock_quantity >= item.quantity) {
-          // Item is in stock, prepare stock update
           const updatedVariants = currentVariants.map(v => 
             v.id === item.variant.id 
               ? { ...v, stock_quantity: v.stock_quantity - item.quantity } 
@@ -92,7 +92,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
           );
           stockUpdates.set(item.productId, updatedVariants);
         } else {
-          // Item is out of stock, try to produce it
+          allItemsInStock = false;
           const recipe = await getProductFabricsForProduct(productInfo.data.id);
           if (recipe.length === 0) {
             console.warn(`Product ${productInfo.data.name} is out of stock and has no recipe. It cannot be produced.`);
@@ -121,10 +121,8 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
           }
         }
       }
-
-      if (stockUpdates.size === orderData.items.length) {
-        finalOrderStatus = 'processing';
-      }
+      
+      const finalOrderStatus: Order['status'] = allItemsInStock ? 'processing' : 'pending';
 
       // --- WRITE PHASE ---
       const newOrderRef = doc(collection(db, 'orders'));
@@ -134,7 +132,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         created_at: serverTimestamp(),
       });
 
-      // Apply stock updates
+      // Apply stock updates for all processed items
       for (const [productId, updatedVariants] of stockUpdates.entries()) {
         const productRef = doc(db, 'products', productId);
         transaction.update(productRef, { variants: updatedVariants });
