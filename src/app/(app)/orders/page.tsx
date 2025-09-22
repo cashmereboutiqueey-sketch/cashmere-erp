@@ -14,9 +14,14 @@ export default function OrdersPage() {
   useEffect(() => {
     const fetchOrders = async () => {
       setIsLoading(true);
-      const fetchedOrders = await getOrders();
-      setOrders(fetchedOrders);
-      setIsLoading(false);
+      try {
+        const fetchedOrders = await getOrders();
+        setOrders(fetchedOrders);
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchOrders();
   }, []);

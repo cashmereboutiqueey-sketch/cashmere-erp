@@ -43,7 +43,7 @@ export async function getOrders(): Promise<Order[]> {
         console.log('No orders found.');
         return [];
     }
-    return Promise.all(snapshot.docs.map(doc => fromFirestore(doc)));
+    return Promise.all(snapshot.docs.map(docSnap => fromFirestore(docSnap)));
   } catch (error) {
     console.error('Error getting orders: ', error);
     return [];
@@ -53,75 +53,63 @@ export async function getOrders(): Promise<Order[]> {
 export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'customer'>) {
   try {
     const newOrderId = await runTransaction(db, async (transaction) => {
-      const itemsToProduce: { item: OrderItem; product: Product }[] = [];
-      const itemsToShip: { item: OrderItem; product: Product }[] = [];
-      
+      // --- READ PHASE ---
       if (!orderData.items) {
         throw new Error('Order must have items.');
       }
 
-      // --- READ PHASE ---
-      const productDocsMap: Map<string, Product> = new Map();
+      const productDocs = new Map<string, { doc: any, data: Product }>();
       for (const item of orderData.items) {
         const productRef = doc(db, 'products', item.productId);
         const productDoc = await transaction.get(productRef);
         if (!productDoc.exists()) throw new Error(`Product with ID ${item.productId} not found.`);
-        const productData = { id: productDoc.id, ...productDoc.data() } as Product;
-        productDocsMap.set(item.productId, productData);
-        
+        productDocs.set(item.productId, { doc: productDoc, data: { id: productDoc.id, ...productDoc.data() } as Product });
+      }
+
+      let finalOrderStatus: Order['status'] = 'pending';
+      let allItemsInStock = true;
+      const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
+
+      for (const item of orderData.items) {
+        const productInfo = productDocs.get(item.productId);
+        if (!productInfo) throw new Error('Internal error: Product info not found in transaction map.');
+        const productData = productInfo.data;
+
         const variant = productData.variants.find(v => v.id === item.variant.id);
         if (!variant) throw new Error(`Variant not found for product ${item.productName}`);
+        
+        if (variant.stock_quantity < item.quantity) {
+          allItemsInStock = false;
+          // Item is out of stock, check fabric availability.
+          const recipe = await getProductFabricsForProduct(productData.id);
+          if (recipe.length === 0) {
+            console.warn(`Product ${productData.name} has no recipe. It cannot be produced.`);
+            continue; 
+          }
 
-        if (variant.stock_quantity >= item.quantity) {
-          itemsToShip.push({ item, product: productData });
-        } else {
-          itemsToProduce.push({ item, product: productData });
+          let canProduce = true;
+          for (const recipeItem of recipe) {
+            const fabricRef = doc(db, 'fabrics', recipeItem.fabric_id);
+            const fabricDoc = await transaction.get(fabricRef);
+            if (!fabricDoc.exists() || (fabricDoc.data() as Fabric).length_in_meters < (recipeItem.fabric_quantity_meters * item.quantity)) {
+              canProduce = false;
+              console.warn(`Not enough fabric ${recipeItem.fabric_id} to produce ${productData.name}.`);
+              break;
+            }
+          }
+          if (canProduce) {
+            productionOrdersToCreate.push({
+              product_id: item.productId,
+              variant_id: item.variant.id,
+              required_quantity: item.quantity,
+              sales_order_id: '', // Will be set after order is created
+              status: 'pending'
+            });
+          }
         }
       }
-      
-      const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
-      let finalOrderStatus: Order['status'] = 'pending';
 
-      if (itemsToProduce.length > 0) {
-        // Some items are out of stock, check fabric availability.
-        for (const { item, product } of itemsToProduce) {
-            const recipe = await getProductFabricsForProduct(product.id);
-            if(recipe.length === 0) {
-                console.warn(`Product ${product.name} has no recipe. Cannot create production order. Order will remain pending.`);
-                continue; // Skip to next item, order remains pending
-            }
-
-            let canProduce = true;
-            for (const recipeItem of recipe) {
-                const fabricRef = doc(db, 'fabrics', recipeItem.fabric_id);
-                const fabricDoc = await transaction.get(fabricRef);
-                if (!fabricDoc.exists()) {
-                    console.warn(`Fabric ${recipeItem.fabric_id} not found. Cannot produce ${product.name}.`);
-                    canProduce = false;
-                    break;
-                };
-
-                const fabricData = fabricDoc.data() as Fabric;
-                const requiredFabric = recipeItem.fabric_quantity_meters * item.quantity;
-                if(fabricData.length_in_meters < requiredFabric) {
-                    console.warn(`Not enough fabric ${fabricData.name} to produce ${product.name}.`);
-                    canProduce = false;
-                    break;
-                }
-            }
-
-            if (canProduce) {
-                 productionOrdersToCreate.push({
-                    product_id: item.productId,
-                    variant_id: item.variant.id,
-                    required_quantity: item.quantity,
-                    sales_order_id: '', // Will be set after order is created
-                    status: 'pending'
-                });
-            }
-        }
-      } else {
-        // All items are in stock.
+      if (allItemsInStock) {
         finalOrderStatus = 'processing';
       }
 
@@ -133,28 +121,30 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
         created_at: serverTimestamp(),
       });
 
-      // Decrement stock for items that are ready to ship.
-      for (const { item } of itemsToShip) {
-        const productData = productDocsMap.get(item.productId);
-        if (!productData) continue;
-        
-        const productRef = doc(db, 'products', item.productId);
-        const newVariants = productData.variants.map(v => 
-          v.id === item.variant.id 
-            ? { ...v, stock_quantity: v.stock_quantity - item.quantity } 
-            : v
-        );
-        transaction.update(productRef, { variants: newVariants });
+      // Update stock for all items
+      for (const item of orderData.items) {
+          const productInfo = productDocs.get(item.productId);
+          if (!productInfo) continue;
+          
+          const variantInStock = productInfo.data.variants.find(v => v.id === item.variant.id)?.stock_quantity ?? 0;
+          if (variantInStock >= item.quantity) {
+            const productRef = doc(db, 'products', item.productId);
+            const newVariants = productInfo.data.variants.map(v => 
+              v.id === item.variant.id 
+                ? { ...v, stock_quantity: v.stock_quantity - item.quantity } 
+                : v
+            );
+            transaction.update(productRef, { variants: newVariants });
+          }
       }
-      
-      // Create Production Orders for items that need to be produced and have enough fabric.
+
       for (const poData of productionOrdersToCreate) {
-          const newProdOrderRef = doc(collection(db, 'production_orders'));
-          transaction.set(newProdOrderRef, {
-              ...poData,
-              sales_order_id: newOrderRef.id,
-              created_at: serverTimestamp()
-          });
+        const newProdOrderRef = doc(collection(db, 'production_orders'));
+        transaction.set(newProdOrderRef, {
+          ...poData,
+          sales_order_id: newOrderRef.id,
+          created_at: serverTimestamp()
+        });
       }
 
       return newOrderRef.id;
@@ -168,10 +158,43 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
 
     return newOrderId;
   } catch (error) {
-    console.error('Error adding order and updating stock: ', error);
+    console.error('Error adding order: ', error);
     throw new Error('Could not add order. ' + (error instanceof Error ? error.message : ''));
   }
 }
+
+export async function addPaymentToOrder(orderId: string, amount: number) {
+    try {
+        await runTransaction(db, async (transaction) => {
+            const orderRef = doc(db, 'orders', orderId);
+            const orderDoc = await transaction.get(orderRef);
+            if (!orderDoc.exists()) {
+                throw new Error("Order not found");
+            }
+            const orderData = orderDoc.data() as Order;
+            const currentPaid = orderData.amount_paid || 0;
+            const newPaidAmount = currentPaid + amount;
+
+            let newPaymentStatus: Order['payment_status'] = 'partially_paid';
+            if (newPaidAmount >= orderData.total_amount) {
+                newPaymentStatus = 'paid';
+            }
+
+            transaction.update(orderRef, {
+                amount_paid: newPaidAmount,
+                payment_status: newPaymentStatus,
+                updatedAt: serverTimestamp(),
+            });
+        });
+
+        revalidatePath('/orders');
+        revalidatePath('/finance');
+    } catch (error) {
+        console.error("Error adding payment to order:", error);
+        throw new Error("Could not add payment. " + (error instanceof Error ? error.message : ''));
+    }
+}
+
 
 export async function updateOrderStatus(id: string, status: Order['status']) {
   try {

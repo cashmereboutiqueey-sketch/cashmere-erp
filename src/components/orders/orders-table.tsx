@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { Order } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
@@ -20,6 +21,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { updateOrderStatus } from '@/services/order-service';
 import { useToast } from '@/hooks/use-toast';
+import { OrderDetailsDialog } from './order-details-dialog';
 
 const statusVariantMap: {
   [key: string]: 'default' | 'secondary' | 'destructive' | 'outline';
@@ -40,7 +42,10 @@ const paymentStatusVariantMap: {
 
 const statuses: Order['status'][] = ['pending', 'processing', 'completed', 'cancelled'];
 
-export function getColumns(onStatusChange: (orderId: string, status: Order['status']) => void): ColumnDef<Order>[] {
+export function getColumns(
+    onStatusChange: (orderId: string, status: Order['status']) => void,
+    onViewDetails: (order: Order) => void
+): ColumnDef<Order>[] {
     return [
         {
             accessorKey: 'id',
@@ -144,7 +149,7 @@ export function getColumns(onStatusChange: (orderId: string, status: Order['stat
                             </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                     </DropdownMenuSub>
-                    <DropdownMenuItem>View details</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onViewDetails(order)}>View details</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
                 </div>
@@ -161,6 +166,8 @@ interface OrdersTableProps {
 
 export function OrdersTable({ data }: OrdersTableProps) {
   const { toast } = useToast();
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const handleStatusChange = async (orderId: string, status: Order['status']) => {
     try {
@@ -180,8 +187,22 @@ export function OrdersTable({ data }: OrdersTableProps) {
       });
     }
   };
-  
-  const columns = getColumns(handleStatusChange);
 
-  return <DataTable columns={columns} data={data} />;
+  const handleViewDetails = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDetailsOpen(true);
+  };
+  
+  const columns = getColumns(handleStatusChange, handleViewDetails);
+
+  return (
+    <>
+        <DataTable columns={columns} data={data} />
+        <OrderDetailsDialog 
+            order={selectedOrder}
+            isOpen={isDetailsOpen}
+            onOpenChange={setIsDetailsOpen}
+        />
+    </>
+  );
 }
