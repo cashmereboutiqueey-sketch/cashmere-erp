@@ -2,8 +2,9 @@
 
 import { db } from './firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, writeBatch, serverTimestamp, query, orderBy, getDoc, runTransaction } from 'firebase/firestore';
-import { Order, Customer, Product, OrderItem } from '@/lib/types';
+import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
+import { getProductFabricsForProduct } from './product-fabric-service';
 
 const ordersCollection = collection(db, 'orders');
 const productsCollection = collection(db, 'products');
@@ -13,9 +14,9 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
   
   let customerData: Customer | undefined = undefined;
   if (data.customer_id) {
-    const customerDoc = await getDoc(doc(db, 'customers', data.customer_id));
-    if (customerDoc.exists()) {
-      customerData = { id: customerDoc.id, ...customerDoc.data() } as Customer;
+    const customerDocSnap = await getDoc(doc(db, 'customers', data.customer_id));
+    if (customerDocSnap.exists()) {
+      customerData = { id: customerDocSnap.id, ...customerDocSnap.data() } as Customer;
     }
   }
 
@@ -51,51 +52,109 @@ export async function getOrders(): Promise<Order[]> {
 export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'customer'>) {
   try {
     const newOrderId = await runTransaction(db, async (transaction) => {
-      // READ PHASE: Read all product documents first.
-      const productDocs = new Map<string, { doc: any, data: Product }>();
-      if (orderData.items) {
-        for (const item of orderData.items) {
-          const productRef = doc(db, 'products', item.productId);
-          const productDoc = await transaction.get(productRef);
-          if (!productDoc.exists()) {
-            throw new Error(`Product with ID ${item.productId} not found.`);
-          }
-          productDocs.set(item.productId, { doc: productDoc, data: productDoc.data() as Product });
+      const itemsToProduce: { item: OrderItem; product: Product }[] = [];
+      const itemsToShip: { item: OrderItem; product: Product }[] = [];
+      let allItemsInStock = true;
+
+      if (!orderData.items) {
+        throw new Error('Order must have items.');
+      }
+
+      // --- READ PHASE ---
+      // 1. Read all product documents for items in the order.
+      const productDocs = new Map<string, { doc: any; data: Product }>();
+      for (const item of orderData.items) {
+        const productRef = doc(db, 'products', item.productId);
+        const productDoc = await transaction.get(productRef);
+        if (!productDoc.exists()) throw new Error(`Product with ID ${item.productId} not found.`);
+        
+        const productData = productDoc.data() as Product;
+        productDocs.set(item.productId, { doc: productDoc, data: productData });
+        
+        const variant = productData.variants.find(v => v.id === item.variant.id);
+        if (!variant) throw new Error(`Variant not found for product ${item.productName}`);
+
+        if (variant.stock_quantity >= item.quantity) {
+          itemsToShip.push({ item, product: productData });
+        } else {
+          allItemsInStock = false;
+          itemsToProduce.push({ item, product: productData });
+        }
+      }
+      
+      const productionOrdersToCreate: Omit<ProductionOrder, 'id' | 'created_at'>[] = [];
+      let finalOrderStatus: Order['status'] = 'pending';
+
+      if(allItemsInStock) {
+        finalOrderStatus = 'processing';
+      } else {
+        // 2. If not all items are in stock, check fabric availability for items to produce.
+        for (const { item, product } of itemsToProduce) {
+            const recipe = await getProductFabricsForProduct(product.id);
+            if(recipe.length === 0) {
+                throw new Error(`Product ${product.name} has no recipe. Cannot create production order.`);
+            }
+
+            let canProduce = true;
+            for (const recipeItem of recipe) {
+                const fabricRef = doc(db, 'fabrics', recipeItem.fabric_id);
+                const fabricDoc = await transaction.get(fabricRef);
+                if (!fabricDoc.exists()) {
+                    canProduce = false;
+                    break;
+                };
+
+                const fabricData = fabricDoc.data() as Fabric;
+                const requiredFabric = recipeItem.fabric_quantity_meters * item.quantity;
+                if(fabricData.length_in_meters < requiredFabric) {
+                    canProduce = false;
+                    break;
+                }
+            }
+
+            if (canProduce) {
+                // If we can produce, add a production order to the list to be created.
+                 productionOrdersToCreate.push({
+                    product_id: item.productId,
+                    variant_id: item.variant.id,
+                    required_quantity: item.quantity,
+                    sales_order_id: '', // Will be set after order is created
+                    status: 'pending'
+                });
+            }
+            // If canProduce is false, we just leave the order as 'pending' without creating a production order.
         }
       }
 
-      // WRITE PHASE: Now perform all writes.
+      // --- WRITE PHASE ---
+      // 1. Create the new Sales Order.
       const newOrderRef = doc(collection(db, 'orders'));
       transaction.set(newOrderRef, {
         ...orderData,
+        status: finalOrderStatus,
         created_at: serverTimestamp(),
       });
 
-      if (!orderData.items) return newOrderRef.id;
-
-      // Update stock for each item in the order
-      for (const item of orderData.items) {
-        const productInfo = productDocs.get(item.productId);
-        if (!productInfo) {
-          // This should not happen if the read phase was successful
-          throw new Error(`Product data for ID ${item.productId} was not pre-fetched.`);
-        }
-        
-        const product = { ...productInfo.data }; // Create a mutable copy
+      // 2. Decrement stock for items that are ready to ship.
+      for (const { item, product } of itemsToShip) {
         const productRef = doc(db, 'products', item.productId);
-        const variantIndex = product.variants.findIndex(v => v.id === item.variant.id);
-
-        if (variantIndex === -1) {
-          throw new Error(`Variant with SKU ${item.variant.sku} not found in product ${product.name}.`);
-        }
-
-        const newStock = product.variants[variantIndex].stock_quantity - item.quantity;
-        if (newStock < 0) {
-          throw new Error(`Not enough stock for ${product.name} - ${item.variant.sku}. Required: ${item.quantity}, Available: ${product.variants[variantIndex].stock_quantity}`);
-        }
-
-        product.variants[variantIndex].stock_quantity = newStock;
-        transaction.update(productRef, { variants: product.variants });
+        const newVariants = product.variants.map(v => {
+          if (v.id === item.variant.id) {
+            return { ...v, stock_quantity: v.stock_quantity - item.quantity };
+          }
+          return v;
+        });
+        transaction.update(productRef, { variants: newVariants });
+      }
+      
+      // 3. Create Production Orders for items that need to be produced.
+      for (const poData of productionOrdersToCreate) {
+          const newProdOrderRef = doc(collection(db, 'production_orders'));
+          transaction.set(newProdOrderRef, {
+              ...poData,
+              sales_order_id: newOrderRef.id, // Link to the sales order
+              created_at: serverTimestamp()
+          });
       }
 
       return newOrderRef.id;
@@ -105,6 +164,7 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
     revalidatePath('/pos');
     revalidatePath('/dashboard');
     revalidatePath('/products');
+    revalidatePath('/production');
 
     return newOrderId;
   } catch (error) {
@@ -165,3 +225,5 @@ export async function deleteOrder(id: string) {
         throw new Error("Could not delete order");
     }
 }
+
+    
