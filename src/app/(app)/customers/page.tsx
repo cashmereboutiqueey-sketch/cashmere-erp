@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { CustomersTable } from '@/components/customers/customers-table';
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
-import { mockOrders } from '@/lib/data';
 import { Customer, Order } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,28 +10,36 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { getCustomers } from '@/services/customer-service';
+import { getOrders } from '@/services/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
-    const fetchCustomers = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
-      const fetchedCustomers = await getCustomers();
+      const [fetchedCustomers, fetchedOrders] = await Promise.all([
+          getCustomers(),
+          getOrders()
+      ]);
+      
       setCustomers(fetchedCustomers);
+      setOrders(fetchedOrders);
+      
       if (fetchedCustomers.length > 0) {
         setSelectedCustomer(fetchedCustomers[0]);
       }
       setIsLoading(false);
     };
-    fetchCustomers();
+    fetchData();
   }, []);
 
   const customerOrders = selectedCustomer
-    ? mockOrders.filter((order) => order.customer_id === selectedCustomer.id)
+    ? orders.filter((order) => order.customer_id === selectedCustomer.id)
     : [];
 
   const activeOrders = customerOrders.filter(
