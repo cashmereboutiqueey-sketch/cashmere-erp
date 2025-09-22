@@ -415,12 +415,6 @@ function ProductEditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-       <DialogTrigger asChild>
-        <Button size="sm" className="h-8">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
-      </DialogTrigger>
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Product' : 'Add New Product'}</DialogTitle>
