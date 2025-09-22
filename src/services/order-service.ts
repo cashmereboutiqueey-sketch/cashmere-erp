@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from './firebase';
@@ -226,7 +227,7 @@ export async function addPaymentToOrder(orderId: string, amount: number) {
 
             // Auto-posting to GL
             logJournalEntry(`Payment - Order ${orderId.slice(0,5)}`, [
-                { account: 'Cash', debit: amount },
+                { account: 'Cash on Hand', debit: amount },
                 { account: 'Accounts Receivable', credit: amount },
             ]);
         });
@@ -291,7 +292,7 @@ export async function deleteOrder(id: string) {
             if (orderData.amount_paid && orderData.amount_paid > 0) {
                  logJournalEntry(`Reversal - Payment for Deleted Order ${id.slice(0,5)}`, [
                     { account: 'Accounts Receivable', debit: orderData.amount_paid },
-                    { account: 'Cash', credit: orderData.amount_paid },
+                    { account: 'Cash on Hand', credit: orderData.amount_paid },
                 ]);
             }
 

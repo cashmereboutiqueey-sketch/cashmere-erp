@@ -10,14 +10,13 @@ import type { DateRange } from 'react-day-picker';
 const expensesCollection = collection(db, 'expenses');
 
 // Simplified journal entry logger
-export const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
+const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
     console.log(`-- JOURNAL ENTRY: ${description} --`);
     entries.forEach(entry => {
         console.log(`  ${entry.account}: Debit: ${entry.debit || 0}, Credit: ${entry.credit || 0}`);
     });
     console.log('------------------------------------');
 }
-
 
 const fromFirestore = (doc: any): Expense => {
   const data = doc.data();
@@ -78,6 +77,22 @@ export async function addExpense(expenseData: Omit<Expense, 'id' | 'created_at'>
     throw new Error('Could not add expense');
   }
 }
+
+export async function recordBankDeposit(amount: number, reference?: string) {
+    try {
+        logJournalEntry(`Bank Deposit - ${reference || 'Daily Deposit'}`, [
+            { account: 'Bank Account', debit: amount },
+            { account: 'Cash on Hand', credit: amount },
+        ]);
+        // In a real app, this would create a real transaction record.
+        // For now, we just log it.
+        revalidatePath('/finance');
+    } catch (error) {
+        console.error('Error recording bank deposit: ', error);
+        throw new Error('Could not record bank deposit');
+    }
+}
+
 
 export async function updateExpense(id: string, expenseData: Partial<Expense>) {
   try {

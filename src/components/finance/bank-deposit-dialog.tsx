@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Landmark } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
-import { logJournalEntry } from '@/services/finance-service';
+import { recordBankDeposit } from '@/services/finance-service';
 
 const depositSchema = z.object({
   amount: z.preprocess((val) => Number(val), z.number().min(0.01, "Amount must be greater than 0")),
@@ -39,21 +39,25 @@ export function BankDepositDialog() {
     },
   });
 
-  const onSubmit = (data: DepositFormData) => {
-    // In a real app, this would trigger a database update.
-    // For now, we'll just log the journal entry.
-    logJournalEntry(`Bank Deposit - ${data.reference || 'Daily Deposit'}`, [
-        { account: 'Bank Account', debit: data.amount },
-        { account: 'Cash on Hand', credit: data.amount },
-    ]);
-    
-    toast({
-      title: 'Success',
-      description: 'Bank deposit has been recorded.',
-    });
-    setOpen(false);
-    form.reset();
-    // You might want to trigger a re-fetch of account balances here.
+  const onSubmit = async (data: DepositFormData) => {
+    try {
+      await recordBankDeposit(data.amount, data.reference);
+      toast({
+        title: 'Success',
+        description: 'Bank deposit has been recorded.',
+      });
+      setOpen(false);
+      form.reset();
+      // In a real app, you'd trigger re-fetching of account balances.
+      // For now, a page reload will show the change in console.
+      window.location.reload();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to record bank deposit.',
+      });
+    }
   };
 
   return (
