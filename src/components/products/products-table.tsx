@@ -52,33 +52,110 @@ import { ScrollArea } from '../ui/scroll-area';
 import { generateProductDescription } from '@/ai/flows/product-description-generator';
 import { getFabrics } from '@/services/fabric-service';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Skeleton } from '../ui/skeleton';
 
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
 
-const VariantRow = ({ variant }: { variant: ProductVariant }) => {
-  return (
-    <TableRow>
-      <TableCell className="pl-12">
-        <Badge variant="outline">{variant.sku}</Badge>
-      </TableCell>
-      <TableCell>
-        <div className="flex gap-1">
-          {variant.color && <Badge variant="secondary">{variant.color}</Badge>}
-          {variant.size && <Badge variant="secondary">{variant.size}</Badge>}
-        </div>
-      </TableCell>
-      <TableCell>
-        {new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-        }).format(variant.price)}
-      </TableCell>
-      <TableCell>{variant.stock_quantity}</TableCell>
-      <TableCell></TableCell>
-    </TableRow>
-  );
+const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
+    const [productFabrics, setProductFabrics] = useState<ProductFabric[]>([]);
+    const [allFabrics, setAllFabrics] = useState<Fabric[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            const [fabricsForProduct, allFabricsData] = await Promise.all([
+                getProductFabricsForProduct(row.original.id),
+                getFabrics()
+            ]);
+            setProductFabrics(fabricsForProduct);
+            setAllFabrics(allFabricsData);
+            setIsLoading(false);
+        };
+        fetchData();
+    }, [row.original.id]);
+
+    const getFabricName = (fabricId: string) => {
+        return allFabrics.find(f => f.id === fabricId)?.name || 'Unknown Fabric';
+    }
+
+    return (
+        <TableCell colSpan={99} className='p-4 bg-muted/50'>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h4 className="font-medium mb-2">Variants</h4>
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>SKU</TableHead>
+                                    <TableHead>Variant</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead>Stock</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {row.original.variants.map((variant: ProductVariant) => (
+                                     <TableRow key={variant.id}>
+                                        <TableCell>
+                                            <Badge variant="outline">{variant.sku}</Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex gap-1">
+                                            {variant.color && <Badge variant="secondary">{variant.color}</Badge>}
+                                            {variant.size && <Badge variant="secondary">{variant.size}</Badge>}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            {new Intl.NumberFormat('en-US', {
+                                            style: 'currency',
+                                            currency: 'USD',
+                                            }).format(variant.price)}
+                                        </TableCell>
+                                        <TableCell>{variant.stock_quantity}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </div>
+                 <div>
+                    <h4 className="font-medium mb-2">Product Recipe (Bill of Materials)</h4>
+                     <div className="rounded-md border">
+                         {isLoading ? (
+                            <div className="p-4 space-y-2">
+                                <Skeleton className="h-8 w-full" />
+                                <Skeleton className="h-8 w-full" />
+                            </div>
+                         ) : productFabrics.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Fabric</TableHead>
+                                        <TableHead className="text-right">Meters / pc</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {productFabrics.map(pf => (
+                                        <TableRow key={pf.fabric_id}>
+                                            <TableCell>{getFabricName(pf.fabric_id)}</TableCell>
+                                            <TableCell className="text-right">{pf.fabric_quantity_meters}m</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                         ) : (
+                            <div className="p-4 text-center text-sm text-muted-foreground">
+                                No recipe defined for this product.
+                            </div>
+                         )}
+                     </div>
+                </div>
+            </div>
+        </TableCell>
+    );
 };
 
 const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
@@ -709,26 +786,9 @@ export function ProductsTable({ data }: ProductsTableProps) {
   
   const renderSubComponent = React.useCallback(({ row }: { row: Row<Product> }) => {
     return (
-        <TableCell colSpan={columns.length} className='p-0 bg-muted/50'>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-12">SKU</TableHead>
-                <TableHead>Variant</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {row.original.variants.map((variant: ProductVariant) => (
-                <VariantRow key={variant.id} variant={variant} />
-              ))}
-            </TableBody>
-          </Table>
-        </TableCell>
+        <ExpandedRowContent row={row} />
     );
-  }, [columns.length]);
+  }, []);
 
 
   return (
