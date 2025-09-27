@@ -32,18 +32,18 @@ export default function ReportsPage() {
       <div className="p-4 lg:p-6">
         <Tabs defaultValue="sales">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="sales">Sales</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="income">Income Statement</TabsTrigger>
-            <TabsTrigger value="balance">Balance Sheet</TabsTrigger>
+            <TabsTrigger value="sales">{t('sales')}</TabsTrigger>
+            <TabsTrigger value="inventory">{t('inventory')}</TabsTrigger>
+            <TabsTrigger value="expenses">{t('expenses')}</TabsTrigger>
+            <TabsTrigger value="income">{t('incomeStatement')}</TabsTrigger>
+            <TabsTrigger value="balance">{t('balanceSheet')}</TabsTrigger>
           </TabsList>
           <TabsContent value="sales" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Sales Report</CardTitle>
+                <CardTitle>{t('salesReport')}</CardTitle>
                 <CardDescription>
-                  Analyze your sales performance over a specific period.
+                  {t('salesReportDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -67,9 +67,9 @@ export default function ReportsPage() {
           <TabsContent value="expenses" className="mt-4">
              <Card>
               <CardHeader>
-                <CardTitle>Expenses Report</CardTitle>
+                <CardTitle>{t('expensesReport')}</CardTitle>
                 <CardDescription>
-                  Analyze your business expenses over a specific period.
+                  {t('expensesReportDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -80,9 +80,9 @@ export default function ReportsPage() {
           <TabsContent value="income" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Income Statement (P&L)</CardTitle>
+                <CardTitle>{t('incomeStatement')}</CardTitle>
                 <CardDescription>
-                  A summary of revenues, costs, and expenses during a specific period.
+                  {t('incomeStatementDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -93,9 +93,9 @@ export default function ReportsPage() {
            <TabsContent value="balance" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Balance Sheet</CardTitle>
+                <CardTitle>{t('balanceSheet')}</CardTitle>
                 <CardDescription>
-                  A snapshot of the company's financial health at a specific point in time.
+                  {t('balanceSheetDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent>

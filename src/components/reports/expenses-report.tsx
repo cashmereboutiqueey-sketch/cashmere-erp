@@ -27,9 +27,11 @@ import { ChartContainer, ChartTooltipContent, type ChartConfig } from '../ui/cha
 import { Pie, PieChart, Cell } from 'recharts';
 import { getExpenses } from '@/services/finance-service';
 import { Skeleton } from '../ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 
 export function ExpensesReport() {
+  const { t } = useTranslation();
   const [date, setDate] = useState<DateRange | undefined>();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,7 +111,7 @@ export function ExpensesReport() {
                   format(date.from, 'LLL dd, y')
                 )
               ) : (
-                <span>Pick a date</span>
+                <span>{t('pickADate')}</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -141,7 +143,7 @@ export function ExpensesReport() {
             <div className="grid gap-4 md:grid-cols-3">
                 <Card className="md:col-span-1">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+                    <CardTitle className="text-sm font-medium">{t('totalExpenses')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-2xl font-bold">
@@ -151,13 +153,13 @@ export function ExpensesReport() {
                     }).format(totalExpenses)}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                    In selected period
+                    {t('inSelectedPeriod')}
                     </p>
                 </CardContent>
                 </Card>
                 <Card className="md:col-span-2">
                 <CardHeader>
-                    <CardTitle>Breakdown by Category</CardTitle>
+                    <CardTitle>{t('breakdownByCategory')}</CardTitle>
                 </CardHeader>
                 <CardContent className='h-48'>
                     <ChartContainer
@@ -181,22 +183,22 @@ export function ExpensesReport() {
             </div>
 
             <div>
-                <h3 className="text-lg font-medium mb-2">Expense Details</h3>
+                <h3 className="text-lg font-medium mb-2">{t('expenseDetails')}</h3>
                 <div className="rounded-md border">
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Note</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>{t('category')}</TableHead>
+                        <TableHead>{t('note')}</TableHead>
+                        <TableHead>{t('date')}</TableHead>
+                        <TableHead className="text-right">{t('amount')}</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                     {expenses.length > 0 ? (
                         expenses.map((expense: Expense) => (
                         <TableRow key={expense.id}>
-                            <TableCell className="font-medium capitalize">{expense.category}</TableCell>
+                            <TableCell className="font-medium capitalize">{t(expense.category as any)}</TableCell>
                             <TableCell>{expense.note}</TableCell>
                             <TableCell>
                             {format(new Date(expense.created_at), 'LLL dd, y')}
@@ -212,7 +214,7 @@ export function ExpensesReport() {
                     ) : (
                         <TableRow>
                         <TableCell colSpan={4} className="h-24 text-center">
-                            No expenses found for the selected period.
+                            {t('noExpensesFound')}
                         </TableCell>
                         </TableRow>
                     )}
