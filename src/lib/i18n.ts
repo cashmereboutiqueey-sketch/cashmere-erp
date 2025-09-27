@@ -150,6 +150,16 @@ export const translations = {
     product: 'Product',
     unitsSold: 'Units Sold',
     noSalesFound: 'No sales found for the selected period.',
+    // Balance Sheet
+    asOf: 'As of',
+    assets: 'Assets',
+    liabilities: 'Liabilities',
+    total: 'Total',
+    totalLiabilitiesAndEquity: 'Total Liabilities & Equity',
+    cash: 'Cash',
+    accountsReceivable: 'Accounts Receivable',
+    accountsPayable: 'Accounts Payable',
+    retainedEarnings: 'Retained Earnings',
   },
   ar: {
     // Sidebar
@@ -301,6 +311,16 @@ export const translations = {
     product: 'المنتج',
     unitsSold: 'الوحدات المباعة',
     noSalesFound: 'لم يتم العثور على مبيعات للفترة المحددة.',
+    // Balance Sheet
+    asOf: 'حتى تاريخ',
+    assets: 'الأصول',
+    liabilities: 'الالتزامات',
+    total: 'إجمالي',
+    totalLiabilitiesAndEquity: 'إجمالي الالتزامات وحقوق الملكية',
+    cash: 'النقدية',
+    accountsReceivable: 'الذمم المدينة',
+    accountsPayable: 'الذمم الدائنة',
+    retainedEarnings: 'الأرباح المحتجزة',
   },
 };
 

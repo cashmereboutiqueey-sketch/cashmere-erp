@@ -15,8 +15,10 @@ import { Skeleton } from '../ui/skeleton';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Button } from '../ui/button';
+import { useTranslation } from '@/hooks/use-translation';
 
 export function BalanceSheet() {
+  const { t } = useTranslation();
   const [data, setData] = useState<BalanceSheetData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -39,12 +41,12 @@ export function BalanceSheet() {
         </TableRow>
         {Object.entries(accounts).map(([key, value]) => (
             <TableRow key={key}>
-                <TableCell className="pl-8">{key}</TableCell>
+                <TableCell className="pl-8">{t(key as any)}</TableCell>
                 <TableCell className="text-right">{formatCurrency(value as number)}</TableCell>
             </TableRow>
         ))}
         <TableRow>
-            <TableCell className="font-bold pl-8">Total {title}</TableCell>
+            <TableCell className="font-bold pl-8">{t('total')} {title}</TableCell>
             <TableCell className="text-right font-bold">{formatCurrency(total)}</TableCell>
         </TableRow>
          <TableRow><TableCell colSpan={2} className="h-4 p-0"></TableCell></TableRow>
@@ -54,7 +56,7 @@ export function BalanceSheet() {
   return (
     <div className="space-y-6">
         <div className="text-sm text-muted-foreground">
-            As of {format(new Date(), 'LLL dd, y')}
+            {t('asOf')} {format(new Date(), 'LLL dd, y')}
         </div>
 
        {isLoading || !data ? (
@@ -65,12 +67,12 @@ export function BalanceSheet() {
         <div className="rounded-md border">
             <Table>
                 <TableBody>
-                    <Section title="Assets" accounts={data.assets} total={data.totalAssets} />
-                    <Section title="Liabilities" accounts={data.liabilities} total={data.totalLiabilities} />
-                    <Section title="Equity" accounts={data.equity} total={data.totalEquity} />
+                    <Section title={t('assets')} accounts={data.assets} total={data.totalAssets} />
+                    <Section title={t('liabilities')} accounts={data.liabilities} total={data.totalLiabilities} />
+                    <Section title={t('equity')} accounts={data.equity} total={data.totalEquity} />
 
                     <TableRow className="bg-primary/10">
-                        <TableHead className="font-bold text-lg">Total Liabilities & Equity</TableHead>
+                        <TableHead className="font-bold text-lg">{t('totalLiabilitiesAndEquity')}</TableHead>
                         <TableHead className="text-right font-bold text-lg">{formatCurrency(data.totalLiabilitiesAndEquity)}</TableHead>
                     </TableRow>
                 </TableBody>
@@ -80,4 +82,3 @@ export function BalanceSheet() {
     </div>
   );
 }
-
