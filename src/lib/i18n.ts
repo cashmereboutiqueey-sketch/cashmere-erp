@@ -111,6 +111,10 @@ export const translations = {
     salaries: 'Salaries',
     utilities: 'Utilities',
     other: 'Other',
+    asset: 'Asset',
+    liability: 'Liability',
+    equity: 'Equity',
+    expense: 'Expense',
     // Reports Page
     sales: 'Sales',
     inventory: 'Inventory',
@@ -258,6 +262,10 @@ export const translations = {
     salaries: 'رواتب',
     utilities: 'خدمات',
     other: 'أخرى',
+    asset: 'أصل',
+    liability: 'التزام',
+    equity: 'حقوق ملكية',
+    expense: 'مصروف',
     // Reports Page
     sales: 'المبيعات',
     inventory: 'المخزون',

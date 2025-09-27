@@ -94,7 +94,7 @@ export function ChartOfAccounts() {
                     <TableCell>{account.name}</TableCell>
                     <TableCell>
                       <Badge variant={accountTypeVariant[account.type]}>
-                        {capitalize(account.type)}
+                        {t(account.type as any) || capitalize(account.type)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
