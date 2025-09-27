@@ -49,18 +49,20 @@ export default function LoginPage() {
         }
         router.push(redirectPath);
       } else {
-         throw new Error("Login failed: User not found");
+         // This path should ideally not be taken if firebase throws an error
+         throw new Error("Login failed: An unknown error occurred.");
       }
     } catch (error) {
       console.error(error);
       const errorMessage = (error as Error).message
         .replace('Firebase: ', '')
-        .replace(/(\(auth\/.*\))/, '');
+        .replace(/(\(auth\/.*\))/, '')
+        .trim();
 
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: errorMessage || 'An unexpected error occurred.',
+        description: errorMessage || 'Invalid credentials or user not found.',
       });
     } finally {
       setIsLoading(false);

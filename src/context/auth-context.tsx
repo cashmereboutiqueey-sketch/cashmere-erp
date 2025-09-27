@@ -65,21 +65,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, pass: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-    if(userCredential.user) {
-        const userRoleData = mockUsers.find(u => u.email.toLowerCase() === userCredential.user.email?.toLowerCase());
-        if (userRoleData) {
-            const appUser: User = {
-                id: userCredential.user.uid,
-                name: userCredential.user.displayName || userRoleData.name,
-                email: userCredential.user.email!,
-                avatarUrl: userCredential.user.photoURL || userRoleData.avatarUrl,
-                role: userRoleData.role,
-            };
-            setUser(appUser);
-            return appUser;
-        }
+    if (!userCredential.user) {
+      return null;
     }
-    return null;
+    
+    const fbUser = userCredential.user;
+    const userRoleData = mockUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
+    
+    let appUser: User;
+
+    if (userRoleData) {
+      appUser = {
+        id: fbUser.uid,
+        name: fbUser.displayName || userRoleData.name,
+        email: fbUser.email!,
+        avatarUrl: fbUser.photoURL || userRoleData.avatarUrl,
+        role: userRoleData.role,
+      };
+    } else {
+      // Create a fallback user if not in mock data
+      appUser = {
+        id: fbUser.uid,
+        name: fbUser.displayName || 'New User',
+        email: fbUser.email!,
+        avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/100/100`,
+        role: 'sales', // Assign a default role
+      };
+    }
+    
+    setUser(appUser);
+    return appUser;
   };
 
   const logout = () => {
