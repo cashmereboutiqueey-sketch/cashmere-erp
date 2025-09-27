@@ -24,6 +24,8 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import { Separator } from '../ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { updateProductCost } from '@/services/product-service';
+import { useToast } from '@/hooks/use-toast';
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', {
@@ -45,7 +47,9 @@ const difficultyAllocation: Record<Difficulty, number> = {
 
 export function ManufacturingPricing({ products, fabrics }: ManufacturingPricingProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // These would typically come from a settings context or API
   const [directLabor, setDirectLabor] = useState(10);
@@ -78,9 +82,9 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
   }, [factoryFixedCosts, monthlyUnits]);
 
   const allocatedFixedCost = useMemo(() => {
-    const allocationPercentage = difficultyAllocation[productionDifficulty] / 100;
+    const allocationPercentage = (selectedProduct?.difficulty ? difficultyAllocation[selectedProduct.difficulty] : difficultyAllocation[productionDifficulty]) / 100;
     return fixedCostPerUnit * allocationPercentage;
-  }, [fixedCostPerUnit, productionDifficulty])
+  }, [fixedCostPerUnit, productionDifficulty, selectedProduct]);
 
   const totalManufacturingCost = useMemo(() => {
     return totalVariableCost + allocatedFixedCost;
@@ -100,13 +104,29 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
     return factoryFixedCosts / contributionMargin;
   }, [factoryFixedCosts, contributionMargin]);
 
+  const handleUpdateCost = async () => {
+    if (!selectedProduct) {
+        toast({ variant: 'destructive', title: t('error'), description: t('selectProductFirst') });
+        return;
+    }
+    setIsUpdating(true);
+    try {
+        await updateProductCost(selectedProduct.id, totalManufacturingCost);
+        toast({ title: t('success'), description: t('productCostUpdatedSuccess') });
+    } catch(e) {
+        toast({ variant: 'destructive', title: t('error'), description: t('productCostUpdatedError') });
+    } finally {
+        setIsUpdating(false);
+    }
+  }
+
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t('costAnalysis')}</CardTitle>
         <CardDescription>
-          {t('selectProduct')}
+          {t('manufacturingCostDesc')}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid md:grid-cols-2 gap-8">
@@ -208,7 +228,11 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
           </div>
            <div className="space-y-2 pt-2">
                 <Label htmlFor="difficulty-select">{t('productionDifficulty')}</Label>
-                 <Select value={productionDifficulty} onValueChange={(v) => setProductionDifficulty(v as Difficulty)}>
+                 <Select 
+                    value={selectedProduct?.difficulty || productionDifficulty} 
+                    onValueChange={(v) => setProductionDifficulty(v as Difficulty)}
+                    disabled={!!selectedProduct?.difficulty}
+                >
                     <SelectTrigger id="difficulty-select">
                         <SelectValue placeholder={t('selectDifficulty')} />
                     </SelectTrigger>
@@ -258,6 +282,13 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
           </div>
         </div>
       </CardContent>
+      <CardFooter className="justify-end">
+        <Button onClick={handleUpdateCost} disabled={isUpdating || !selectedProduct}>
+            {isUpdating ? t('updating') : t('updateProductCost')}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
+
+    

@@ -301,6 +301,7 @@ export const translations = {
     newColor: 'New Color',
     add: 'Add',
     filterProducts: 'Filter products...',
+    cost: 'Cost',
     // Shipping Page
     shippingCarriersDashboard: 'Shipping Carriers Dashboard',
     shippingCompanyA: 'Shipping Co. A',
@@ -348,7 +349,9 @@ export const translations = {
     breakEvenAnalysisDesc: 'Units of this product needed to cover all monthly fixed costs.',
     unitsToSell: 'Units to sell to break-even',
     retailPriceAnalysis: 'Retail Price Analysis',
+    retailPriceAnalysisDesc: 'Determine the final selling price after adding brand-level costs and target margin.',
     startingCost: 'Starting Cost (Price from Factory)',
+    startingCostDesc: 'This is the average manufacturing cost from all variants.',
     brandCosts: 'Brand Costs',
     marketingCost: 'Marketing Cost / Unit',
     brandFixedCost: 'Brand Fixed Cost / Unit',
@@ -382,6 +385,15 @@ export const translations = {
     hardProductsDesc: 'High complexity, high value items.',
     mediumProductsDesc: 'Standard production items.',
     easyProductsDesc: 'Simple, high-volume items.',
+    manufacturingCostDesc: 'Calculate the complete manufacturing cost for a single product unit.',
+    selectProductFirst: 'Please select a product first.',
+    productCostUpdatedSuccess: 'Product cost updated successfully for all variants.',
+    productCostUpdatedError: 'Failed to update product cost.',
+    productPriceUpdatedSuccess: 'Product retail price updated successfully for all variants.',
+    productPriceUpdatedError: 'Failed to update product retail price.',
+    updateProductCost: 'Update Product Cost',
+    updateRetailPrice: 'Update Retail Price',
+    updating: 'Updating...',
   },
   ar: {
     // Sidebar
@@ -684,6 +696,7 @@ export const translations = {
     newColor: 'لون جديد',
     add: 'إضافة',
     filterProducts: 'تصفية المنتجات...',
+    cost: 'التكلفة',
     // Shipping Page
     shippingCarriersDashboard: 'لوحة تحكم شركات الشحن',
     shippingCompanyA: 'شركة الشحن أ',
@@ -731,7 +744,9 @@ export const translations = {
     breakEvenAnalysisDesc: 'وحدات هذا المنتج اللازمة لتغطية جميع التكاليف الثابتة الشهرية.',
     unitsToSell: 'وحدة للبيع لتحقيق التعادل',
     retailPriceAnalysis: 'تحليل سعر التجزئة',
+    retailPriceAnalysisDesc: 'تحديد سعر البيع النهائي بعد إضافة تكاليف مستوى العلامة التجارية والهامش المستهدف.',
     startingCost: 'التكلفة المبدئية (السعر من المصنع)',
+    startingCostDesc: 'هذه هي متوسط تكلفة التصنيع من جميع المتغيرات.',
     brandCosts: 'تكاليف العلامة التجارية',
     marketingCost: 'تكلفة التسويق / وحدة',
     brandFixedCost: 'التكلفة الثابتة للعلامة التجارية / وحدة',
@@ -765,6 +780,15 @@ export const translations = {
     hardProductsDesc: 'عناصر عالية التعقيد والقيمة.',
     mediumProductsDesc: 'عناصر إنتاج قياسية.',
     easyProductsDesc: 'عناصر بسيطة وذات حجم كبير.',
+    manufacturingCostDesc: 'حساب تكلفة التصنيع الكاملة لوحدة منتج واحدة.',
+    selectProductFirst: 'يرجى اختيار منتج أولاً.',
+    productCostUpdatedSuccess: 'تم تحديث تكلفة المنتج بنجاح لجميع المتغيرات.',
+    productCostUpdatedError: 'فشل تحديث تكلفة المنتج.',
+    productPriceUpdatedSuccess: 'تم تحديث سعر التجزئة للمنتج بنجاح لجميع المتغيرات.',
+    productPriceUpdatedError: 'فشل تحديث سعر التجزئة للمنتج.',
+    updateProductCost: 'تحديث تكلفة المنتج',
+    updateRetailPrice: 'تحديث سعر التجزئة',
+    updating: 'جاري التحديث...',
   },
 };
 
@@ -779,3 +803,5 @@ export const interpolate = (text: string, values: InterpolationValues): string =
     return values.hasOwnProperty(key) ? String(values[key]) : match;
   });
 };
+
+    

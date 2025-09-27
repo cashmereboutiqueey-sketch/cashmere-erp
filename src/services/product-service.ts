@@ -1,8 +1,9 @@
+
 'use server';
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
-import { Product, ProductFabric } from '@/lib/types';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, serverTimestamp, writeBatch, runTransaction } from 'firebase/firestore';
+import { Product, ProductFabric, ProductVariant } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 import { addProductFabrics, deleteProductFabrics } from './product-fabric-service';
 
@@ -55,6 +56,7 @@ export async function addProduct(productData: Omit<Product, 'id' | 'created_at'>
     await batch.commit();
 
     revalidatePath('/products');
+    revalidatePath('/pricing');
     return newProductRef.id;
   } catch (error) {
     console.error('Error adding product: ', error);
@@ -83,11 +85,59 @@ export async function updateProduct(id: string, productData: Partial<Product> & 
     await batch.commit();
 
     revalidatePath('/products');
+    revalidatePath('/pricing');
   } catch (error) {
     console.error('Error updating product: ', error);
     throw new Error('Could not update product');
   }
 }
+
+export async function updateProductCost(productId: string, newCost: number) {
+    try {
+        await runTransaction(db, async (transaction) => {
+            const productRef = doc(db, 'products', productId);
+            const productDoc = await transaction.get(productRef);
+            if (!productDoc.exists()) {
+                throw new Error("Product not found");
+            }
+            const productData = productDoc.data() as Product;
+            const updatedVariants = productData.variants.map(variant => ({
+                ...variant,
+                cost: newCost
+            }));
+            transaction.update(productRef, { variants: updatedVariants });
+        });
+        revalidatePath('/products');
+        revalidatePath('/pricing');
+    } catch (error) {
+        console.error('Error updating product cost:', error);
+        throw new Error('Could not update product cost');
+    }
+}
+
+export async function updateProductPrice(productId: string, newPrice: number) {
+    try {
+        await runTransaction(db, async (transaction) => {
+            const productRef = doc(db, 'products', productId);
+            const productDoc = await transaction.get(productRef);
+            if (!productDoc.exists()) {
+                throw new Error("Product not found");
+            }
+            const productData = productDoc.data() as Product;
+            const updatedVariants = productData.variants.map(variant => ({
+                ...variant,
+                price: newPrice
+            }));
+            transaction.update(productRef, { variants: updatedVariants });
+        });
+        revalidatePath('/products');
+        revalidatePath('/pricing');
+    } catch (error) {
+        console.error('Error updating product price:', error);
+        throw new Error('Could not update product price');
+    }
+}
+
 
 export async function deleteProduct(id: string) {
   try {
@@ -102,8 +152,11 @@ export async function deleteProduct(id: string) {
     await batch.commit();
 
     revalidatePath('/products');
+    revalidatePath('/pricing');
   } catch (error) {
     console.error('Error deleting product: ', error);
     throw new Error('Could not delete product');
   }
 }
+
+    

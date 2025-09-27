@@ -20,9 +20,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Product } from '@/lib/types';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import { Separator } from '../ui/separator';
+import { updateProductPrice } from '@/services/product-service';
+import { useToast } from '@/hooks/use-toast';
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', {
@@ -36,13 +38,31 @@ interface BrandPricingProps {
 
 export function BrandPricing({ products }: BrandPricingProps) {
   const { t } = useTranslation();
+  const { toast } = useToast();
   const [selectedProductId, setSelectedProductId] = useState<string>('');
+  const [isUpdating, setIsUpdating] = useState(false);
   
-  // These would typically come from a settings context or API
-  const [startingCost, setStartingCost] = useState(100);
+  const selectedProduct = useMemo(
+    () => products.find((p) => p.id === selectedProductId),
+    [selectedProductId, products]
+  );
+  
+  // Get the average cost from all variants
+  const avgCost = useMemo(() => {
+    if (!selectedProduct || selectedProduct.variants.length === 0) return 0;
+    const totalCost = selectedProduct.variants.reduce((sum, v) => sum + v.cost, 0);
+    return totalCost / selectedProduct.variants.length;
+  }, [selectedProduct]);
+
+  const [startingCost, setStartingCost] = useState(0);
   const [marketingCost, setMarketingCost] = useState(15);
   const [brandFixedCost, setBrandFixedCost] = useState(10);
   const [targetMargin, setTargetMargin] = useState(60);
+
+  useEffect(() => {
+    setStartingCost(avgCost);
+  }, [avgCost]);
+
 
   const totalBrandCost = useMemo(() => {
     return startingCost + marketingCost + brandFixedCost;
@@ -53,12 +73,28 @@ export function BrandPricing({ products }: BrandPricingProps) {
     return totalBrandCost / (1 - targetMargin / 100);
   }, [totalBrandCost, targetMargin]);
 
+  const handleUpdatePrice = async () => {
+    if (!selectedProduct) {
+        toast({ variant: 'destructive', title: t('error'), description: t('selectProductFirst') });
+        return;
+    }
+    setIsUpdating(true);
+    try {
+        await updateProductPrice(selectedProduct.id, suggestedRetailPrice);
+        toast({ title: t('success'), description: t('productPriceUpdatedSuccess') });
+    } catch(e) {
+        toast({ variant: 'destructive', title: t('error'), description: t('productPriceUpdatedError') });
+    } finally {
+        setIsUpdating(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t('retailPriceAnalysis')}</CardTitle>
         <CardDescription>
-          {t('addProductDesc')}
+          {t('retailPriceAnalysisDesc')}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid md:grid-cols-2 gap-8">
@@ -85,7 +121,9 @@ export function BrandPricing({ products }: BrandPricingProps) {
                 type="number"
                 value={startingCost}
                 onChange={(e) => setStartingCost(Number(e.target.value))}
+                disabled // This is now derived from the product's variants
               />
+               <p className="text-xs text-muted-foreground">{t('startingCostDesc')}</p>
             </div>
             <Separator />
              <h3 className="font-medium">{t('brandCosts')}</h3>
@@ -132,6 +170,13 @@ export function BrandPricing({ products }: BrandPricingProps) {
             </div>
         </div>
       </CardContent>
+       <CardFooter className="justify-end">
+        <Button onClick={handleUpdatePrice} disabled={isUpdating || !selectedProduct}>
+            {isUpdating ? t('updating') : t('updateRetailPrice')}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }
+
+    

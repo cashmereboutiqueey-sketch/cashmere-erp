@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -72,6 +73,7 @@ const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
                                 <TableRow>
                                     <TableHead>{t('sku')}</TableHead>
                                     <TableHead>{t('variant')}</TableHead>
+                                    <TableHead>{t('cost')}</TableHead>
                                     <TableHead>{t('price')}</TableHead>
                                     <TableHead>{t('stock')}</TableHead>
                                 </TableRow>
@@ -87,6 +89,12 @@ const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
                                             {variant.color && <Badge variant="secondary">{variant.color}</Badge>}
                                             {variant.size && <Badge variant="secondary">{variant.size}</Badge>}
                                             </div>
+                                        </TableCell>
+                                         <TableCell>
+                                            {new Intl.NumberFormat('en-US', {
+                                            style: 'currency',
+                                            currency: 'USD',
+                                            }).format(variant.cost)}
                                         </TableCell>
                                         <TableCell>
                                             {new Intl.NumberFormat('en-US', {
@@ -621,6 +629,7 @@ function ProductEditDialog({
                         <TableRow>
                           <TableHead>{t('variant')}</TableHead>
                           <TableHead>{t('sku')}</TableHead>
+                           <TableHead>{t('cost')}</TableHead>
                           <TableHead>{t('price')}</TableHead>
                           <TableHead>{t('stock')}</TableHead>
                         </TableRow>
@@ -637,9 +646,14 @@ function ProductEditDialog({
                                     <Input {...field} className="h-8" />
                                 )}/>
                             </TableCell>
+                             <TableCell>
+                                <FormField name={`variants.${index}.cost`} control={control} render={({ field }) => (
+                                    <Input {...field} type="number" step="0.01" className="h-8" />
+                                )}/>
+                            </TableCell>
                             <TableCell>
                                 <FormField name={`variants.${index}.price`} control={control} render={({ field }) => (
-                                    <Input {...field} type="number" className="h-8" />
+                                    <Input {...field} type="number" step="0.01" className="h-8" />
                                 )}/>
                             </TableCell>
                             <TableCell>
@@ -826,7 +840,7 @@ export function ProductsTable({ data }: ProductsTableProps) {
     return (
         <ExpandedRowContent row={row} />
     );
-  }, []);
+  }, [t]);
 
 
   return (
@@ -853,3 +867,5 @@ export function ProductsTable({ data }: ProductsTableProps) {
     </>
   );
 }
+
+    
