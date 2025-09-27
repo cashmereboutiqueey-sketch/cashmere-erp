@@ -42,6 +42,8 @@ export const translations = {
     noProductStockIssues: 'No product stock issues predicted.',
     fabricAlerts: 'Fabric Alerts',
     noFabricStockIssues: 'No fabric stock issues predicted.',
+    // Production Page
+    productionQueue: 'Production Queue',
   },
   ar: {
     // Sidebar
@@ -85,6 +87,8 @@ export const translations = {
     noProductStockIssues: 'لا توجد مشاكل في مخزون المنتجات متوقعة.',
     fabricAlerts: 'تنبيهات النسيج',
     noFabricStockIssues: 'لا توجد مشاكل في مخزون الأقمشة متوقعة.',
+    // Production Page
+    productionQueue: 'قائمة انتظار الإنتاج',
   },
 };
 

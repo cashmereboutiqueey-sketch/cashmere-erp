@@ -8,8 +8,10 @@ import { getOrders } from '@/services/order-service';
 import { ProductionOrder, Product, Order } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function ProductionPage() {
+  const { t } = useTranslation();
   const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -34,7 +36,7 @@ export default function ProductionPage() {
   return (
     <>
       <PageHeader>
-        <PageHeaderHeading>Production Queue</PageHeaderHeading>
+        <PageHeaderHeading>{t('productionQueue')}</PageHeaderHeading>
       </PageHeader>
       <div className="p-4 lg:p-6">
         {isLoading ? (
