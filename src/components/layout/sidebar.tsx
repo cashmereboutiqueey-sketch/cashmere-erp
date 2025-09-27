@@ -130,7 +130,7 @@ const hasAccess = (
   return itemRoles.includes(userRole);
 };
 
-export function AppSidebar() {
+export function AppSidebar({ side }: { side: 'left' | 'right' }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -147,6 +147,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar
+      side={side}
       variant="sidebar"
       collapsible="icon"
       className="group-data-[variant=sidebar]:border-r-0"

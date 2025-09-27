@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -25,6 +26,7 @@ import {
 import { getOrders } from '@/services/order-service';
 import { Order } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
   pending: "outline",
@@ -34,6 +36,7 @@ const statusVariantMap: { [key: string]: "default" | "secondary" | "destructive"
 };
 
 export function RecentOrders() {
+  const { t } = useTranslation();
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -51,8 +54,8 @@ export function RecentOrders() {
   return (
     <Card className="shadow-sm">
       <CardHeader>
-        <CardTitle className="font-headline">Recent Orders</CardTitle>
-        <CardDescription>An overview of the latest 5 orders.</CardDescription>
+        <CardTitle className="font-headline">{t('recentOrders')}</CardTitle>
+        <CardDescription>{t('recentOrdersDesc')}</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -72,9 +75,9 @@ export function RecentOrders() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
+                <TableHead>{t('customer')}</TableHead>
+                <TableHead>{t('status')}</TableHead>
+                <TableHead className="text-right">{t('amount')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -14,8 +15,10 @@ import { getProducts } from '@/services/product-service';
 import { getProductionOrders } from '@/services/production-service';
 import { Order, Product, ProductionOrder } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 export function OverviewCards() {
+    const { t } = useTranslation();
     const [orders, setOrders] = useState<Order[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
     const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>([]);
@@ -93,44 +96,44 @@ export function OverviewCards() {
     <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
       <Card className="shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('totalRevenue')}</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-          <p className="text-xs text-muted-foreground">From all completed sales</p>
+          <p className="text-xs text-muted-foreground">{t('fromAllCompletedSales')}</p>
         </CardContent>
       </Card>
       <Card className="shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">New Orders</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('newOrders')}</CardTitle>
           <ShoppingCart className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">+{newOrdersCount}</div>
-          <p className="text-xs text-muted-foreground">In the last 30 days</p>
+          <p className="text-xs text-muted-foreground">{t('inTheLast30Days')}</p>
         </CardContent>
       </Card>
       <Card className="shadow-sm" >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Stock Alerts</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('stockAlerts')}</CardTitle>
           <AlertCircle className="h-4 w-4 text-destructive" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stockAlertsCount} Items</div>
-          <p className="text-xs text-muted-foreground">Running low on stock</p>
+          <div className="text-2xl font-bold">{stockAlertsCount} {t('items')}</div>
+          <p className="text-xs text-muted-foreground">{t('runningLowOnStock')}</p>
         </CardContent>
       </Card>
       <Card className="shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            Pending Production
+            {t('pendingProduction')}
           </CardTitle>
           <Factory className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{pendingProductionCount}</div>
-          <p className="text-xs text-muted-foreground">Orders waiting for production</p>
+          <p className="text-xs text-muted-foreground">{t('ordersWaitingForProduction')}</p>
         </CardContent>
       </Card>
     </div>

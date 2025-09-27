@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -17,6 +18,7 @@ import { Product, Fabric } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/use-translation';
 
 // Helper to convert array of objects to CSV
 const toCsv = (data: any[], headers: string[]) => {
@@ -28,6 +30,7 @@ const toCsv = (data: any[], headers: string[]) => {
 };
 
 export function StockAlerts() {
+    const { t } = useTranslation();
     const [alerts, setAlerts] = useState<AnalyzeStockLevelsOutput | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
@@ -78,10 +81,10 @@ export function StockAlerts() {
                 <div>
                     <CardTitle className="font-headline flex items-center gap-2">
                         <AlertCircle className="text-destructive" />
-                        AI-Powered Stock Alerts
+                        {t('aiStockAlerts')}
                     </CardTitle>
                     <CardDescription>
-                        Predicted low stock situations based on sales trends.
+                        {t('aiStockAlertsDesc')}
                     </CardDescription>
                 </div>
                 <Button variant="ghost" size="icon" onClick={runAnalysis} disabled={isLoading}>
@@ -99,7 +102,7 @@ export function StockAlerts() {
                     <>
                         <Alert variant={hasProductAlerts ? "destructive" : "default"}>
                             <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Product Alerts</AlertTitle>
+                            <AlertTitle>{t('productAlerts')}</AlertTitle>
                             <AlertDescription>
                                 {hasProductAlerts ? (
                                     <ul className="list-disc pl-5">
@@ -108,13 +111,13 @@ export function StockAlerts() {
                                         ))}
                                     </ul>
                                 ) : (
-                                    "No product stock issues predicted."
+                                    t('noProductStockIssues')
                                 )}
                             </AlertDescription>
                         </Alert>
                         <Alert variant={hasFabricAlerts ? "destructive" : "default"}>
                             <AlertCircle className="h-4 w-4" />
-                            <AlertTitle>Fabric Alerts</AlertTitle>
+                            <AlertTitle>{t('fabricAlerts')}</AlertTitle>
                             <AlertDescription>
                                  {hasFabricAlerts ? (
                                     <ul className="list-disc pl-5">
@@ -123,7 +126,7 @@ export function StockAlerts() {
                                         ))}
                                     </ul>
                                 ) : (
-                                    "No fabric stock issues predicted."
+                                    t('noFabricStockIssues')
                                 )}
                             </AlertDescription>
                         </Alert>

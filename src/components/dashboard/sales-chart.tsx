@@ -15,6 +15,7 @@ import { getOrders } from '@/services/order-service';
 import { Order } from '@/lib/types';
 import { format, startOfMonth, subMonths } from 'date-fns';
 import { Skeleton } from '../ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 const chartConfig = {
   total: {
@@ -49,6 +50,7 @@ const aggregateSalesByMonth = (orders: Order[]) => {
 
 
 export function SalesChart() {
+    const { t } = useTranslation();
     const [salesData, setSalesData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -66,8 +68,8 @@ export function SalesChart() {
   return (
     <Card className="shadow-sm">
       <CardHeader>
-        <CardTitle className="font-headline">Sales Overview</CardTitle>
-        <CardDescription>An overview of your monthly sales for the last year.</CardDescription>
+        <CardTitle className="font-headline">{t('salesOverview')}</CardTitle>
+        <CardDescription>{t('salesOverviewDesc')}</CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
        {isLoading ? (
