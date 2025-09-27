@@ -34,6 +34,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface CustomersTableProps {
   data: Customer[];
@@ -41,11 +42,11 @@ interface CustomersTableProps {
   selectedCustomerId?: string | null;
 }
 
-export const columns: ColumnDef<Customer>[] = [
+export const getColumns = (t: any): ColumnDef<Customer>[] => [
   {
     accessorKey: 'name',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Customer" />
+      <DataTableColumnHeader column={column} title={t('customer')} />
     ),
     cell: ({ row }) => {
       const customer = row.original;
@@ -80,9 +81,9 @@ export const columns: ColumnDef<Customer>[] = [
               <DropdownMenuItem
                 onClick={() => navigator.clipboard.writeText(customer.id)}
               >
-                Copy customer ID
+                {t('copyCustomerID')}
               </DropdownMenuItem>
-              <DropdownMenuItem>View details</DropdownMenuItem>
+              <DropdownMenuItem>{t('viewDetails')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -96,11 +97,12 @@ function CustomersTableToolbar({
 }: {
   onFilter: (value: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between">
       <div className="flex flex-1 items-center space-x-2">
         <Input
-          placeholder="Search customers..."
+          placeholder={t('searchCustomers')}
           onChange={(event) => onFilter(event.target.value)}
           className="h-8 w-full"
         />
@@ -110,7 +112,10 @@ function CustomersTableToolbar({
 }
 
 export function CustomersTable({ data, onRowClick, selectedCustomerId }: CustomersTableProps) {
+  const { t } = useTranslation();
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  
+  const columns = getColumns(t);
 
   const table = useReactTable({
     data,
@@ -180,7 +185,7 @@ export function CustomersTable({ data, onRowClick, selectedCustomerId }: Custome
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  {t('noResults')}
                 </TableCell>
               </TableRow>
             )}
@@ -194,7 +199,7 @@ export function CustomersTable({ data, onRowClick, selectedCustomerId }: Custome
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
-          Previous
+          {t('previous')}
         </Button>
         <Button
           variant="outline"
@@ -202,7 +207,7 @@ export function CustomersTable({ data, onRowClick, selectedCustomerId }: Custome
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >
-          Next
+          {t('next')}
         </Button>
       </div>
     </div>

@@ -20,6 +20,7 @@ import { UserPlus } from 'lucide-react';
 import { addCustomer } from '@/services/customer-service';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
+import { useTranslation } from '@/hooks/use-translation';
 
 
 const customerSchema = z.object({
@@ -35,6 +36,7 @@ type CustomerFormData = z.infer<typeof customerSchema>;
 export function AddCustomerDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
@@ -49,8 +51,8 @@ export function AddCustomerDialog() {
     try {
       await addCustomer(data);
       toast({
-        title: 'Success',
-        description: 'New customer has been added.',
+        title: t('success'),
+        description: t('customerAddedSuccess'),
       });
       setOpen(false);
       form.reset();
@@ -61,8 +63,8 @@ export function AddCustomerDialog() {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to add customer.',
+        title: t('error'),
+        description: t('customerAddedError'),
       });
     }
   };
@@ -75,14 +77,14 @@ export function AddCustomerDialog() {
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
           <UserPlus className="mr-2 h-4 w-4" />
-          Add New Customer
+          {t('addNewCustomer')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Customer</DialogTitle>
+          <DialogTitle>{t('addNewCustomer')}</DialogTitle>
           <DialogDescription>
-            Enter the details for the new customer.
+            {t('addNewCustomerDesc')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -92,7 +94,7 @@ export function AddCustomerDialog() {
               name="name"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Name</FormLabel>
+                  <FormLabel className="text-right">{t('name')}</FormLabel>
                   <FormControl>
                     <Input {...field} className="col-span-3" placeholder="e.g., Alia Hassan" />
                   </FormControl>
@@ -105,7 +107,7 @@ export function AddCustomerDialog() {
               name="email"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Email</FormLabel>
+                  <FormLabel className="text-right">{t('email')}</FormLabel>
                   <FormControl>
                     <Input {...field} type="email" className="col-span-3" placeholder="e.g., a.hassan@example.com" />
                   </FormControl>
@@ -118,7 +120,7 @@ export function AddCustomerDialog() {
               name="phone"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Phone</FormLabel>
+                  <FormLabel className="text-right">{t('phone')}</FormLabel>
                   <FormControl>
                     <Input {...field} className="col-span-3" placeholder="e.g., 555-123-4567" />
                   </FormControl>
@@ -131,7 +133,7 @@ export function AddCustomerDialog() {
               name="address"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Address</FormLabel>
+                  <FormLabel className="text-right">{t('address')}</FormLabel>
                   <FormControl>
                     <Input {...field} className="col-span-3" placeholder="e.g., 123 Main St, Anytown, USA" />
                   </FormControl>
@@ -141,7 +143,7 @@ export function AddCustomerDialog() {
             />
             <DialogFooter>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? 'Adding...' : 'Add Customer'}
+                    {form.formState.isSubmitting ? t('adding') : t('addCustomer')}
                 </Button>
             </DialogFooter>
           </form>

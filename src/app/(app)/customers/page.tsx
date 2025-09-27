@@ -12,8 +12,10 @@ import { Separator } from '@/components/ui/separator';
 import { getCustomers } from '@/services/customer-service';
 import { getOrders } from '@/services/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function CustomersPage() {
+  const { t } = useTranslation();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,7 +68,7 @@ export default function CustomersPage() {
   return (
     <div className="flex flex-col h-full">
       <PageHeader>
-        <PageHeaderHeading>Customers</PageHeaderHeading>
+        <PageHeaderHeading>{t('customers')}</PageHeaderHeading>
       </PageHeader>
       <div className="grid md:grid-cols-3 gap-4 p-4 lg:p-6 flex-1">
         <div className="md:col-span-1">
@@ -113,43 +115,43 @@ export default function CustomersPage() {
                 <Separator className="my-4" />
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-medium mb-2">Active Orders</h3>
+                    <h3 className="text-lg font-medium mb-2">{t('activeOrders')}</h3>
                     {activeOrders.length > 0 ? (
                       <div className="space-y-4">
                         {activeOrders.map((order) => (
                           <div key={order.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                             <div>
-                              <p className="font-medium">Order {order.id}</p>
+                              <p className="font-medium">{t('order')} {order.id}</p>
                               <p className="text-sm text-muted-foreground">
                                 {new Date(order.created_at).toLocaleDateString()}
                               </p>
                             </div>
                             <div className="text-right">
-                                <Badge variant={statusVariantMap[order.status]} className="capitalize mb-1">{order.status}</Badge>
+                                <Badge variant={statusVariantMap[order.status]} className="capitalize mb-1">{t(order.status as any)}</Badge>
                                 <p className="font-semibold">{formatCurrency(order.total_amount)}</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No active orders.</p>
+                      <p className="text-sm text-muted-foreground">{t('noActiveOrders')}</p>
                     )}
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium mb-2">Previous Orders</h3>
+                    <h3 className="text-lg font-medium mb-2">{t('previousOrders')}</h3>
                     {previousOrders.length > 0 ? (
                       <ScrollArea className="h-72">
                         <div className="space-y-4">
                           {previousOrders.map((order) => (
                              <div key={order.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                                 <div>
-                                <p className="font-medium">Order {order.id}</p>
+                                <p className="font-medium">{t('order')} {order.id}</p>
                                 <p className="text-sm text-muted-foreground">
                                     {new Date(order.created_at).toLocaleDateString()}
                                 </p>
                                 </div>
                                 <div className="text-right">
-                                    <Badge variant={statusVariantMap[order.status]} className="capitalize mb-1">{order.status}</Badge>
+                                    <Badge variant={statusVariantMap[order.status]} className="capitalize mb-1">{t(order.status as any)}</Badge>
                                     <p className="font-semibold">{formatCurrency(order.total_amount)}</p>
                                 </div>
                             </div>
@@ -157,7 +159,7 @@ export default function CustomersPage() {
                         </div>
                       </ScrollArea>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No previous orders.</p>
+                      <p className="text-sm text-muted-foreground">{t('noPreviousOrders')}</p>
                     )}
                   </div>
                 </div>
@@ -167,10 +169,10 @@ export default function CustomersPage() {
             <div className="flex items-center justify-center h-full rounded-lg border border-dashed shadow-sm">
                 <div className="text-center">
                     <h3 className="text-2xl font-bold tracking-tight">
-                        {isLoading ? 'Loading Customers...' : 'No Customers Found'}
+                        {isLoading ? t('loadingCustomers') : t('noCustomersFound')}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        {isLoading ? 'Please wait while we fetch your data.' : 'Add a new customer to get started.'}
+                        {isLoading ? t('loadingCustomersDesc') : t('noCustomersFoundDesc')}
                     </p>
                 </div>
             </div>
