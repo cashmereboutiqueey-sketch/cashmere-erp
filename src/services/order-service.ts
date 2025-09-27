@@ -44,6 +44,7 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
     items: data.items,
     fulfillment_type: data.fulfillment_type,
     shipping_status: data.shipping_status,
+    carrier_id: data.carrier_id,
   };
 };
 
@@ -271,10 +272,18 @@ export async function updateOrderStatus(id: string, status: Order['status']) {
 export async function updateOrderShipping(id: string, shippingStatus: ShippingStatus) {
   try {
     const orderDocRef = doc(db, 'orders', id);
-    await updateDoc(orderDocRef, {
+    const updateData: { shipping_status: ShippingStatus, carrier_id?: 'a' | 'b', updatedAt: any } = {
       shipping_status: shippingStatus,
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    if (shippingStatus === 'assigned_to_carrier_a') {
+      updateData.carrier_id = 'a';
+    } else if (shippingStatus === 'assigned_to_carrier_b') {
+      updateData.carrier_id = 'b';
+    }
+
+    await updateDoc(orderDocRef, updateData);
     revalidatePath('/shipping');
     revalidatePath('/orders');
   } catch (error) {

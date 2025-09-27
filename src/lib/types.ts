@@ -71,9 +71,11 @@ export type ShippingStatus =
     | 'ready_to_ship'
     | 'assigned_to_carrier_a'
     | 'assigned_to_carrier_b'
+    | 'out_for_delivery'
     | 'shipped'
     | 'delivered'
-    | 'picked_up';
+    | 'picked_up'
+    | 'cod_remitted';
 
 export type Order = {
   id: string;
@@ -89,6 +91,7 @@ export type Order = {
   items?: OrderItem[];
   fulfillment_type?: OrderFulfillmentType;
   shipping_status?: ShippingStatus;
+  carrier_id?: 'a' | 'b';
 };
 
 export type ProductionOrder = {

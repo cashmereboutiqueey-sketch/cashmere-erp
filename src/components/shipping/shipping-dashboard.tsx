@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '../ui/button';
-import { ShippableCustomer } from '@/app/(app)/shipping/page';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import {
   ChevronDown,
   ChevronRight,
@@ -23,204 +23,167 @@ import {
   Ship,
   Store,
   Truck,
+  DollarSign,
+  Package,
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Order, ShippingStatus } from '@/lib/types';
 import { updateOrderShipping } from '@/services/order-service';
 import { useToast } from '@/hooks/use-toast';
 import { capitalize } from 'string-ts';
+import { Separator } from '../ui/separator';
 
 const shippingStatusVariantMap: {
   [key in ShippingStatus]: 'default' | 'secondary' | 'destructive' | 'outline';
 } = {
   pending: 'outline',
-  ready_to_ship: 'secondary',
-  ready_for_pickup: 'secondary',
-  assigned_to_carrier_a: 'default',
-  assigned_to_carrier_b: 'default',
+  ready_to_ship: 'outline',
+  ready_for_pickup: 'outline',
+  assigned_to_carrier_a: 'secondary',
+  assigned_to_carrier_b: 'secondary',
+  out_for_delivery: 'secondary',
   shipped: 'default',
   delivered: 'default',
   picked_up: 'default',
+  cod_remitted: 'default',
 };
 
-const CustomerRow = ({
-  shippableCustomer,
-}: {
-  shippableCustomer: ShippableCustomer;
-}) => {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const { toast } = useToast();
-  const { customer, orders } = shippableCustomer;
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+}
 
-  const handleShipAll = () => {
-    // This is where you would integrate with a shipping API
-    console.log('Shipping all orders for:', customer.name, orders);
-    toast({
-      title: 'Shipment Created (Simulation)',
-      description: `Preparing shipment for ${customer.name} with ${orders.length} order(s).`,
-    });
-  };
+const OrderRow = ({ order }: { order: Order }) => {
+    const { toast } = useToast();
+    const handleStatusUpdate = async (status: ShippingStatus) => {
+        try {
+            await updateOrderShipping(order.id, status);
+            toast({ title: 'Success', description: `Order ${order.id.slice(0, 4)} status updated.` });
+            window.location.reload();
+        } catch (e) {
+            toast({ variant: 'destructive', title: 'Error updating status' });
+        }
+    };
+    return (
+        <TableRow>
+            <TableCell className="font-mono text-xs">{order.id.slice(0, 8)}...</TableCell>
+            <TableCell>{order.customer?.name}</TableCell>
+            <TableCell className="text-right">{formatCurrency(order.total_amount)}</TableCell>
+            <TableCell className="text-right">
+                <Button size="xs" variant="outline" onClick={() => handleStatusUpdate('out_for_delivery')}>Out for Delivery</Button>
+                <Button size="xs" variant="outline" className="ml-2" onClick={() => handleStatusUpdate('delivered')}>Delivered</Button>
+            </TableCell>
+        </TableRow>
+    );
+};
+
+const UnpaidCODOrderRow = ({ order }: { order: Order }) => (
+    <TableRow>
+        <TableCell className="font-mono text-xs">{order.id.slice(0, 8)}...</TableCell>
+        <TableCell>{order.customer?.name}</TableCell>
+        <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+        <TableCell className="text-right font-medium">{formatCurrency(order.total_amount)}</TableCell>
+    </TableRow>
+);
+
+
+const CarrierDashboard = ({ carrierName, carrierId, orders }: { carrierName: string, carrierId: 'a' | 'b', orders: Order[] }) => {
+  const [pendingOpen, setPendingOpen] = React.useState(true);
+  const [unpaidCodOpen, setUnpaidCodOpen] = React.useState(false);
   
-  const handleShippingStatusChange = async (orderId: string, status: ShippingStatus) => {
-    try {
-      await updateOrderShipping(orderId, status);
-      toast({
-        title: 'Success',
-        description: `Order fulfillment status updated to ${capitalize(status.replace(/_/g, ' '))}.`,
-      });
-      window.location.reload();
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to update order status.',
-      });
-    }
-  };
+  const assignedStatus = `assigned_to_carrier_${carrierId}` as const;
+  
+  const pendingShipments = orders.filter(o => o.shipping_status === assignedStatus);
+  const deliveredCOD = orders.filter(o => o.shipping_status === 'delivered' && o.payment_method === 'cash' && (o.carrier_id === carrierId));
+  const totalCOD = deliveredCOD.reduce((sum, o) => sum + o.total_amount, 0);
 
   return (
-    <Collapsible
-      asChild
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      className="border-b"
-    >
-      <>
-        <TableRow className="hover:bg-transparent">
-          <TableCell className="w-12">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="icon">
-                {isOpen ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-                <span className="sr-only">Toggle</span>
-              </Button>
-            </CollapsibleTrigger>
-          </TableCell>
-          <TableCell>
-            <div className="flex items-center gap-3">
-              <Avatar>
-                <AvatarImage
-                  src={customer.avatarUrl}
-                  alt={customer.name}
-                  className="h-9 w-9"
-                />
-                <AvatarFallback>{customer.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <div className="font-medium">{customer.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {customer.email}
-                </div>
-              </div>
+    <Card className="shadow-sm">
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Truck /> {carrierName}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Pending Shipments</CardTitle>
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{pendingShipments.length}</div>
+                        <p className="text-xs text-muted-foreground">Orders to be shipped</p>
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Unpaid COD Balance</CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(totalCOD)}</div>
+                        <p className="text-xs text-muted-foreground">From {deliveredCOD.length} delivered orders</p>
+                    </CardContent>
+                </Card>
             </div>
-          </TableCell>
-          <TableCell className="text-center">
-            <Badge variant="outline">{orders.length}</Badge>
-          </TableCell>
-          <TableCell className="text-right">
-            <Button onClick={handleShipAll}>
-              <Ship className="mr-2" /> Ship All
-            </Button>
-          </TableCell>
-        </TableRow>
 
-        <CollapsibleContent asChild>
-          <TableRow>
-            <TableCell colSpan={4} className="p-0">
-              <div className="p-4 bg-muted/50">
-                <h4 className="font-semibold mb-2">Orders for {customer.name}</h4>
-                <div className="space-y-2">
-                  {orders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between p-3 bg-background rounded-md border"
-                    >
-                      <div>
-                        <p className="font-mono text-sm">
-                          ID: {order.id.slice(0, 8)}...
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                       <Badge variant={shippingStatusVariantMap[order.shipping_status || 'pending']} className="capitalize">
-                            {order.shipping_status?.replace(/_/g, ' ') || 'pending'}
-                       </Badge>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleShippingStatusChange(order.id, 'picked_up')}
-                        >
-                          <Store className="mr-2 h-4 w-4" /> Mark as Picked Up
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleShippingStatusChange(order.id, 'assigned_to_carrier_a')}
-                        >
-                          <Truck className="mr-2 h-4 w-4" /> Carrier A
-                        </Button>
-                         <Button
-                          size="sm"
-                          variant="outline"
-                           onClick={() => handleShippingStatusChange(order.id, 'assigned_to_carrier_b')}
-                        >
-                          <Truck className="mr-2 h-4 w-4" /> Carrier B
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleShippingStatusChange(order.id, 'shipped')}
-                        >
-                          <PackageCheck className="mr-2 h-4 w-4" /> Mark as Shipped
-                        </Button>
-                      </div>
+            <Separator />
+            
+             <Collapsible open={pendingOpen} onOpenChange={setPendingOpen}>
+                <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-start gap-2">
+                        {pendingOpen ? <ChevronDown /> : <ChevronRight />}
+                        Pending Shipments ({pendingShipments.length})
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <Table>
+                        <TableHeader><TableRow><TableHead>Order</TableHead><TableHead>Customer</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {pendingShipments.length > 0 ? pendingShipments.map(o => <OrderRow key={o.id} order={o} />) : <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">No pending shipments</TableCell></TableRow>}
+                        </TableBody>
+                    </Table>
+                </CollapsibleContent>
+            </Collapsible>
+            
+             <Collapsible open={unpaidCodOpen} onOpenChange={setUnpaidCodOpen}>
+                 <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-start gap-2">
+                        {unpaidCodOpen ? <ChevronDown /> : <ChevronRight />}
+                        Unpaid COD Orders ({deliveredCOD.length})
+                    </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <div className="p-2 space-y-2">
+                        <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
+                            <span className="font-bold">Total to be Remitted: {formatCurrency(totalCOD)}</span>
+                            <Button size="sm" disabled={totalCOD === 0}>Settle COD Balance</Button>
+                        </div>
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Order</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {deliveredCOD.length > 0 ? deliveredCOD.map(o => <UnpaidCODOrderRow key={o.id} order={o} />) : <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">No unpaid COD orders</TableCell></TableRow>}
+                            </TableBody>
+                        </Table>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </TableCell>
-          </TableRow>
-        </CollapsibleContent>
-      </>
-    </Collapsible>
+                </CollapsibleContent>
+            </Collapsible>
+
+        </CardContent>
+    </Card>
   );
 };
 
-export function ShippingDashboard({ data }: { data: ShippableCustomer[] }) {
+export function ShippingDashboard({ allOrders }: { allOrders: Order[] }) {
+  
+  const carrierA_Orders = allOrders.filter(o => o.shipping_status?.includes('carrier_a'));
+  const carrierB_Orders = allOrders.filter(o => o.shipping_status?.includes('carrier_b'));
+
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-12"></TableHead>
-            <TableHead>Customer</TableHead>
-            <TableHead className="text-center">Ready Orders</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.length > 0 ? (
-            data.map((shippableCustomer) => (
-              <CustomerRow
-                key={shippableCustomer.customer.id}
-                shippableCustomer={shippableCustomer}
-              />
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={4} className="h-24 text-center">
-                No orders are ready for shipping.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <CarrierDashboard carrierName="Shipping Co. A" carrierId="a" orders={allOrders} />
+        <CarrierDashboard carrierName="Shipping Co. B" carrierId="b" orders={allOrders} />
     </div>
   );
 }
