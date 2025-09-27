@@ -34,17 +34,80 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { mockUsers } from '@/lib/data';
+import { mockUsers as initialUsers } from '@/lib/data';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
-import type { Role } from '@/lib/types';
+import type { Role, User } from '@/lib/types';
 import { capitalize } from 'string-ts';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { firebaseConfig } from '@/services/firebase';
+import { useState } from 'react';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
 
 export default function SettingsPage() {
+  const { user: currentUser } = useAuth();
+  const { toast } = useToast();
+  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState<Role['name']>('sales');
+
+  const isAdmin = currentUser?.role === 'admin';
+
+  const handleRoleChange = (userId: string, newRole: Role['name']) => {
+    if (!isAdmin) {
+      toast({
+        variant: 'destructive',
+        title: 'Permission Denied',
+        description: 'Only admins can change user roles.',
+      });
+      return;
+    }
+    setUsers(users.map(user => user.id === userId ? { ...user, role: newRole } : user));
+    toast({
+      title: 'Success',
+      description: 'User role has been updated locally. Note: This is a demo and changes are not saved to a database.',
+    });
+  };
+
+  const handleAddUser = () => {
+    if (!isAdmin) {
+      toast({
+        variant: 'destructive',
+        title: 'Permission Denied',
+        description: 'Only admins can add new users.',
+      });
+      return;
+    }
+    if (!newUserName || !newUserEmail) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description: 'Please provide a name and email for the new user.',
+      });
+      return;
+    }
+
+    const newUser: User = {
+      id: `user_${Math.random().toString(36).substr(2, 9)}`,
+      name: newUserName,
+      email: newUserEmail,
+      role: newUserRole,
+      avatarUrl: `https://picsum.photos/seed/${newUserName}/100/100`,
+    };
+
+    setUsers([...users, newUser]);
+    setNewUserName('');
+    setNewUserEmail('');
+    toast({
+      title: 'User Added',
+      description: 'The user has been added to the local list. Remember to create their account in the Firebase Console.',
+    });
+  }
+
   return (
     <>
       <PageHeader>
@@ -147,37 +210,74 @@ export default function SettingsPage() {
                         <div>
                             <CardTitle>User Management</CardTitle>
                             <CardDescription>
-                                To add or remove users, please visit the Firebase Console Authentication page.
+                                Add users, assign roles, then create their login in the Firebase Console.
                             </CardDescription>
                         </div>
                          <a href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`} target="_blank" rel="noopener noreferrer">
                             <Button size="sm">
                                 <PlusCircle className="mr-2 h-4 w-4" />
-                                Manage Users
+                                Manage Users in Firebase
                             </Button>
                         </a>
                     </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {mockUsers.map(user => (
-                                <div key={user.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                                    <div className="flex items-center gap-4">
-                                        <Avatar>
-                                            <AvatarImage src={user.avatarUrl} alt={user.name} />
-                                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="font-medium">{user.name}</p>
-                                            <p className="text-sm text-muted-foreground">{user.email}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <Badge variant="outline" className="capitalize">{user.role.replace('_', ' ')}</Badge>
+                    <CardContent className="space-y-4">
+                        {users.map(user => (
+                            <div key={user.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                <div className="flex items-center gap-4">
+                                    <Avatar>
+                                        <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-medium">{user.name}</p>
+                                        <p className="text-sm text-muted-foreground">{user.email}</p>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+                                <div className="flex items-center gap-4">
+                                  {isAdmin ? (
+                                    <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value as Role['name'])}>
+                                      <SelectTrigger className="w-[180px]">
+                                        <SelectValue placeholder="Select a role" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {roles.map(role => (
+                                          <SelectItem key={role} value={role} className="capitalize">{role.replace('_', ' ')}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  ) : (
+                                    <Badge variant="outline" className="capitalize">{user.role.replace('_', ' ')}</Badge>
+                                  )}
+                                </div>
+                            </div>
+                        ))}
                     </CardContent>
+                    {isAdmin && (
+                      <>
+                        <Separator />
+                        <CardFooter className="flex-col items-start gap-4 pt-6">
+                            <h3 className="font-medium">Add New User</h3>
+                            <div className="flex w-full gap-4">
+                               <Input placeholder="Full Name" value={newUserName} onChange={e => setNewUserName(e.target.value)} />
+                                <Input type="email" placeholder="Email Address" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
+                               <Select value={newUserRole} onValueChange={(value) => setNewUserRole(value as Role['name'])}>
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select a role" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {roles.map(role => (
+                                      <SelectItem key={role} value={role} className="capitalize">{role.replace('_', ' ')}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Button onClick={handleAddUser}><PlusCircle className="mr-2 h-4 w-4" /> Add User</Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                After adding a user here, you must create an account for them with the same email in the Firebase Console.
+                            </p>
+                        </CardFooter>
+                      </>
+                    )}
                 </Card>
            </TabsContent>
             <TabsContent value="notifications">
@@ -197,3 +297,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
