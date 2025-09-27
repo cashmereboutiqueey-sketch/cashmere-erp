@@ -32,6 +32,7 @@ import { getCustomers } from '@/services/customer-service';
 import { addOrder } from '@/services/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type CartItem = {
   productId: string;
@@ -52,6 +53,7 @@ export default function PosPage() {
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [source, setSource] = useState<Order['source']>('store');
+  const [fulfillmentType, setFulfillmentType] = useState<Order['fulfillment_type']>('from_stock');
   const [sku, setSku] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -179,7 +181,13 @@ export default function PosPage() {
         payment_method: paymentMethod,
         amount_paid: amountPaid,
         total_amount: total,
-        items: cart,
+        fulfillment_type: fulfillmentType,
+        items: cart.map(({productId, productName, variant, quantity}) => ({
+          productId,
+          productName,
+          variant,
+          quantity
+        })),
       };
 
       const orderId = await addOrder(newOrder);
@@ -393,6 +401,25 @@ export default function PosPage() {
                     <SelectItem value="social">Social Media</SelectItem>
                     </SelectContent>
                 </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="fulfillment">Fulfillment</Label>
+               <RadioGroup
+                id="fulfillment"
+                value={fulfillmentType}
+                onValueChange={(v) => setFulfillmentType(v as Order['fulfillment_type'])}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="from_stock" id="from_stock" />
+                  <Label htmlFor="from_stock">From Stock</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="make_to_order" id="make_to_order" />
+                  <Label htmlFor="make_to_order">Make to Order</Label>
+                </div>
+              </RadioGroup>
             </div>
             
             <Separator />
