@@ -16,6 +16,7 @@ import {
   DollarSign,
   MonitorPlay,
   Package,
+  BadgePercent,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -106,6 +107,12 @@ const allMenuItems: {
     href: '/finance',
     labelKey: 'finance',
     icon: DollarSign,
+    roles: ['admin', 'accountant'],
+  },
+  {
+    href: '/pricing',
+    labelKey: 'pricing',
+    icon: BadgePercent,
     roles: ['admin', 'accountant'],
   },
   {

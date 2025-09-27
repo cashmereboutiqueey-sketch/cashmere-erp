@@ -1,3 +1,4 @@
+
 export const translations = {
   en: {
     // Sidebar
@@ -15,6 +16,7 @@ export const translations = {
     settings: 'Settings',
     needHelp: 'Need Help?',
     contactSupport: 'Contact Support',
+    pricing: 'Pricing',
     // Header Dropdown
     profile: 'Profile',
     logout: 'Logout',
@@ -178,7 +180,6 @@ export const translations = {
     bestSeller: 'Best Seller',
     topProductByRevenue: 'Top product by revenue in period',
     salesByProduct: 'Sales by Product',
-    product: 'Product',
     unitsSold: 'Units Sold',
     noSalesFound: 'No sales found for the selected period.',
     // Balance Sheet
@@ -319,6 +320,28 @@ export const translations = {
     noUnpaidCodOrders: 'No unpaid COD orders',
     orderStatusUpdated: 'Order {orderId} status updated.',
     errorUpdatingStatus: 'Error updating status',
+    // Pricing Page
+    pricingAndProfitability: 'Pricing & Profitability',
+    pricingSettings: 'Pricing Settings',
+    pricingSettingsDesc: 'Set target margins and simulate sales mix.',
+    targetMargin: 'Target Margin',
+    basics: 'Basics',
+    premium: 'Premium',
+    salesMixSimulation: 'Sales Mix Simulation',
+    normalPrice: 'Normal Price',
+    seasonalSale: 'Seasonal Sale',
+    clearance: 'Clearance',
+    productPricingAnalysis: 'Product Pricing Analysis',
+    costPerUnit: 'Cost/Unit',
+    sellingPrice: 'Selling Price',
+    margin: 'Margin %',
+    breakEvenUnits: 'Break-Even Units',
+    averageMargin: 'Average Margin',
+    acrossAllProducts: 'Across all products',
+    totalBreakEvenUnits: 'Total Break-Even Units',
+    unitsToCoverFixedCosts: 'Units to cover fixed costs',
+    estimatedMonthlyProfit: 'Est. Monthly Profit',
+    basedOnSalesSim: 'Based on sales simulation',
   },
   ar: {
     // Sidebar
@@ -336,6 +359,7 @@ export const translations = {
     settings: 'الإعدادات',
     needHelp: 'تحتاج مساعدة؟',
     contactSupport: 'تواصل مع الدعم',
+    pricing: 'التسعير',
     // Header Dropdown
     profile: 'الملف الشخصي',
     logout: 'تسجيل الخروج',
@@ -499,7 +523,6 @@ export const translations = {
     bestSeller: 'الأكثر مبيعًا',
     topProductByRevenue: 'المنتج الأعلى إيرادًا في الفترة',
     salesByProduct: 'المبيعات حسب المنتج',
-    product: 'المنتج',
     unitsSold: 'الوحدات المباعة',
     noSalesFound: 'لم يتم العثور على مبيعات للفترة المحددة.',
     // Balance Sheet
@@ -640,6 +663,28 @@ export const translations = {
     noUnpaidCodOrders: 'لا توجد طلبات دفع عند الاستلام غير مدفوعة',
     orderStatusUpdated: 'تم تحديث حالة الطلب {orderId}.',
     errorUpdatingStatus: 'خطأ في تحديث الحالة',
+    // Pricing Page
+    pricingAndProfitability: 'التسعير والربحية',
+    pricingSettings: 'إعدادات التسعير',
+    pricingSettingsDesc: 'حدد هوامش الربح المستهدفة ومحاكاة مزيج المبيعات.',
+    targetMargin: 'هامش الربح المستهدف',
+    basics: 'الأساسيات',
+    premium: 'الممتازة',
+    salesMixSimulation: 'محاكاة مزيج المبيعات',
+    normalPrice: 'السعر العادي',
+    seasonalSale: 'تخفيضات موسمية',
+    clearance: 'تصفية',
+    productPricingAnalysis: 'تحليل تسعير المنتج',
+    costPerUnit: 'التكلفة/الوحدة',
+    sellingPrice: 'سعر البيع',
+    margin: 'الهامش %',
+    breakEvenUnits: 'وحدات نقطة التعادل',
+    averageMargin: 'متوسط الهامش',
+    acrossAllProducts: 'عبر جميع المنتجات',
+    totalBreakEvenUnits: 'إجمالي وحدات نقطة التعادل',
+    unitsToCoverFixedCosts: 'الوحدات اللازمة لتغطية التكاليف الثابتة',
+    estimatedMonthlyProfit: 'الربح الشهري المقدر',
+    basedOnSalesSim: 'بناءً على محاكاة المبيعات',
   },
 };
 
