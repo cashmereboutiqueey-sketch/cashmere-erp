@@ -111,6 +111,13 @@ export const translations = {
     salaries: 'Salaries',
     utilities: 'Utilities',
     other: 'Other',
+    // Reports Page
+    productStockLevels: 'Product Stock Levels',
+    fabricStockLevels: 'Fabric Stock Levels',
+    stock: 'Stock',
+    minStock: 'Min. Stock',
+    stockMeters: 'Stock (m)',
+    minStockMeters: 'Min. Stock (m)',
   },
   ar: {
     // Sidebar
@@ -223,6 +230,13 @@ export const translations = {
     salaries: 'رواتب',
     utilities: 'خدمات',
     other: 'أخرى',
+    // Reports Page
+    productStockLevels: 'مستويات مخزون المنتجات',
+    fabricStockLevels: 'مستويات مخزون الأقمشة',
+    stock: 'المخزون',
+    minStock: 'أدنى مخزون',
+    stockMeters: 'المخزون (م)',
+    minStockMeters: 'أدنى مخزون (م)',
   },
 };
 

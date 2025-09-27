@@ -15,8 +15,10 @@ import { getProducts } from '@/services/product-service';
 import { getFabrics } from '@/services/fabric-service';
 import { Product, Fabric } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 export function InventoryReport() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [fabrics, setFabrics] = useState<Fabric[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,13 +52,13 @@ export function InventoryReport() {
     return (
         <div className="grid gap-6 md:grid-cols-2">
             <div>
-                <h3 className="text-lg font-medium mb-2">Product Stock Levels</h3>
+                <h3 className="text-lg font-medium mb-2">{t('productStockLevels')}</h3>
                 <div className="rounded-md border p-4 space-y-2">
                     {[...Array(5)].map((_,i) => <Skeleton key={i} className="h-10 w-full" />)}
                 </div>
             </div>
             <div>
-                <h3 className="text-lg font-medium mb-2">Fabric Stock Levels</h3>
+                <h3 className="text-lg font-medium mb-2">{t('fabricStockLevels')}</h3>
                 <div className="rounded-md border p-4 space-y-2">
                     {[...Array(5)].map((_,i) => <Skeleton key={i} className="h-10 w-full" />)}
                 </div>
@@ -68,15 +70,15 @@ export function InventoryReport() {
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <div>
-        <h3 className="text-lg font-medium mb-2">Product Stock Levels</h3>
+        <h3 className="text-lg font-medium mb-2">{t('productStockLevels')}</h3>
         <div className="rounded-md border">
           <ScrollArea className="h-96">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Stock</TableHead>
-                  <TableHead className="text-right">Min. Stock</TableHead>
+                  <TableHead>{t('products')}</TableHead>
+                  <TableHead className="text-right">{t('stock')}</TableHead>
+                  <TableHead className="text-right">{t('minStock')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -105,15 +107,15 @@ export function InventoryReport() {
         </div>
       </div>
       <div>
-        <h3 className="text-lg font-medium mb-2">Fabric Stock Levels</h3>
+        <h3 className="text-lg font-medium mb-2">{t('fabricStockLevels')}</h3>
         <div className="rounded-md border">
           <ScrollArea className="h-96">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Fabric</TableHead>
-                  <TableHead className="text-right">Stock (m)</TableHead>
-                  <TableHead className="text-right">Min. Stock (m)</TableHead>
+                  <TableHead>{t('fabrics')}</TableHead>
+                  <TableHead className="text-right">{t('stockMeters')}</TableHead>
+                  <TableHead className="text-right">{t('minStockMeters')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
