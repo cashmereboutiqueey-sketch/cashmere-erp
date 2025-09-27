@@ -24,7 +24,6 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import { Separator } from '../ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Slider } from '../ui/slider';
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', {
@@ -37,6 +36,13 @@ interface ManufacturingPricingProps {
   fabrics: Fabric[];
 }
 
+type Difficulty = 'easy' | 'medium' | 'hard';
+const difficultyAllocation: Record<Difficulty, number> = {
+    easy: 20,
+    medium: 30,
+    hard: 50,
+}
+
 export function ManufacturingPricing({ products, fabrics }: ManufacturingPricingProps) {
   const { t } = useTranslation();
   const [selectedProductId, setSelectedProductId] = useState<string>('');
@@ -47,7 +53,7 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
   const [factoryFixedCosts, setFactoryFixedCosts] = useState(5000);
   const [monthlyUnits, setMonthlyUnits] = useState(1000);
   const [factoryMargin, setFactoryMargin] = useState(20);
-  const [fixedCostAllocation, setFixedCostAllocation] = useState(100);
+  const [productionDifficulty, setProductionDifficulty] = useState<Difficulty>('medium');
 
   const selectedProduct = useMemo(
     () => products.find((p) => p.id === selectedProductId),
@@ -71,15 +77,28 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
     return factoryFixedCosts / monthlyUnits;
   }, [factoryFixedCosts, monthlyUnits]);
 
+  const allocatedFixedCost = useMemo(() => {
+    const allocationPercentage = difficultyAllocation[productionDifficulty] / 100;
+    return fixedCostPerUnit * allocationPercentage;
+  }, [fixedCostPerUnit, productionDifficulty])
+
   const totalManufacturingCost = useMemo(() => {
-    const allocatedFixedCost = fixedCostPerUnit * (fixedCostAllocation / 100);
     return totalVariableCost + allocatedFixedCost;
-  }, [totalVariableCost, fixedCostPerUnit, fixedCostAllocation]);
+  }, [totalVariableCost, allocatedFixedCost]);
 
   const finalPriceToBrand = useMemo(() => {
     if (1 - factoryMargin / 100 === 0) return 0;
     return totalManufacturingCost / (1 - factoryMargin / 100);
   }, [totalManufacturingCost, factoryMargin]);
+
+  const contributionMargin = useMemo(() => {
+    return finalPriceToBrand - totalVariableCost;
+  }, [finalPriceToBrand, totalVariableCost]);
+
+  const breakEvenUnits = useMemo(() => {
+    if (contributionMargin <= 0) return Infinity;
+    return factoryFixedCosts / contributionMargin;
+  }, [factoryFixedCosts, contributionMargin]);
 
 
   return (
@@ -187,16 +206,20 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
             <span>{t('fixedCostPerUnit')}</span>
             <span>{formatCurrency(fixedCostPerUnit)}</span>
           </div>
-           <div className="space-y-4 pt-2">
-            <Label htmlFor="include-fixed-cost">{t('fixedCostAllocation')} - {fixedCostAllocation}%</Label>
-            <Slider
-                id="include-fixed-cost"
-                defaultValue={[fixedCostAllocation]}
-                onValueChange={(value) => setFixedCostAllocation(value[0])}
-                max={100}
-                step={1}
-            />
-          </div>
+           <div className="space-y-2 pt-2">
+                <Label htmlFor="difficulty-select">{t('productionDifficulty')}</Label>
+                 <Select value={productionDifficulty} onValueChange={(v) => setProductionDifficulty(v as Difficulty)}>
+                    <SelectTrigger id="difficulty-select">
+                        <SelectValue placeholder={t('selectDifficulty')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="easy">{t('easy')} (20%)</SelectItem>
+                        <SelectItem value="medium">{t('medium')} (30%)</SelectItem>
+                        <SelectItem value="hard">{t('hard')} (50%)</SelectItem>
+                    </SelectContent>
+                </Select>
+                 <p className="text-sm text-muted-foreground">{t('allocatedFixedCost')}: {formatCurrency(allocatedFixedCost)}</p>
+            </div>
 
           <Separator className="my-6" />
 
@@ -218,6 +241,19 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
                 <CardDescription className="text-secondary-foreground/80">{t('finalPriceToBrand')}</CardDescription>
                 <CardTitle className="text-4xl">{formatCurrency(finalPriceToBrand)}</CardTitle>
                 </CardHeader>
+            </Card>
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>{t('breakEvenAnalysis')}</CardTitle>
+                    <CardDescription>{t('breakEvenAnalysisDesc')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-3xl font-bold text-center">
+                        {isFinite(breakEvenUnits) ? Math.ceil(breakEvenUnits).toLocaleString() : 'N/A'}
+                    </p>
+                    <p className="text-sm text-muted-foreground text-center">{t('unitsToSell')}</p>
+                </CardContent>
             </Card>
           </div>
         </div>
