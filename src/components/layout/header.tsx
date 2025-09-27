@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -26,6 +27,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { useTranslation } from '@/hooks/use-translation';
 
 
 export function Header() {
@@ -34,6 +36,7 @@ export function Header() {
   const [notificationCount, setNotificationCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
   const [language, setLanguage] = useState('en');
+  const { t } = useTranslation();
 
   useEffect(() => {
     setIsClient(true);
@@ -55,6 +58,8 @@ export function Header() {
     localStorage.setItem('language', newLang);
     document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = newLang;
+    // Dispatch a custom event so other components can react to language changes
+    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: newLang } }));
   };
 
   return (
@@ -93,10 +98,10 @@ export function Header() {
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem><User className="mr-2" />Profile</DropdownMenuItem>
-          <DropdownMenuItem><Settings className="mr-2" />Settings</DropdownMenuItem>
+          <DropdownMenuItem><User className="mr-2" />{t('profile')}</DropdownMenuItem>
+          <DropdownMenuItem><Settings className="mr-2" />{t('settings')}</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={handleLogout}><LogOut className="mr-2" />Logout</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleLogout}><LogOut className="mr-2" />{t('logout')}</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

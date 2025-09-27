@@ -1,3 +1,6 @@
+
+import { TranslationKey } from './i18n';
+
 export type Role = {
   id: string;
   name: 'admin' | 'accountant' | 'sales' | 'production' | 'warehouse_manager';
@@ -182,3 +185,5 @@ export type Account = {
   type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense';
   balance: number;
 };
+
+export { TranslationKey };

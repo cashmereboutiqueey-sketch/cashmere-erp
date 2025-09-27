@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -36,80 +37,86 @@ import {
   CardTitle,
 } from '../ui/card';
 import { useAuth } from '@/context/auth-context';
-import type { Role } from '@/lib/types';
+import type { Role, TranslationKey } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { capitalize } from 'string-ts';
+import { useTranslation } from '@/hooks/use-translation';
 
-const allMenuItems = [
+const allMenuItems: {
+  href: string;
+  labelKey: TranslationKey;
+  icon: React.ElementType;
+  roles: Role['name'][];
+}[] = [
   {
     href: '/dashboard',
-    label: 'Dashboard',
+    labelKey: 'dashboard',
     icon: LayoutDashboard,
     roles: ['admin', 'accountant'],
   },
   {
     href: '/pos',
-    label: 'Point of Sale',
+    labelKey: 'pos',
     icon: MonitorPlay,
     roles: ['admin', 'sales'],
   },
   {
     href: '/orders',
-    label: 'Orders',
+    labelKey: 'orders',
     icon: ShoppingCart,
     roles: ['admin', 'sales'],
   },
   {
     href: '/shipping',
-    label: 'Shipping',
+    labelKey: 'shipping',
     icon: Package,
     roles: ['admin', 'sales', 'warehouse_manager'],
   },
   {
     href: '/products',
-    label: 'Products',
+    labelKey: 'products',
     icon: Box,
     roles: ['admin', 'production', 'warehouse_manager'],
   },
   {
     href: '/customers',
-    label: 'Customers',
+    labelKey: 'customers',
     icon: Users,
     roles: ['admin', 'sales'],
   },
   {
     href: '/suppliers',
-    label: 'Suppliers',
+    labelKey: 'suppliers',
     icon: Truck,
     roles: ['admin', 'production'],
   },
   {
     href: '/fabrics',
-    label: 'Fabrics',
+    labelKey: 'fabrics',
     icon: Scissors,
     roles: ['admin', 'production'],
   },
   {
     href: '/production',
-    label: 'Production',
+    labelKey: 'production',
     icon: Factory,
     roles: ['admin', 'production'],
   },
   {
     href: '/finance',
-    label: 'Finance',
+    labelKey: 'finance',
     icon: DollarSign,
     roles: ['admin', 'accountant'],
   },
   {
     href: '/reports',
-    label: 'Reports',
+    labelKey: 'reports',
     icon: BarChart,
     roles: ['admin', 'accountant'],
   },
   {
     href: '/settings',
-    label: 'Settings',
+    labelKey: 'settings',
     icon: Settings,
     roles: ['admin'],
   },
@@ -127,6 +134,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleLogout = () => {
     logout();
@@ -162,11 +170,11 @@ export function AppSidebar() {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href}
-                tooltip={item.label}
+                tooltip={t(item.labelKey)}
               >
                 <Link href={item.href}>
                   <item.icon />
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey)}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -184,14 +192,14 @@ export function AppSidebar() {
         <div className="flex flex-col gap-2 p-2 group-data-[collapsible=icon]:hidden">
           <Card>
             <CardHeader className="p-2 pt-0 md:p-4">
-              <CardTitle className="font-headline">Need Help?</CardTitle>
+              <CardTitle className="font-headline">{t('needHelp')}</CardTitle>
               <CardDescription>
                 Contact support for any issues.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-2 pt-0 md:p-4 md:pt-0">
               <Link href="#" className="w-full">
-                <span className="font-bold underline">Contact Support</span>
+                <span className="font-bold underline">{t('contactSupport')}</span>
               </Link>
             </CardContent>
           </Card>
