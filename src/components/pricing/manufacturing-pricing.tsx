@@ -99,11 +99,6 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
     return finalPriceToBrand - totalVariableCost;
   }, [finalPriceToBrand, totalVariableCost]);
 
-  const breakEvenUnits = useMemo(() => {
-    if (contributionMargin <= 0) return Infinity;
-    return factoryFixedCosts / contributionMargin;
-  }, [factoryFixedCosts, contributionMargin]);
-
   const handleUpdateCost = async () => {
     if (!selectedProduct) {
         toast({ variant: 'destructive', title: t('error'), description: t('selectProductFirst') });
@@ -269,14 +264,14 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
             
             <Card>
                 <CardHeader>
-                    <CardTitle>{t('breakEvenAnalysis')}</CardTitle>
-                    <CardDescription>{t('breakEvenAnalysisDesc')}</CardDescription>
+                    <CardTitle>{t('contributionMargin')}</CardTitle>
+                    <CardDescription>{t('contributionMarginDesc')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <p className="text-3xl font-bold text-center">
-                        {isFinite(breakEvenUnits) ? Math.ceil(breakEvenUnits).toLocaleString() : 'N/A'}
+                        {formatCurrency(contributionMargin)}
                     </p>
-                    <p className="text-sm text-muted-foreground text-center">{t('unitsToSell')}</p>
+                    <p className="text-sm text-muted-foreground text-center">{t('perUnit')}</p>
                 </CardContent>
             </Card>
           </div>
@@ -290,5 +285,3 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
     </Card>
   );
 }
-
-    
