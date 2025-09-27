@@ -39,6 +39,7 @@ import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import type { Role } from '@/lib/types';
 import { capitalize } from 'string-ts';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
 
