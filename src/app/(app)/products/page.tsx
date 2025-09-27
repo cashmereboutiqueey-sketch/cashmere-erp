@@ -8,8 +8,10 @@ import { getFabrics } from '@/services/fabric-service';
 import { getAllProductFabrics } from '@/services/product-fabric-service';
 import { Product, Fabric, ProductFabric } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function ProductsPage() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -43,7 +45,7 @@ export default function ProductsPage() {
   return (
     <>
       <PageHeader>
-        <PageHeaderHeading>Products</PageHeaderHeading>
+        <PageHeaderHeading>{t('products')}</PageHeaderHeading>
       </PageHeader>
       <div className="p-4 lg:p-6">
         {isLoading ? (

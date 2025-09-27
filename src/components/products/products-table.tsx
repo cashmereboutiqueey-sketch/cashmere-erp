@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ColumnDef, Row } from '@tanstack/react-table';
-import { Product, ProductVariant, Fabric, ProductFabric } from '@/lib/types';
+import { Product, ProductVariant, Fabric, ProductFabric, TranslationKey } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { Badge } from '../ui/badge';
@@ -53,25 +53,27 @@ import { getFabrics } from '@/services/fabric-service';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Skeleton } from '../ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useTranslation } from '@/hooks/use-translation';
 
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
 
 const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
+    const { t } = useTranslation();
     return (
         <TableCell colSpan={99} className='p-4 bg-muted/50'>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <h4 className="font-medium mb-2">Variants</h4>
+                    <h4 className="font-medium mb-2">{t('variants')}</h4>
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>SKU</TableHead>
-                                    <TableHead>Variant</TableHead>
-                                    <TableHead>Price</TableHead>
-                                    <TableHead>Stock</TableHead>
+                                    <TableHead>{t('sku')}</TableHead>
+                                    <TableHead>{t('variant')}</TableHead>
+                                    <TableHead>{t('price')}</TableHead>
+                                    <TableHead>{t('stock')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -100,14 +102,14 @@ const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
                     </div>
                 </div>
                  <div>
-                    <h4 className="font-medium mb-2">Product Recipe (Bill of Materials)</h4>
+                    <h4 className="font-medium mb-2">{t('productRecipe')}</h4>
                      <div className="rounded-md border">
                          {row.original.fabrics && row.original.fabrics.length > 0 ? (
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Fabric</TableHead>
-                                        <TableHead className="text-right">Meters / pc</TableHead>
+                                        <TableHead>{t('fabric')}</TableHead>
+                                        <TableHead className="text-right">{t('metersPerPc')}</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -121,7 +123,7 @@ const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
                             </Table>
                          ) : (
                             <div className="p-4 text-center text-sm text-muted-foreground">
-                                No recipe defined for this product.
+                                {t('noRecipeDefined')}
                             </div>
                          )}
                      </div>
@@ -132,6 +134,7 @@ const ExpandedRowContent = ({ row }: { row: Row<Product> }) => {
 };
 
 const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
+    const { t } = useTranslation();
     const { toast } = useToast();
     const [isGenerating, setIsGenerating] = useState(false);
     const [description, setDescription] = useState('');
@@ -141,7 +144,7 @@ const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
 
     const handleGenerate = async () => {
         if (!firstVariant) {
-             toast({ variant: "destructive", title: "No variants found for this product." });
+             toast({ variant: "destructive", title: t('noVariantsFound') });
              return;
         }
 
@@ -155,7 +158,7 @@ const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
             });
             setDescription(result.description);
         } catch (e) {
-            toast({ variant: "destructive", title: "Failed to generate description." });
+            toast({ variant: "destructive", title: t('failedToGenerateDesc') });
         } finally {
             setIsGenerating(false);
         }
@@ -164,13 +167,13 @@ const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>Generate Description</DropdownMenuItem>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>{t('generateDescription')}</DropdownMenuItem>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Generate Product Description for {product.name}</DialogTitle>
+                    <DialogTitle>{t('generateProductDescriptionFor', { productName: product.name })}</DialogTitle>
                      <DialogDescription>
-                        Use AI to generate a compelling product description.
+                        {t('generateProductDescriptionDesc')}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4 space-y-4">
@@ -181,12 +184,12 @@ const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
                      ) : (
                         <div className="flex items-center justify-center h-24 border rounded-md bg-muted/50">
                             <p className="text-sm text-muted-foreground">
-                                {isGenerating ? "Generating..." : "Click the button to generate a description."}
+                                {isGenerating ? t('generating') : t('clickToGenerate')}
                             </p>
                         </div>
                      )}
                      <Button onClick={handleGenerate} disabled={isGenerating}>
-                        {isGenerating ? "Generating..." : "Generate with AI"}
+                        {isGenerating ? t('generating') : t('generateWithAI')}
                     </Button>
                 </div>
             </DialogContent>
@@ -196,6 +199,7 @@ const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
 
 
 export const getColumns = (
+  t: (key: TranslationKey) => string,
   onEdit: (product: Product) => void,
   onDelete: (product: Product) => void
 ): ColumnDef<Product>[] => [
@@ -225,7 +229,7 @@ export const getColumns = (
   {
     accessorKey: 'name',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Product" />
+      <DataTableColumnHeader column={column} title={t('product')} />
     ),
     cell: ({ row }) => {
       const product = row.original;
@@ -248,7 +252,7 @@ export const getColumns = (
   {
     accessorKey: 'category',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Category" />
+      <DataTableColumnHeader column={column} title={t('category')} />
     ),
     cell: ({ row }) => <Badge variant="outline">{row.original.category}</Badge>,
   },
@@ -256,11 +260,11 @@ export const getColumns = (
     id: 'fabrics',
     accessorKey: 'fabrics',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Fabrics Used" />
+      <DataTableColumnHeader column={column} title={t('fabricsUsed')} />
     ),
     cell: ({ row }) => {
         const fabrics = row.original.fabrics;
-        if (!fabrics || fabrics.length === 0) return <span className="text-muted-foreground text-xs">None</span>;
+        if (!fabrics || fabrics.length === 0) return <span className="text-muted-foreground text-xs">{t('none')}</span>;
         
         const displayFabrics = fabrics.slice(0, 2);
         const remainingCount = fabrics.length - displayFabrics.length;
@@ -287,7 +291,7 @@ export const getColumns = (
   {
     id: 'price',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Price" />
+      <DataTableColumnHeader column={column} title={t('price')} />
     ),
     cell: ({ row }) => {
       const prices = row.original.variants.map(v => v.price);
@@ -305,7 +309,7 @@ export const getColumns = (
   {
     id: 'stock',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Total Stock" />
+      <DataTableColumnHeader column={column} title={t('totalStock')} />
     ),
      cell: ({ row }) => {
       const totalStock = row.original.variants.reduce((acc, v) => acc + v.stock_quantity, 0);
@@ -325,8 +329,8 @@ export const getColumns = (
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(row.original)}>Edit</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onDelete(row.original)} className="text-destructive">Delete</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>{t('edit')}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete(row.original)} className="text-destructive">{t('delete')}</DropdownMenuItem>
               <ProductDescriptionGenerator product={row.original} />
             </DropdownMenuContent>
           </DropdownMenu>
@@ -384,6 +388,7 @@ function ProductEditDialog({
     allSizes: string[],
     allColors: string[] 
 }) {
+  const { t } = useTranslation();
   const [availableFabrics, setAvailableFabrics] = useState<Fabric[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -467,16 +472,16 @@ function ProductEditDialog({
     try {
       if (isEditMode && data.id) {
         await updateProduct(data.id, data);
-        toast({ title: "Success", description: "Product updated successfully." });
+        toast({ title: t('success'), description: t('productUpdated') });
       } else {
         await addProduct(data);
-        toast({ title: "Success", description: "Product added successfully." });
+        toast({ title: t('success'), description: t('productAdded') });
       }
       onOpenChange(false);
       window.location.reload();
     } catch (error) {
       const action = isEditMode ? 'update' : 'add';
-      toast({ variant: "destructive", title: "Error", description: `Failed to ${action} product.` });
+      toast({ variant: "destructive", title: t('error'), description: t('failedToActionProduct', { action }) });
     }
   };
   
@@ -499,11 +504,11 @@ function ProductEditDialog({
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Product' : 'Add New Product'}</DialogTitle>
+          <DialogTitle>{isEditMode ? t('editProduct') : t('addNewProduct')}</DialogTitle>
           <DialogDescription>
             {isEditMode 
-              ? `Editing ${product?.name}. You can update details and the product recipe.`
-              : 'Enter product details, define its recipe, and select attributes to generate variants.'
+              ? t('editProductDesc', { productName: product?.name || '' })
+              : t('addProductDesc')
             }
           </DialogDescription>
         </DialogHeader>
@@ -514,14 +519,14 @@ function ProductEditDialog({
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={control} name="name" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Product Name</FormLabel>
+                    <FormLabel>{t('productName')}</FormLabel>
                     <FormControl><Input {...field} placeholder="e.g., Silk Abaya" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
                 <FormField control={control} name="category" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category</FormLabel>
+                    <FormLabel>{t('category')}</FormLabel>
                     <FormControl><Input {...field} placeholder="e.g., Abayas" /></FormControl>
                     <FormMessage />
                   </FormItem>
@@ -529,15 +534,15 @@ function ProductEditDialog({
               </div>
 
             <div className="space-y-2 pt-4">
-                <h3 className="text-lg font-medium">Product Recipe (Bill of Materials)</h3>
+                <h3 className="text-lg font-medium">{t('productRecipe')}</h3>
                  {fabricFields.map((field, index) => (
                     <div key={field.id} className="flex items-end gap-2 p-2 rounded-md border">
                         <FormField control={control} name={`fabrics.${index}.fabric_id`} render={({ field }) => (
                             <FormItem className="flex-1">
-                                <FormLabel>Fabric</FormLabel>
+                                <FormLabel>{t('fabric')}</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                     <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Select a fabric" /></SelectTrigger>
+                                        <SelectTrigger><SelectValue placeholder={t('selectFabric')} /></SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
                                         {availableFabrics.map(fabric => <SelectItem key={fabric.id} value={fabric.id}>{fabric.name} ({fabric.color})</SelectItem>)}
@@ -548,7 +553,7 @@ function ProductEditDialog({
                         )} />
                          <FormField control={control} name={`fabrics.${index}.fabric_quantity_meters`} render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Meters/pc</FormLabel>
+                                <FormLabel>{t('metersPerPc')}</FormLabel>
                                 <FormControl><Input {...field} type="number" step="0.1" placeholder="e.g., 3.5" /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -557,16 +562,16 @@ function ProductEditDialog({
                     </div>
                 ))}
                  <Button type="button" size="sm" variant="outline" onClick={() => appendFabric({ fabric_id: '', fabric_quantity_meters: 0 })}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Fabric to Recipe
+                    <PlusCircle className="mr-2 h-4 w-4" /> {t('addFabricToRecipe')}
                 </Button>
                 <FormField control={control} name="fabrics" render={() => (<FormItem><FormMessage /></FormItem>)} />
             </div>
 
               {!isEditMode && (
                 <div className="space-y-2 pt-4">
-                  <h3 className="text-lg font-medium">Variant Generation</h3>
+                  <h3 className="text-lg font-medium">{t('variantGeneration')}</h3>
                   <div className="space-y-2">
-                      <Label>Sizes</Label>
+                      <Label>{t('sizes')}</Label>
                       <div className="flex flex-wrap gap-2">
                       {allSizes.map(size => (
                           <Button key={size} type="button" variant={selectedSizes.includes(size) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(size, selectedSizes, setSelectedSizes)}>{size}</Button>
@@ -574,7 +579,7 @@ function ProductEditDialog({
                       </div>
                   </div>
                   <div className="space-y-2">
-                      <Label>Colors</Label>
+                      <Label>{t('colors')}</Label>
                       <div className="flex flex-wrap gap-2">
                       {allColors.map(color => (
                           <Button key={color} type="button" variant={selectedColors.includes(color) ? 'secondary' : 'outline'} size="sm" onClick={() => toggleSelection(color, selectedColors, setSelectedColors)}>{color}</Button>
@@ -586,14 +591,14 @@ function ProductEditDialog({
               
               {variantFields.length > 0 && (
                 <div className="space-y-4 pt-4">
-                  <h3 className="text-lg font-medium">Generated Variants</h3>
+                  <h3 className="text-lg font-medium">{t('generatedVariants')}</h3>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Variant</TableHead>
-                          <TableHead>SKU</TableHead>
-                          <TableHead>Price</TableHead>
-                          <TableHead>Stock</TableHead>
+                          <TableHead>{t('variant')}</TableHead>
+                          <TableHead>{t('sku')}</TableHead>
+                          <TableHead>{t('price')}</TableHead>
+                          <TableHead>{t('stock')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -631,7 +636,7 @@ function ProductEditDialog({
                 )} />
               </ScrollArea>
               <DialogFooter>
-                <Button type="submit">{isEditMode ? 'Save Changes' : 'Add Product'}</Button>
+                <Button type="submit">{isEditMode ? t('saveChanges') : t('addProduct')}</Button>
               </DialogFooter>
             </form>
           </Form>
@@ -642,6 +647,7 @@ function ProductEditDialog({
 }
 
 function DeleteProductDialog({ product, isOpen, onOpenChange }: { product: Product | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+    const { t } = useTranslation();
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -650,11 +656,11 @@ function DeleteProductDialog({ product, isOpen, onOpenChange }: { product: Produ
         setIsDeleting(true);
         try {
             await deleteProduct(product.id);
-            toast({ title: "Success", description: "Product deleted successfully." });
+            toast({ title: t('success'), description: t('productDeleted') });
             onOpenChange(false);
             window.location.reload();
         } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Failed to delete product." });
+            toast({ variant: "destructive", title: t('error'), description: t('failedToDeleteProduct') });
         } finally {
             setIsDeleting(false);
         }
@@ -664,15 +670,15 @@ function DeleteProductDialog({ product, isOpen, onOpenChange }: { product: Produ
         <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to delete this product?</AlertDialogTitle>
+                    <AlertDialogTitle>{t('confirmDeleteProduct')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete the product "{product?.name}" and all its associated data.
+                       {t('confirmDeleteProductDesc', { productName: product?.name || '' })}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
-                        {isDeleting ? "Deleting..." : "Delete"}
+                        {isDeleting ? t('deleting') : t('delete')}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -684,6 +690,7 @@ function ManageAttributesDialog({ allSizes, setAllSizes, allColors, setAllColors
   const [open, setOpen] = useState(false);
   const [newSize, setNewSize] = useState('');
   const [newColor, setNewColor] = useState('');
+  const { t } = useTranslation();
 
   const handleAddSize = () => {
     if (newSize && !allSizes.includes(newSize)) {
@@ -704,34 +711,34 @@ function ManageAttributesDialog({ allSizes, setAllSizes, allColors, setAllColors
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="h-8">
           <Settings className="mr-2 h-4 w-4" />
-          Manage Attributes
+          {t('manageAttributes')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Manage Attributes</DialogTitle>
+          <DialogTitle>{t('manageAttributes')}</DialogTitle>
           <DialogDescription>
-            Add new sizes and colors to be available when creating products.
+            {t('manageAttributesDesc')}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="new-size" className="text-right">
-              New Size
+              {t('newSize')}
             </Label>
             <Input id="new-size" value={newSize} onChange={(e) => setNewSize(e.target.value)} className="col-span-2" placeholder="e.g., XXXL" />
-            <Button onClick={handleAddSize} className="col-span-1">Add</Button>
+            <Button onClick={handleAddSize} className="col-span-1">{t('add')}</Button>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="new-color" className="text-right">
-              New Color
+              {t('newColor')}
             </Label>
             <Input id="new-color" value={newColor} onChange={(e) => setNewColor(e.target.value)} className="col-span-2" placeholder="e.g., Green" />
-             <Button onClick={handleAddColor} className="col-span-1">Add</Button>
+             <Button onClick={handleAddColor} className="col-span-1">{t('add')}</Button>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="secondary" onClick={() => setOpen(false)}>Done</Button>
+          <Button variant="secondary" onClick={() => setOpen(false)}>{t('done')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -747,16 +754,17 @@ function ProductsTableToolbar({
   allSizes: string[], setAllSizes: (sizes: string[]) => void, 
   allColors: string[], setAllColors: (colors: string[]) => void 
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <Input
-        placeholder="Filter products..."
+        placeholder={t('filterProducts')}
         className="h-8 w-[150px] lg:w-[250px]"
       />
       <div className="ml-auto flex items-center gap-2">
         <Button size="sm" className="h-8" onClick={onAdd}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Product
+          {t('addProduct')}
         </Button>
         <ManageAttributesDialog allSizes={allSizes} setAllSizes={setAllSizes} allColors={allColors} setAllColors={setAllColors} />
       </div>
@@ -765,6 +773,7 @@ function ProductsTableToolbar({
 }
 
 export function ProductsTable({ data }: ProductsTableProps) {
+  const { t } = useTranslation();
   const [allSizes, setAllSizes] = useState(INITIAL_SIZES);
   const [allColors, setAllColors] = useState(INITIAL_COLORS);
 
@@ -787,7 +796,7 @@ export function ProductsTable({ data }: ProductsTableProps) {
     setIsEditOpen(true);
   };
 
-  const columns = getColumns(handleEdit, handleDelete);
+  const columns = getColumns(t, handleEdit, handleDelete);
   
   const renderSubComponent = React.useCallback(({ row }: { row: Row<Product> }) => {
     return (
