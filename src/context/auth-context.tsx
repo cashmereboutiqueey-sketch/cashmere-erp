@@ -28,8 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
-        // In a real app, you would fetch user roles from your database.
-        // For this demo, we'll find the matching mock user to get the role.
+        // Find the matching mock user to get the role.
         const userRoleData = mockUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
 
         if (userRoleData) {
@@ -42,16 +41,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             setUser(appUser);
         } else {
-            console.warn("User logged in but no role found in mock data for:", fbUser.email);
-            // Fallback for users created in Firebase console not in mock data
-             const fallbackUser: User = {
-                id: fbUser.uid,
-                name: fbUser.displayName || 'New User',
-                email: fbUser.email!,
-                avatarUrl: fbUser.photoURL || '',
-                role: 'sales', // default role
-            };
-            setUser(fallbackUser);
+            // If user is not in our mock data, they can't log in.
+            // This is a security measure.
+            console.warn("Firebase user not found in application user list:", fbUser.email);
+            setUser(null); 
+            signOut(auth); // Sign them out of Firebase too.
         }
 
       } else {
@@ -70,28 +64,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     const fbUser = userCredential.user;
+    // After successful Firebase login, check if user is in our system.
     const userRoleData = mockUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
     
-    let appUser: User;
-
-    if (userRoleData) {
-      appUser = {
+    if (!userRoleData) {
+        // If not, sign them out and throw an error.
+        await signOut(auth);
+        throw new Error("User authenticated but not found in the ERP system. Please contact an administrator to get access.");
+    }
+    
+    const appUser: User = {
         id: fbUser.uid,
         name: fbUser.displayName || userRoleData.name,
         email: fbUser.email!,
         avatarUrl: fbUser.photoURL || userRoleData.avatarUrl,
         role: userRoleData.role,
-      };
-    } else {
-      // Create a fallback user if not in mock data
-      appUser = {
-        id: fbUser.uid,
-        name: fbUser.displayName || 'New User',
-        email: fbUser.email!,
-        avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/100/100`,
-        role: 'sales', // Assign a default role
-      };
-    }
+    };
     
     setUser(appUser);
     return appUser;
