@@ -145,13 +145,15 @@ export default function SettingsPage() {
                         <div>
                             <CardTitle>User Management</CardTitle>
                             <CardDescription>
-                                Manage user access and roles within the system.
+                                To add or remove users, please visit the Firebase Console Authentication page.
                             </CardDescription>
                         </div>
-                        <Button size="sm">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add User
-                        </Button>
+                         <a href={`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/authentication/users`} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Manage Users
+                            </Button>
+                        </a>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
@@ -168,30 +170,7 @@ export default function SettingsPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <Select defaultValue={user.role}>
-                                            <SelectTrigger className="w-[180px]">
-                                                <SelectValue placeholder="Select a role" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {roles.map(role => (
-                                                    <SelectItem key={role} value={role} className="capitalize">
-                                                        {capitalize(role.replace('_', ' '))}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">Open menu</span>
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem>View Activity</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive">Remove User</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        <Badge variant="outline" className="capitalize">{user.role.replace('_', ' ')}</Badge>
                                     </div>
                                 </div>
                             ))}

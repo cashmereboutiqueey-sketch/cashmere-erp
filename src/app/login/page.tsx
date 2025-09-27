@@ -1,7 +1,7 @@
 
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -13,35 +13,26 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/icons';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
-import { Role, User } from '@/lib/types';
-import { mockUser, mockCustomers } from '@/lib/data';
-import { useState } from 'react';
-
-const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
-    const { login } = useAuth();
-    const router = useRouter();
-    const [selectedRole, setSelectedRole] = useState<Role['name']>('admin');
+  const { login } = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = () => {
-        const user: User = {
-            ...mockUser,
-            role: selectedRole
-        }
-        login(user);
-
+  const handleLogin = async () => {
+    setIsLoading(true);
+    try {
+      const user = await login(email, password);
+      if (user) {
+        // Redirect based on role after successful login
         let redirectPath = '/dashboard';
-        switch (selectedRole) {
+         switch (user.role) {
             case 'admin':
             case 'accountant':
                 redirectPath = '/dashboard';
@@ -57,7 +48,24 @@ export default function LoginPage() {
                 break;
         }
         router.push(redirectPath);
+      } else {
+         throw new Error("Login failed: User not found");
+      }
+    } catch (error) {
+      console.error(error);
+      const errorMessage = (error as Error).message
+        .replace('Firebase: ', '')
+        .replace(/(\(auth\/.*\))/, '');
+
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: errorMessage || 'An unexpected error occurred.',
+      });
+    } finally {
+      setIsLoading(false);
     }
+  };
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-background px-4">
@@ -68,7 +76,7 @@ export default function LoginPage() {
           </div>
           <CardTitle className="font-headline text-2xl font-bold">Welcome Back</CardTitle>
           <CardDescription>
-            Select a role to login to your account
+            Enter your credentials to login to your account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -79,27 +87,25 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 placeholder="m@example.com"
-                defaultValue={mockUser.email}
-                disabled
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
             <div className="grid gap-2">
-                <Label htmlFor="role">Role</Label>
-                <Select value={selectedRole} onValueChange={(value) => setSelectedRole(value as Role['name'])}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {roles.map(role => (
-                            <SelectItem key={role} value={role} className="capitalize">
-                                {role.replace('_', ' ')}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+              <div className="flex items-center">
+                <Label htmlFor="password">Password</Label>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
-            <Button type="submit" className="w-full font-bold" onClick={handleLogin}>
-              Login
+            <Button type="submit" className="w-full font-bold" onClick={handleLogin} disabled={isLoading}>
+              {isLoading ? 'Logging in...' : 'Login'}
             </Button>
           </div>
         </CardContent>
