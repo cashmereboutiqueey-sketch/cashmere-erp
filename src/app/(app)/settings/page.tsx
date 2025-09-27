@@ -40,6 +40,7 @@ import type { Role } from '@/lib/types';
 import { capitalize } from 'string-ts';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { firebaseConfig } from '@/services/firebase';
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
 
@@ -149,7 +150,7 @@ export default function SettingsPage() {
                                 To add or remove users, please visit the Firebase Console Authentication page.
                             </CardDescription>
                         </div>
-                         <a href={`https://console.firebase.google.com/project/${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}/authentication/users`} target="_blank" rel="noopener noreferrer">
+                         <a href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`} target="_blank" rel="noopener noreferrer">
                             <Button size="sm">
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Manage Users
