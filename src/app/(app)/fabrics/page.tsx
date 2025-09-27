@@ -7,8 +7,10 @@ import { getFabrics } from '@/services/fabric-service';
 import { getSuppliers } from '@/services/supplier-service';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function FabricsPage() {
+  const { t } = useTranslation();
   const [fabrics, setFabrics] = useState<(Fabric & { supplier?: Supplier })[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,7 +41,7 @@ export default function FabricsPage() {
   return (
     <>
       <PageHeader>
-        <PageHeaderHeading>Fabrics</PageHeaderHeading>
+        <PageHeaderHeading>{t('fabrics')}</PageHeaderHeading>
       </PageHeader>
       <div className="p-4 lg:p-6">
         {isLoading ? (

@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
-import { Fabric, Supplier } from '@/lib/types';
+import { Fabric, Supplier, TranslationKey } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import {
@@ -39,11 +39,14 @@ import { useToast } from '@/hooks/use-toast';
 import { addFabric } from '@/services/fabric-service';
 import { addExpense } from '@/services/finance-service';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
+import { useTranslation } from '@/hooks/use-translation';
 
 
 type FabricWithSupplier = Fabric & { supplier?: Supplier };
 
-export const columns: ColumnDef<FabricWithSupplier>[] = [
+export const getColumns = (
+    t: (key: TranslationKey, values?: Record<string, string | number>) => string
+): ColumnDef<FabricWithSupplier>[] => [
   {
     id: 'select',
     header: ({ table }) => (
@@ -66,7 +69,7 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
   {
     accessorKey: 'name',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Fabric" />
+      <DataTableColumnHeader column={column} title={t('fabric')} />
     ),
     cell: ({ row }) => {
       const fabric = row.original;
@@ -81,13 +84,13 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
   {
     accessorKey: 'color',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Color" />
+      <DataTableColumnHeader column={column} title={t('color')} />
     ),
   },
   {
     accessorKey: 'length_in_meters',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Stock (m)" />
+      <DataTableColumnHeader column={column} title={t('stockMeters')} />
     ),
     cell: ({ row }) => {
       return <div>{row.original.length_in_meters}m</div>;
@@ -96,7 +99,7 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
    {
     accessorKey: 'price_per_meter',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Cost/meter" />
+      <DataTableColumnHeader column={column} title={t('costPerMeter')} />
     ),
     cell: ({ row }) => {
        const amount = parseFloat(row.getValue('price_per_meter') as any);
@@ -109,7 +112,7 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
   },
   {
     accessorKey: 'supplier.name',
-    header: 'Supplier',
+    header: t('supplier') as string,
     cell: ({ row }) => {
       return <div>{row.original.supplier?.name || 'N/A'}</div>;
     },
@@ -130,9 +133,9 @@ export const columns: ColumnDef<FabricWithSupplier>[] = [
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Edit</DropdownMenuItem>
-              <DropdownMenuItem>Delete</DropdownMenuItem>
-              <DropdownMenuItem>View Details</DropdownMenuItem>
+              <DropdownMenuItem>{t('edit')}</DropdownMenuItem>
+              <DropdownMenuItem>{t('delete')}</DropdownMenuItem>
+              <DropdownMenuItem>{t('viewDetails')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -161,6 +164,7 @@ type FabricFormData = z.infer<typeof fabricSchema>;
 function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
   const form = useForm<FabricFormData>({
     resolver: zodResolver(fabricSchema),
     defaultValues: {
@@ -178,8 +182,8 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
     try {
       await addFabric(data);
       toast({
-        title: 'Success',
-        description: 'New fabric has been added.',
+        title: t('success'),
+        description: t('fabricAddedSuccess'),
       });
       setOpen(false);
       form.reset();
@@ -187,8 +191,8 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to add fabric.',
+        title: t('error'),
+        description: t('fabricAddedError'),
       });
     }
   };
@@ -201,12 +205,12 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
       <DialogTrigger asChild>
         <Button size="sm" className="h-8">
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Fabric
+          {t('addFabric')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Fabric</DialogTitle>
+          <DialogTitle>{t('addFabric')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -215,9 +219,9 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="name"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Name</FormLabel>
+                  <FormLabel className="text-right">{t('name')}</FormLabel>
                   <FormControl>
-                    <Input {...field} className="col-span-3" placeholder="e.g., Silk" />
+                    <Input {...field} className="col-span-3" placeholder={t('fabricNamePlaceholder')} />
                   </FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
@@ -228,9 +232,9 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="code"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Code</FormLabel>
+                  <FormLabel className="text-right">{t('code')}</FormLabel>
                   <FormControl>
-                    <Input {...field} className="col-span-3" placeholder="e.g., F007" />
+                    <Input {...field} className="col-span-3" placeholder={t('fabricCodePlaceholder')} />
                   </FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
@@ -241,9 +245,9 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="color"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Color</FormLabel>
+                  <FormLabel className="text-right">{t('color')}</FormLabel>
                   <FormControl>
-                    <Input {...field} className="col-span-3" placeholder="e.g., Emerald Green" />
+                    <Input {...field} className="col-span-3" placeholder={t('fabricColorPlaceholder')} />
                   </FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
@@ -254,9 +258,9 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="length_in_meters"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Initial Stock (m)</FormLabel>
+                  <FormLabel className="text-right">{t('initialStock')}</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" className="col-span-3" placeholder="e.g., 100" />
+                    <Input {...field} type="number" className="col-span-3" placeholder="100" />
                   </FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
@@ -267,9 +271,9 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="price_per_meter"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Price/meter</FormLabel>
+                  <FormLabel className="text-right">{t('costPerMeter')}</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" className="col-span-3" placeholder="e.g., 25.50" />
+                    <Input {...field} type="number" className="col-span-3" placeholder="25.50" />
                   </FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
@@ -280,9 +284,9 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="min_stock_level"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Min. Stock (m)</FormLabel>
+                  <FormLabel className="text-right">{t('minStockMeters')}</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" className="col-span-3" placeholder="e.g., 20" />
+                    <Input {...field} type="number" className="col-span-3" placeholder="20" />
                   </FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
@@ -293,11 +297,11 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="supplier_id"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Supplier</FormLabel>
+                  <FormLabel className="text-right">{t('supplier')}</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Select a supplier" />
+                        <SelectValue placeholder={t('selectSupplier')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -314,7 +318,7 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
             />
             <DialogFooter>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? 'Adding...' : 'Add Fabric'}
+                    {form.formState.isSubmitting ? t('adding') : t('addFabric')}
                 </Button>
             </DialogFooter>
           </form>
@@ -335,6 +339,7 @@ type PurchaseFormData = z.infer<typeof purchaseSchema>;
 function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
   const form = useForm<PurchaseFormData>({
     resolver: zodResolver(purchaseSchema),
     defaultValues: {
@@ -355,8 +360,8 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
       });
 
       toast({
-        title: 'Success',
-        description: 'Fabric purchase has been recorded as an expense.',
+        title: t('success'),
+        description: t('purchaseRecordedSuccess'),
       });
       setOpen(false);
       form.reset();
@@ -364,8 +369,8 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
     } catch (error) {
        toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to record purchase.',
+        title: t('error'),
+        description: t('purchaseRecordedError'),
       });
     }
   }
@@ -378,14 +383,14 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="h-8">
           <PlusCircle className="mr-2 h-4 w-4" />
-          Record Purchase
+          {t('recordPurchase')}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Record Fabric Purchase</DialogTitle>
+          <DialogTitle>{t('recordPurchase')}</DialogTitle>
           <DialogDescription>
-            Record a bill from a supplier for a fabric purchase. This will create an expense under "Cost of Goods Sold".
+            {t('recordPurchaseDesc')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -395,11 +400,11 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="supplier_id"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Supplier</FormLabel>
+                  <FormLabel className="text-right">{t('supplier')}</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Select a supplier" />
+                        <SelectValue placeholder={t('selectSupplier')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -419,9 +424,9 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="cost"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Total Cost</FormLabel>
+                  <FormLabel className="text-right">{t('totalCost')}</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" step="0.01" className="col-span-3" placeholder="e.g., 500.00" />
+                    <Input {...field} type="number" step="0.01" className="col-span-3" placeholder="500.00" />
                   </FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
@@ -432,16 +437,16 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
               name="payment_status"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Payment</FormLabel>
+                  <FormLabel className="text-right">{t('payment')}</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Select payment status" />
+                        <SelectValue placeholder={t('selectPaymentStatus')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="paid">Paid (from Cash)</SelectItem>
-                      <SelectItem value="unpaid">To be Paid (Credit)</SelectItem>
+                      <SelectItem value="paid">{t('paidFromCash')}</SelectItem>
+                      <SelectItem value="unpaid">{t('toBePaidCredit')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
@@ -450,7 +455,7 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
             />
             <DialogFooter>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Recording...' : 'Add Purchase'}
+                {form.formState.isSubmitting ? t('recording') : t('addPurchase')}
               </Button>
             </DialogFooter>
           </form>
@@ -462,10 +467,11 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
 
 
 function FabricsTableToolbar({ suppliers }: { suppliers: Supplier[] }) {
+  const { t } = useTranslation();
   return (
     <>
       <Input
-        placeholder="Filter fabrics..."
+        placeholder={t('filterFabrics')}
         className="h-8 w-[150px] lg:w-[250px]"
       />
       <div className="ml-auto flex items-center gap-2">
@@ -477,6 +483,8 @@ function FabricsTableToolbar({ suppliers }: { suppliers: Supplier[] }) {
 }
 
 export function FabricsTable({ data, suppliers }: FabricsTableProps) {
+  const { t } = useTranslation();
+  const columns = getColumns(t);
   return (
     <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar suppliers={suppliers} />} />
   );
