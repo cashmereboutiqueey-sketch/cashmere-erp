@@ -20,12 +20,14 @@ import { InventoryReport } from '@/components/reports/inventory-report';
 import { ExpensesReport } from '@/components/reports/expenses-report';
 import { IncomeStatement } from '@/components/reports/income-statement';
 import { BalanceSheet } from '@/components/reports/balance-sheet';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function ReportsPage() {
+  const { t } = useTranslation();
   return (
     <>
       <PageHeader>
-        <PageHeaderHeading>Reports</PageHeaderHeading>
+        <PageHeaderHeading>{t('reports')}</PageHeaderHeading>
       </PageHeader>
       <div className="p-4 lg:p-6">
         <Tabs defaultValue="sales">
@@ -52,9 +54,9 @@ export default function ReportsPage() {
           <TabsContent value="inventory" className="mt-4">
             <Card>
               <CardHeader>
-                <CardTitle>Inventory Report</CardTitle>
+                <CardTitle>{t('inventoryReport')}</CardTitle>
                 <CardDescription>
-                  An overview of your current product and fabric stock levels.
+                  {t('inventoryReportDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -106,3 +108,5 @@ export default function ReportsPage() {
     </>
   );
 }
+
+    

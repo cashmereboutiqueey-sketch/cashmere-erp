@@ -118,6 +118,8 @@ export const translations = {
     minStock: 'Min. Stock',
     stockMeters: 'Stock (m)',
     minStockMeters: 'Min. Stock (m)',
+    inventoryReport: 'Inventory Report',
+    inventoryReportDesc: 'An overview of your current product and fabric stock levels.',
   },
   ar: {
     // Sidebar
@@ -237,9 +239,13 @@ export const translations = {
     minStock: 'أدنى مخزون',
     stockMeters: 'المخزون (م)',
     minStockMeters: 'أدنى مخزون (م)',
+    inventoryReport: 'تقرير المخزون',
+    inventoryReportDesc: 'نظرة عامة على مستويات مخزون المنتجات والأقمشة الحالية.',
   },
 };
 
 export type Language = keyof typeof translations;
 
 export type TranslationKey = keyof typeof translations['en'];
+
+    
