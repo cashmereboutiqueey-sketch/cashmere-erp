@@ -37,6 +37,11 @@ export function Header() {
 
   useEffect(() => {
     setIsClient(true);
+    // Set initial direction based on saved preference or default
+    const savedLang = localStorage.getItem('language') || 'en';
+    setLanguage(savedLang);
+    document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = savedLang;
   }, []);
 
   const handleLogout = () => {
@@ -47,7 +52,7 @@ export function Header() {
   const toggleLanguage = () => {
     const newLang = language === 'en' ? 'ar' : 'en';
     setLanguage(newLang);
-    // In a real i18n setup, you'd also change the direction of the document
+    localStorage.setItem('language', newLang);
     document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = newLang;
   };
