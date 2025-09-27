@@ -6,6 +6,7 @@ import {
   LogOut,
   Settings,
   User,
+  Globe,
 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ export function Header() {
   const router = useRouter();
   const [notificationCount, setNotificationCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
+  const [language, setLanguage] = useState('en');
 
   useEffect(() => {
     setIsClient(true);
@@ -42,6 +44,14 @@ export function Header() {
     router.push('/login');
   }
 
+  const toggleLanguage = () => {
+    const newLang = language === 'en' ? 'ar' : 'en';
+    setLanguage(newLang);
+    // In a real i18n setup, you'd also change the direction of the document
+    document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = newLang;
+  };
+
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
       <SidebarTrigger className="shrink-0 md:hidden" />
@@ -49,6 +59,10 @@ export function Header() {
         {/* The search input can be enabled later */}
       </div>
       <ThemeToggle />
+      <Button variant="ghost" size="icon" onClick={toggleLanguage}>
+        <Globe className="h-5 w-5" />
+        <span className="sr-only">Toggle Language</span>
+      </Button>
       <Button variant="ghost" size="icon" className="relative">
         <Bell className="h-5 w-5" />
         {isClient && notificationCount > 0 && (
