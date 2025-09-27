@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ManufacturingPricing } from '@/components/pricing/manufacturing-pricing';
 import { BrandPricing } from '@/components/pricing/brand-pricing';
+import { BreakEvenAnalysis } from '@/components/pricing/break-even-analysis';
 
 
 export default function PricingPage() {
@@ -64,9 +65,10 @@ export default function PricingPage() {
             </div>
         ) : (
            <Tabs defaultValue="manufacturing">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="manufacturing">{t('manufacturingPricing')}</TabsTrigger>
                     <TabsTrigger value="brand">{t('brandPricing')}</TabsTrigger>
+                    <TabsTrigger value="break-even">{t('breakEvenAnalysis')}</TabsTrigger>
                 </TabsList>
                 <TabsContent value="manufacturing">
                     <ManufacturingPricing products={products} fabrics={fabrics} />
@@ -74,9 +76,13 @@ export default function PricingPage() {
                 <TabsContent value="brand">
                     <BrandPricing products={products} />
                 </TabsContent>
+                <TabsContent value="break-even">
+                    <BreakEvenAnalysis products={products} />
+                </TabsContent>
             </Tabs>
         )}
       </div>
     </>
   );
 }
+

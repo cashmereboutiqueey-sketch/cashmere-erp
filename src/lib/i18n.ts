@@ -218,6 +218,7 @@ export const translations = {
     addPurchase: 'Add Purchase',
     filterFabrics: 'Filter fabrics...',
     // Suppliers Page
+    supplier: 'Supplier',
     fabricsSupplied: 'Fabrics Supplied',
     noFabricsFromSupplier: 'No fabrics recorded from this supplier.',
     accountBalance: 'Account Balance',
@@ -375,6 +376,12 @@ export const translations = {
     unitsToCoverFixedCosts: 'Units to cover fixed costs',
     estimatedMonthlyProfit: 'Est. Monthly Profit',
     basedOnSalesSim: 'Based on sales simulation',
+    breakEvenByCategory: 'Break-Even by Category',
+    breakEvenByCategoryDesc: 'Calculate the number of units to sell from each difficulty category to cover all fixed costs.',
+    avgContributionMargin: 'Avg. Contribution Margin / Unit',
+    hardProductsDesc: 'High complexity, high value items.',
+    mediumProductsDesc: 'Standard production items.',
+    easyProductsDesc: 'Simple, high-volume items.',
   },
   ar: {
     // Sidebar
@@ -594,6 +601,7 @@ export const translations = {
     addPurchase: 'إضافة شراء',
     filterFabrics: 'تصفية الأقمشة...',
     // Suppliers Page
+    supplier: 'المورد',
     fabricsSupplied: 'الأقمشة الموردة',
     noFabricsFromSupplier: 'لا توجد أقمشة مسجلة من هذا المورد.',
     accountBalance: 'رصيد الحساب',
@@ -720,7 +728,7 @@ export const translations = {
     factoryMargin: 'هامش المصنع (٪)',
     finalPriceToBrand: 'السعر النهائي للعلامة التجارية',
     breakEvenAnalysis: 'تحليل نقطة التعادل',
-    breakEvenAnalysisDesc: 'عدد وحدات هذا المنتج اللازمة لتغطية جميع التكاليف الثابتة الشهرية.',
+    breakEvenAnalysisDesc: 'وحدات هذا المنتج اللازمة لتغطية جميع التكاليف الثابتة الشهرية.',
     unitsToSell: 'وحدة للبيع لتحقيق التعادل',
     retailPriceAnalysis: 'تحليل سعر التجزئة',
     startingCost: 'التكلفة المبدئية (السعر من المصنع)',
@@ -751,6 +759,12 @@ export const translations = {
     unitsToCoverFixedCosts: 'الوحدات اللازمة لتغطية التكاليف الثابتة',
     estimatedMonthlyProfit: 'الربح الشهري المقدر',
     basedOnSalesSim: 'بناءً على محاكاة المبيعات',
+    breakEvenByCategory: 'نقطة التعادل حسب الفئة',
+    breakEvenByCategoryDesc: 'احسب عدد الوحدات التي يجب بيعها من كل فئة صعوبة لتغطية جميع التكاليف الثابتة.',
+    avgContributionMargin: 'متوسط هامش المساهمة / وحدة',
+    hardProductsDesc: 'عناصر عالية التعقيد والقيمة.',
+    mediumProductsDesc: 'عناصر إنتاج قياسية.',
+    easyProductsDesc: 'عناصر بسيطة وذات حجم كبير.',
   },
 };
 

@@ -38,9 +38,9 @@ interface ManufacturingPricingProps {
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 const difficultyAllocation: Record<Difficulty, number> = {
-    easy: 20,
-    medium: 30,
-    hard: 50,
+    easy: 40,
+    medium: 60,
+    hard: 100,
 }
 
 export function ManufacturingPricing({ products, fabrics }: ManufacturingPricingProps) {
@@ -213,9 +213,9 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
                         <SelectValue placeholder={t('selectDifficulty')} />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="easy">{t('easy')} (20%)</SelectItem>
-                        <SelectItem value="medium">{t('medium')} (30%)</SelectItem>
-                        <SelectItem value="hard">{t('hard')} (50%)</SelectItem>
+                        <SelectItem value="easy">{t('easy')} (40%)</SelectItem>
+                        <SelectItem value="medium">{t('medium')} (60%)</SelectItem>
+                        <SelectItem value="hard">{t('hard')} (100%)</SelectItem>
                     </SelectContent>
                 </Select>
                  <p className="text-sm text-muted-foreground">{t('allocatedFixedCost')}: {formatCurrency(allocatedFixedCost)}</p>
