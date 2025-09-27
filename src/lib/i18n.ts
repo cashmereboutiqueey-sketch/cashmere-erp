@@ -138,6 +138,14 @@ export const translations = {
     expenseDetails: 'Expense Details',
     date: 'Date',
     noExpensesFound: 'No expenses found for the selected period.',
+    fromCompletedOrdersInPeriod: 'From completed orders in selected period',
+    totalUnitsSold: 'Total Units Sold',
+    bestSeller: 'Best Seller',
+    topProductByRevenue: 'Top product by revenue in period',
+    salesByProduct: 'Sales by Product',
+    product: 'Product',
+    unitsSold: 'Units Sold',
+    noSalesFound: 'No sales found for the selected period.',
   },
   ar: {
     // Sidebar
@@ -277,6 +285,14 @@ export const translations = {
     expenseDetails: 'تفاصيل المصروفات',
     date: 'التاريخ',
     noExpensesFound: 'لم يتم العثور على مصروفات للفترة المحددة.',
+    fromCompletedOrdersInPeriod: 'من الطلبات المكتملة في الفترة المحددة',
+    totalUnitsSold: 'إجمالي الوحدات المباعة',
+    bestSeller: 'الأكثر مبيعًا',
+    topProductByRevenue: 'المنتج الأعلى إيرادًا في الفترة',
+    salesByProduct: 'المبيعات حسب المنتج',
+    product: 'المنتج',
+    unitsSold: 'الوحدات المباعة',
+    noSalesFound: 'لم يتم العثور على مبيعات للفترة المحددة.',
   },
 };
 

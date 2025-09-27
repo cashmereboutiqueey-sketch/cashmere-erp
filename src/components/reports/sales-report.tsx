@@ -27,6 +27,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { getOrders } from '@/services/order-service';
 import { getProducts } from '@/services/product-service';
 import { Skeleton } from '../ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -38,6 +39,7 @@ type ProductSalesData = {
 };
 
 export function SalesReport() {
+  const { t } = useTranslation();
   const [date, setDate] = useState<DateRange | undefined>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -136,7 +138,7 @@ export function SalesReport() {
                   format(date.from, 'LLL dd, y')
                 )
               ) : (
-                <span>Pick a date</span>
+                <span>{t('pickADate')}</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -145,8 +147,7 @@ export function SalesReport() {
               initialFocus
               mode="range"
               defaultMonth={date?.from}
-              selected={date}
-              onSelect={setDate}
+              selected={setDate}
               numberOfMonths={2}
             />
           </PopoverContent>
@@ -169,7 +170,7 @@ export function SalesReport() {
         <div className="grid gap-4 md:grid-cols-3">
             <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('totalRevenue')}</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">
@@ -179,43 +180,43 @@ export function SalesReport() {
                 }).format(totalRevenue)}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                From completed orders in selected period
+                {t('fromCompletedOrdersInPeriod')}
                 </p>
             </CardContent>
             </Card>
             <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Units Sold</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('totalUnitsSold')}</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{totalUnitsSold}</div>
                 <p className="text-xs text-muted-foreground">
-                In selected period
+                {t('inSelectedPeriod')}
                 </p>
             </CardContent>
             </Card>
             <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Best Seller</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('bestSeller')}</CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold truncate">{bestSeller?.product.name || 'N/A'}</div>
                 <p className="text-xs text-muted-foreground">
-                Top product by revenue in period
+                {t('topProductByRevenue')}
                 </p>
             </CardContent>
             </Card>
         </div>
 
         <div>
-            <h3 className="text-lg font-medium mb-2">Sales by Product</h3>
+            <h3 className="text-lg font-medium mb-2">{t('salesByProduct')}</h3>
             <div className="rounded-md border">
             <Table>
             <TableHeader>
                 <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead className="text-right">Units Sold</TableHead>
-                <TableHead className="text-right">Total Revenue</TableHead>
+                <TableHead>{t('product')}</TableHead>
+                <TableHead className="text-right">{t('unitsSold')}</TableHead>
+                <TableHead className="text-right">{t('totalRevenue')}</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -246,7 +247,7 @@ export function SalesReport() {
                 ) : (
                 <TableRow>
                     <TableCell colSpan={3} className="h-24 text-center">
-                    No sales found for the selected period.
+                    {t('noSalesFound')}
                     </TableCell>
                 </TableRow>
                 )}
