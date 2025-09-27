@@ -21,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -36,6 +37,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { addFabric } from '@/services/fabric-service';
+import { addExpense } from '@/services/finance-service';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
 
 
@@ -322,8 +324,144 @@ function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
   );
 }
 
-function FabricsTableToolbar({ suppliers }: { suppliers: Supplier[] }) {
+const purchaseSchema = z.object({
+  supplier_id: z.string().min(1, "Supplier is required"),
+  cost: z.preprocess((val) => Number(val), z.number().min(0.01, "Cost must be greater than zero")),
+  payment_status: z.enum(['paid', 'unpaid']),
+});
+
+type PurchaseFormData = z.infer<typeof purchaseSchema>;
+
+function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  const form = useForm<PurchaseFormData>({
+    resolver: zodResolver(purchaseSchema),
+    defaultValues: {
+      supplier_id: '',
+      cost: 0,
+      payment_status: 'unpaid',
+    }
+  });
+
+  const onSubmit = async (data: PurchaseFormData) => {
+    try {
+      const supplierName = suppliers.find(s => s.id === data.supplier_id)?.name;
+      await addExpense({
+        category: 'cogs',
+        amount: data.cost,
+        supplier_id: data.supplier_id,
+        note: `Fabric purchase from ${supplierName}`,
+      });
+
+      toast({
+        title: 'Success',
+        description: 'Fabric purchase has been recorded as an expense.',
+      });
+      setOpen(false);
+      form.reset();
+      window.location.reload(); 
+    } catch (error) {
+       toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Failed to record purchase.',
+      });
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) form.reset();
+    }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="h-8">
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Record Purchase
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Record Fabric Purchase</DialogTitle>
+          <DialogDescription>
+            Record a bill from a supplier for a fabric purchase. This will create an expense under "Cost of Goods Sold".
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
+             <FormField
+              control={form.control}
+              name="supplier_id"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Supplier</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select a supplier" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {suppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="cost"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Total Cost</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="number" step="0.01" className="col-span-3" placeholder="e.g., 500.00" />
+                  </FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="payment_status"
+              render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">Payment</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder="Select payment status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="paid">Paid (from Cash)</SelectItem>
+                      <SelectItem value="unpaid">To be Paid (Credit)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Recording...' : 'Add Purchase'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+function FabricsTableToolbar({ suppliers }: { suppliers: Supplier[] }) {
   return (
     <>
       <Input
@@ -332,61 +470,7 @@ function FabricsTableToolbar({ suppliers }: { suppliers: Supplier[] }) {
       />
       <div className="ml-auto flex items-center gap-2">
         <AddFabricDialog suppliers={suppliers} />
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="outline" className="h-8">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Record Purchase
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Record Fabric Purchase</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="supplier" className="text-right">
-                  Supplier
-                </Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select a supplier" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="cost" className="text-right">
-                  Total Cost
-                </Label>
-                <Input id="cost" type="number" className="col-span-3" placeholder="e.g., 500.00" />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="payment-status" className="text-right">
-                  Payment
-                </Label>
-                <Select>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select payment status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="paid">Paid (Cash)</SelectItem>
-                    <SelectItem value="unpaid">To be Paid (Late)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => setOpen(false)}>Add Purchase</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <RecordPurchaseDialog suppliers={suppliers} />
       </div>
     </>
   );
