@@ -18,6 +18,7 @@ export const mockUsers: User[] = [
     { id: 'user_prod_1', name: 'Fatima Ahmed', email: 'fatima.a@example.com', avatarUrl: 'https://picsum.photos/seed/user2/100/100', role: 'production' },
     { id: 'user_acc_1', name: 'Noor Khan', email: 'noor.k@example.com', avatarUrl: 'https://picsum.photos/seed/user3/100/100', role: 'accountant' },
     { id: 'user_wh_1', name: 'Layla Ibrahim', email: 'layla.i@example.com', avatarUrl: 'https://picsum.photos/seed/user4/100/100', role: 'warehouse_manager' },
+    { id: 'user_sales_2', name: 'Ahmed', email: 'ahmed@cashmere.com', avatarUrl: 'https://picsum.photos/seed/user5/100/100', role: 'sales' },
 ];
 
 export const INITIAL_MOCK_SUPPLIERS: Omit<Supplier, 'id'>[] = [
