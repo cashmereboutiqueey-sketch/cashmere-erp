@@ -6,8 +6,10 @@ import { getOrders } from '@/services/order-service';
 import { Order } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function ShippingPage() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -29,7 +31,7 @@ export default function ShippingPage() {
   return (
     <>
       <PageHeader>
-        <PageHeaderHeading>Shipping Carriers Dashboard</PageHeaderHeading>
+        <PageHeaderHeading>{t('shippingCarriersDashboard')}</PageHeaderHeading>
       </PageHeader>
       <div className="p-4 lg:p-6">
         {isLoading ? (

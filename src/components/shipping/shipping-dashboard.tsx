@@ -32,21 +32,8 @@ import { updateOrderShipping } from '@/services/order-service';
 import { useToast } from '@/hooks/use-toast';
 import { capitalize } from 'string-ts';
 import { Separator } from '../ui/separator';
+import { useTranslation } from '@/hooks/use-translation';
 
-const shippingStatusVariantMap: {
-  [key in ShippingStatus]: 'default' | 'secondary' | 'destructive' | 'outline';
-} = {
-  pending: 'outline',
-  ready_to_ship: 'outline',
-  ready_for_pickup: 'outline',
-  assigned_to_carrier_a: 'secondary',
-  assigned_to_carrier_b: 'secondary',
-  out_for_delivery: 'secondary',
-  shipped: 'default',
-  delivered: 'default',
-  picked_up: 'default',
-  cod_remitted: 'default',
-};
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -57,13 +44,14 @@ const formatCurrency = (amount: number) => {
 
 const OrderRow = ({ order }: { order: Order }) => {
     const { toast } = useToast();
+    const { t } = useTranslation();
     const handleStatusUpdate = async (status: ShippingStatus) => {
         try {
             await updateOrderShipping(order.id, status);
-            toast({ title: 'Success', description: `Order ${order.id.slice(0, 4)} status updated.` });
+            toast({ title: t('success'), description: t('orderStatusUpdated', { orderId: order.id.slice(0, 4) }) });
             window.location.reload();
         } catch (e) {
-            toast({ variant: 'destructive', title: 'Error updating status' });
+            toast({ variant: 'destructive', title: t('errorUpdatingStatus') });
         }
     };
     return (
@@ -72,24 +60,28 @@ const OrderRow = ({ order }: { order: Order }) => {
             <TableCell>{order.customer?.name}</TableCell>
             <TableCell className="text-right">{formatCurrency(order.total_amount)}</TableCell>
             <TableCell className="text-right">
-                <Button size="xs" variant="outline" onClick={() => handleStatusUpdate('out_for_delivery')}>Out for Delivery</Button>
-                <Button size="xs" variant="outline" className="ml-2" onClick={() => handleStatusUpdate('delivered')}>Delivered</Button>
+                <Button size="xs" variant="outline" onClick={() => handleStatusUpdate('out_for_delivery')}>{t('outForDelivery')}</Button>
+                <Button size="xs" variant="outline" className="ml-2" onClick={() => handleStatusUpdate('delivered')}>{t('delivered')}</Button>
             </TableCell>
         </TableRow>
     );
 };
 
-const UnpaidCODOrderRow = ({ order }: { order: Order }) => (
-    <TableRow>
-        <TableCell className="font-mono text-xs">{order.id.slice(0, 8)}...</TableCell>
-        <TableCell>{order.customer?.name}</TableCell>
-        <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
-        <TableCell className="text-right font-medium">{formatCurrency(order.total_amount)}</TableCell>
-    </TableRow>
-);
+const UnpaidCODOrderRow = ({ order }: { order: Order }) => {
+    const { t } = useTranslation();
+    return (
+        <TableRow>
+            <TableCell className="font-mono text-xs">{order.id.slice(0, 8)}...</TableCell>
+            <TableCell>{order.customer?.name}</TableCell>
+            <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+            <TableCell className="text-right font-medium">{formatCurrency(order.total_amount)}</TableCell>
+        </TableRow>
+    );
+};
 
 
-const CarrierDashboard = ({ carrierName, carrierId, orders }: { carrierName: string, carrierId: 'a' | 'b', orders: Order[] }) => {
+const CarrierDashboard = ({ carrierNameKey, carrierId, orders }: { carrierNameKey: 'shippingCompanyA' | 'shippingCompanyB', carrierId: 'a' | 'b', orders: Order[] }) => {
+  const { t } = useTranslation();
   const [pendingOpen, setPendingOpen] = React.useState(true);
   const [unpaidCodOpen, setUnpaidCodOpen] = React.useState(false);
   
@@ -102,28 +94,28 @@ const CarrierDashboard = ({ carrierName, carrierId, orders }: { carrierName: str
   return (
     <Card className="shadow-sm">
         <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Truck /> {carrierName}</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Truck /> {t(carrierNameKey)}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pending Shipments</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('pendingShipments')}</CardTitle>
                         <Package className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{pendingShipments.length}</div>
-                        <p className="text-xs text-muted-foreground">Orders to be shipped</p>
+                        <p className="text-xs text-muted-foreground">{t('ordersToBeShipped')}</p>
                     </CardContent>
                 </Card>
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Unpaid COD Balance</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('unpaidCodBalance')}</CardTitle>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{formatCurrency(totalCOD)}</div>
-                        <p className="text-xs text-muted-foreground">From {deliveredCOD.length} delivered orders</p>
+                        <p className="text-xs text-muted-foreground">{t('fromDeliveredOrders', { count: deliveredCOD.length })}</p>
                     </CardContent>
                 </Card>
             </div>
@@ -134,14 +126,14 @@ const CarrierDashboard = ({ carrierName, carrierId, orders }: { carrierName: str
                 <CollapsibleTrigger asChild>
                     <Button variant="ghost" className="w-full justify-start gap-2">
                         {pendingOpen ? <ChevronDown /> : <ChevronRight />}
-                        Pending Shipments ({pendingShipments.length})
+                        {t('pendingShipments')} ({pendingShipments.length})
                     </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                     <Table>
-                        <TableHeader><TableRow><TableHead>Order</TableHead><TableHead>Customer</TableHead><TableHead className="text-right">Amount</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                        <TableHeader><TableRow><TableHead>{t('order')}</TableHead><TableHead>{t('customer')}</TableHead><TableHead className="text-right">{t('amount')}</TableHead><TableHead className="text-right">{t('actions')}</TableHead></TableRow></TableHeader>
                         <TableBody>
-                            {pendingShipments.length > 0 ? pendingShipments.map(o => <OrderRow key={o.id} order={o} />) : <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">No pending shipments</TableCell></TableRow>}
+                            {pendingShipments.length > 0 ? pendingShipments.map(o => <OrderRow key={o.id} order={o} />) : <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">{t('noPendingShipments')}</TableCell></TableRow>}
                         </TableBody>
                     </Table>
                 </CollapsibleContent>
@@ -151,19 +143,19 @@ const CarrierDashboard = ({ carrierName, carrierId, orders }: { carrierName: str
                  <CollapsibleTrigger asChild>
                     <Button variant="ghost" className="w-full justify-start gap-2">
                         {unpaidCodOpen ? <ChevronDown /> : <ChevronRight />}
-                        Unpaid COD Orders ({deliveredCOD.length})
+                        {t('unpaidCodOrders')} ({deliveredCOD.length})
                     </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                     <div className="p-2 space-y-2">
                         <div className="flex justify-between items-center p-2 rounded-md bg-muted/50">
-                            <span className="font-bold">Total to be Remitted: {formatCurrency(totalCOD)}</span>
-                            <Button size="sm" disabled={totalCOD === 0}>Settle COD Balance</Button>
+                            <span className="font-bold">{t('totalToBeRemitted')}: {formatCurrency(totalCOD)}</span>
+                            <Button size="sm" disabled={totalCOD === 0}>{t('settleCodBalance')}</Button>
                         </div>
                         <Table>
-                            <TableHeader><TableRow><TableHead>Order</TableHead><TableHead>Customer</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                            <TableHeader><TableRow><TableHead>{t('order')}</TableHead><TableHead>{t('customer')}</TableHead><TableHead>{t('date')}</TableHead><TableHead className="text-right">{t('amount')}</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {deliveredCOD.length > 0 ? deliveredCOD.map(o => <UnpaidCODOrderRow key={o.id} order={o} />) : <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">No unpaid COD orders</TableCell></TableRow>}
+                                {deliveredCOD.length > 0 ? deliveredCOD.map(o => <UnpaidCODOrderRow key={o.id} order={o} />) : <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground h-24">{t('noUnpaidCodOrders')}</TableCell></TableRow>}
                             </TableBody>
                         </Table>
                     </div>
@@ -177,13 +169,10 @@ const CarrierDashboard = ({ carrierName, carrierId, orders }: { carrierName: str
 
 export function ShippingDashboard({ allOrders }: { allOrders: Order[] }) {
   
-  const carrierA_Orders = allOrders.filter(o => o.shipping_status?.includes('carrier_a'));
-  const carrierB_Orders = allOrders.filter(o => o.shipping_status?.includes('carrier_b'));
-
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <CarrierDashboard carrierName="Shipping Co. A" carrierId="a" orders={allOrders} />
-        <CarrierDashboard carrierName="Shipping Co. B" carrierId="b" orders={allOrders} />
+        <CarrierDashboard carrierNameKey="shippingCompanyA" carrierId="a" orders={allOrders} />
+        <CarrierDashboard carrierNameKey="shippingCompanyB" carrierId="b" orders={allOrders} />
     </div>
   );
 }
