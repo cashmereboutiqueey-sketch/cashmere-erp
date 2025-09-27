@@ -2,7 +2,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { translations, Language, TranslationKey } from '@/lib/i18n';
+import { translations, Language, TranslationKey, interpolate } from '@/lib/i18n';
+
+type InterpolationValues = { [key: string]: string | number };
 
 export const useTranslation = () => {
   const [language, setLanguage] = useState<Language>('en');
@@ -39,8 +41,12 @@ export const useTranslation = () => {
   }, []);
 
   const t = useCallback(
-    (key: TranslationKey): string => {
-      return translations[language][key] || translations['en'][key];
+    (key: TranslationKey, values?: InterpolationValues): string => {
+      const translation = translations[language][key] || translations['en'][key];
+      if (values) {
+        return interpolate(translation, values);
+      }
+      return translation;
     },
     [language]
   );

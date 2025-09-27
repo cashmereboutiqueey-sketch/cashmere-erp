@@ -1,4 +1,3 @@
-
 export const translations = {
   en: {
     // Sidebar
@@ -44,6 +43,36 @@ export const translations = {
     noFabricStockIssues: 'No fabric stock issues predicted.',
     // Production Page
     productionQueue: 'Production Queue',
+    addProductionOrder: 'Add Production Order',
+    quantity: 'Quantity',
+    source: 'Source',
+    order: 'Order',
+    forStock: 'For Stock',
+    updateStatus: 'Update Status',
+    viewDetails: 'View Details',
+    delete: 'Delete',
+    pending: 'Pending',
+    in_progress: 'In Progress',
+    done: 'Done',
+    'forSalesOrder': 'For Sales Order',
+    'salesOrder': 'Sales Order',
+    'selectAnOrder': 'Select an order',
+    'selectAProductVariant': 'Select a product variant',
+    'createOrder': 'Create Order',
+    'filterProductionOrders': 'Filter production orders...',
+    'productionOrderDeleted': 'Production order deleted.',
+    'failedToDeleteProductionOrder': 'Failed to delete production order.',
+    'confirmDeleteProductionOrder': 'Are you sure you want to delete this production order?',
+    'confirmDeleteProductionOrderDesc': 'This action cannot be undone. This will permanently delete production order for {quantity} pc(s) of "{name}".',
+    'cancel': 'Cancel',
+    'deleting': 'Deleting...',
+    'deleteOrder': 'Delete Order',
+    'productionOrderStatusUpdated': 'Production order status updated to {status}.',
+    'failedToUpdateOrderStatus': 'Failed to update order status.',
+    'invalidSelections': 'Invalid Selections',
+    'invalidSelectionsDesc': 'Please select a product, variant, and quantity.',
+    'productionOrderCreated': 'Production order created.',
+    'failedToCreateProductionOrder': 'Failed to create production order.',
     // Finance Page
     financeDashboard: 'Finance Dashboard',
     addExpense: 'Add Expense',
@@ -205,6 +234,36 @@ export const translations = {
     noFabricStockIssues: 'لا توجد مشاكل في مخزون الأقمشة متوقعة.',
     // Production Page
     productionQueue: 'قائمة انتظار الإنتاج',
+    addProductionOrder: 'إضافة أمر إنتاج',
+    quantity: 'الكمية',
+    source: 'المصدر',
+    order: 'طلب',
+    forStock: 'للمخزون',
+    updateStatus: 'تحديث الحالة',
+    viewDetails: 'عرض التفاصيل',
+    delete: 'حذف',
+    pending: 'معلق',
+    in_progress: 'قيد التنفيذ',
+    done: 'مكتمل',
+    'forSalesOrder': 'لطلب مبيعات',
+    'salesOrder': 'طلب مبيعات',
+    'selectAnOrder': 'اختر طلبًا',
+    'selectAProductVariant': 'اختر متغير المنتج',
+    'createOrder': 'إنشاء طلب',
+    'filterProductionOrders': 'تصفية أوامر الإنتاج...',
+    'productionOrderDeleted': 'تم حذف أمر الإنتاج.',
+    'failedToDeleteProductionOrder': 'فشل حذف أمر الإنتاج.',
+    'confirmDeleteProductionOrder': 'هل أنت متأكد أنك تريد حذف أمر الإنتاج هذا؟',
+    'confirmDeleteProductionOrderDesc': 'لا يمكن التراجع عن هذا الإجراء. سيؤدي هذا إلى حذف أمر الإنتاج لـ {quantity} قطعة من "{name}" بشكل دائم.',
+    'cancel': 'إلغاء',
+    'deleting': 'يتم الحذف...',
+    'deleteOrder': 'حذف الطلب',
+    'productionOrderStatusUpdated': 'تم تحديث حالة أمر الإنتاج إلى {status}.',
+    'failedToUpdateOrderStatus': 'فشل تحديث حالة الطلب.',
+    'invalidSelections': 'تحديدات غير صالحة',
+    'invalidSelectionsDesc': 'يرجى تحديد منتج ومتغير وكمية.',
+    'productionOrderCreated': 'تم إنشاء أمر الإنتاج.',
+    'failedToCreateProductionOrder': 'فشل إنشاء أمر الإنتاج.',
     // Finance Page
     financeDashboard: 'لوحة التحكم المالية',
     addExpense: 'إضافة مصروف',
@@ -327,5 +386,11 @@ export const translations = {
 export type Language = keyof typeof translations;
 
 export type TranslationKey = keyof typeof translations['en'];
-
     
+type InterpolationValues = { [key: string]: string | number };
+
+export const interpolate = (text: string, values: InterpolationValues): string => {
+  return text.replace(/{(\w+)}/g, (match, key) => {
+    return values.hasOwnProperty(key) ? String(values[key]) : match;
+  });
+};

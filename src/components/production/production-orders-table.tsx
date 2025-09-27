@@ -51,6 +51,8 @@ import { useState } from 'react';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { addProductionOrder, updateProductionOrderStatus, deleteProductionOrder } from '@/services/production-service';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/use-translation';
+import type { TranslationKey } from '@/lib/types';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -66,13 +68,14 @@ const statusVariantMap: {
 const statuses: ProductionOrder['status'][] = ['pending', 'in_progress', 'done'];
 
 export const getColumns = (
+  t: (key: TranslationKey) => string,
   onStatusChange: (orderId: string, status: ProductionOrder['status']) => void,
   onDelete: (order: ProductionOrder) => void,
 ): ColumnDef<ProductionOrder>[] => [
   {
     accessorKey: 'product',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Product" />
+      <DataTableColumnHeader column={column} title={t('product')} />
     ),
     cell: ({ row }) => {
       const product = row.original.product;
@@ -101,32 +104,32 @@ export const getColumns = (
   {
     accessorKey: 'required_quantity',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Quantity" />
+      <DataTableColumnHeader column={column} title={t('quantity')} />
     ),
   },
   {
     accessorKey: 'status',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Status" />
+      <DataTableColumnHeader column={column} title={t('status')} />
     ),
     cell: ({ row }) => (
       <Badge
         variant={statusVariantMap[row.original.status]}
         className="capitalize"
       >
-        {row.original.status.replace('_', ' ')}
+        {t(row.original.status as TranslationKey) || row.original.status.replace('_', ' ')}
       </Badge>
     ),
   },
   {
     id: 'source_order',
-    header: 'Source',
-    accessorFn: (row) => row.sales_order_id ? `Order #${row.sales_order_id.slice(0,4)}` : 'For Stock',
+    header: t('source') as string,
+    accessorFn: (row) => row.sales_order_id ? `${t('order')} #${row.sales_order_id.slice(0,4)}` : t('forStock'),
   },
   {
     accessorKey: 'created_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Date" />
+      <DataTableColumnHeader column={column} title={t('date')} />
     ),
     cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString(),
   },
@@ -146,21 +149,21 @@ export const getColumns = (
             <DropdownMenuContent align="end">
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
-                  <span>Update Status</span>
+                  <span>{t('updateStatus')}</span>
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
                     {statuses.map(status => (
                       <DropdownMenuItem key={status} onClick={() => onStatusChange(order.id, status)}>
-                          <span className="capitalize">{status.replace('_', ' ')}</span>
+                          <span className="capitalize">{t(status as TranslationKey) || status.replace('_', ' ')}</span>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
-              <DropdownMenuItem>View Details</DropdownMenuItem>
+              <DropdownMenuItem>{t('viewDetails')}</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>Delete</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>{t('delete')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -178,6 +181,7 @@ interface ProductionOrdersTableProps {
 function AddProductionOrderDialog({ products, salesOrders }: { products: Product[], salesOrders: Order[] }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [orderType, setOrderType] = useState('stock');
   const [selectedSalesOrder, setSelectedSalesOrder] = useState<Order | null>(null);
@@ -237,7 +241,7 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
   
   const handleSubmit = async () => {
     if (!selectedProduct || !selectedVariant || quantity <= 0) {
-      toast({ variant: 'destructive', title: 'Invalid Selections', description: 'Please select a product, variant, and quantity.' });
+      toast({ variant: 'destructive', title: t('invalidSelections'), description: t('invalidSelectionsDesc') });
       return;
     }
     
@@ -251,11 +255,11 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
       };
 
       await addProductionOrder(productionOrderData);
-      toast({ title: 'Success', description: 'Production order created.' });
+      toast({ title: t('success'), description: t('productionOrderCreated') });
       setOpen(false);
       window.location.reload();
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to create production order.' });
+      toast({ variant: 'destructive', title: t('error'), description: t('failedToCreateProductionOrder') });
     }
   }
   
@@ -282,16 +286,16 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
       <DialogTrigger asChild>
         <Button size="sm" className="h-8">
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Production Order
+          {t('addProductionOrder')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Production Order</DialogTitle>
+          <DialogTitle>{t('addProductionOrder')}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-4">
            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right">Type</Label>
+              <Label className="text-right">{t('type')}</Label>
                <RadioGroup
                 value={orderType}
                 onValueChange={handleOrderTypeChange}
@@ -299,22 +303,22 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="stock" id="stock" />
-                  <Label htmlFor="stock">For Store Stock</Label>
+                  <Label htmlFor="stock">{t('forStock')}</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="order" id="order" />
-                  <Label htmlFor="order">For Sales Order</Label>
+                  <Label htmlFor="order">{t('forSalesOrder')}</Label>
                 </div>
               </RadioGroup>
            </div>
             {orderType === 'order' && (
                <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="sales-order" className="text-right">
-                  Sales Order
+                  {t('salesOrder')}
                 </Label>
                 <Select onValueChange={handleSalesOrderChange}>
                   <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select an order" />
+                    <SelectValue placeholder={t('selectAnOrder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {pendingSalesOrders.map((order) => (
@@ -328,11 +332,11 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
             )}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="product" className="text-right">
-              Product
+              {t('product')}
             </Label>
             <Select onValueChange={handleProductVariantChange} value={selectedVariant?.id || ''} disabled={(orderType === 'order' && !selectedSalesOrder)}>
               <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a product variant" />
+                <SelectValue placeholder={t('selectAProductVariant')} />
               </SelectTrigger>
               <SelectContent>
                 {renderProductVariantOptions()}
@@ -341,13 +345,13 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="quantity" className="text-right">
-              Quantity
+              {t('quantity')}
             </Label>
             <Input id="quantity" type="number" className="col-span-3" placeholder="e.g., 25" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} disabled={orderType === 'order'} />
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={handleSubmit}>Create Order</Button>
+          <Button onClick={handleSubmit}>{t('createOrder')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -355,10 +359,11 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
 }
 
 function ProductionOrdersToolbar({ products, salesOrders }: { products: Product[], salesOrders: Order[] }) {
+  const { t } = useTranslation();
   return (
     <>
       <Input
-        placeholder="Filter production orders..."
+        placeholder={t('filterProductionOrders')}
         className="h-8 w-[150px] lg:w-[250px]"
       />
       <div className="ml-auto flex items-center gap-2">
@@ -370,6 +375,7 @@ function ProductionOrdersToolbar({ products, salesOrders }: { products: Product[
 
 function DeleteProductionOrderDialog({ order, isOpen, onOpenChange }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
     const { toast } = useToast();
+    const { t } = useTranslation();
     const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = async () => {
@@ -377,11 +383,11 @@ function DeleteProductionOrderDialog({ order, isOpen, onOpenChange }: { order: P
         setIsDeleting(true);
         try {
             await deleteProductionOrder(order.id);
-            toast({ title: "Success", description: "Production order deleted." });
+            toast({ title: t('success'), description: t('productionOrderDeleted') });
             onOpenChange(false);
             window.location.reload();
         } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "Failed to delete production order." });
+            toast({ variant: "destructive", title: t('error'), description: t('failedToDeleteProductionOrder') });
         } finally {
             setIsDeleting(false);
         }
@@ -391,15 +397,18 @@ function DeleteProductionOrderDialog({ order, isOpen, onOpenChange }: { order: P
         <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure you want to delete this production order?</AlertDialogTitle>
+                    <AlertDialogTitle>{t('confirmDeleteProductionOrder')}</AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete production order for {order?.required_quantity} pc(s) of "{order?.product?.name}".
+                        {t('confirmDeleteProductionOrderDesc', {
+                            quantity: order?.required_quantity,
+                            name: order?.product?.name,
+                        })}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
-                        {isDeleting ? "Deleting..." : "Delete Order"}
+                        {isDeleting ? t('deleting') : t('deleteOrder')}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -408,6 +417,7 @@ function DeleteProductionOrderDialog({ order, isOpen, onOpenChange }: { order: P
 }
 
 export function ProductionOrdersTable({ data, products, salesOrders }: ProductionOrdersTableProps) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -416,15 +426,15 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
     try {
       await updateProductionOrderStatus(orderId, status);
       toast({
-        title: 'Success',
-        description: `Production order status updated to ${status.replace('_', ' ')}.`,
+        title: t('success'),
+        description: t('productionOrderStatusUpdated', { status: t(status as TranslationKey) || status.replace('_', ' ') }),
       });
       window.location.reload();
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to update order status.',
+        title: t('error'),
+        description: t('failedToUpdateOrderStatus'),
       });
     }
   };
@@ -434,7 +444,7 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
     setIsDeleteOpen(true);
   };
 
-  const columns = getColumns(handleStatusChange, handleDelete);
+  const columns = getColumns(t, handleStatusChange, handleDelete);
 
   return (
     <>
