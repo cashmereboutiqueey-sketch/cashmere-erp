@@ -41,12 +41,12 @@ export function BrandPricing({ products }: BrandPricingProps) {
   // These would typically come from a settings context or API
   const [startingCost, setStartingCost] = useState(100);
   const [marketingCost, setMarketingCost] = useState(15);
-  const [operationalCost, setOperationalCost] = useState(10);
+  const [brandFixedCost, setBrandFixedCost] = useState(10);
   const [targetMargin, setTargetMargin] = useState(60);
 
   const totalBrandCost = useMemo(() => {
-    return startingCost + marketingCost + operationalCost;
-  }, [startingCost, marketingCost, operationalCost]);
+    return startingCost + marketingCost + brandFixedCost;
+  }, [startingCost, marketingCost, brandFixedCost]);
 
   const suggestedRetailPrice = useMemo(() => {
     if (1 - targetMargin / 100 === 0) return 0;
@@ -99,12 +99,12 @@ export function BrandPricing({ products }: BrandPricingProps) {
               />
             </div>
              <div className="space-y-2">
-              <Label htmlFor="operational-cost">{t('operationalCost')}</Label>
+              <Label htmlFor="brand-fixed-cost">{t('brandFixedCost')}</Label>
               <Input
-                id="operational-cost"
+                id="brand-fixed-cost"
                 type="number"
-                value={operationalCost}
-                onChange={(e) => setOperationalCost(Number(e.target.value))}
+                value={brandFixedCost}
+                onChange={(e) => setBrandFixedCost(Number(e.target.value))}
               />
             </div>
              <div className="flex justify-between items-center font-semibold pt-2">
