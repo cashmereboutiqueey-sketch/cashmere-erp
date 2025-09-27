@@ -21,8 +21,10 @@ import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getIncomeStatementData, IncomeStatementData } from '@/services/reporting-service';
 import { Skeleton } from '../ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 export function IncomeStatement() {
+  const { t } = useTranslation();
   const [date, setDate] = useState<DateRange | undefined>();
   const [data, setData] = useState<IncomeStatementData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +83,7 @@ export function IncomeStatement() {
                   format(date.from, 'LLL dd, y')
                 )
               ) : (
-                <span>Pick a date</span>
+                <span>{t('pickADate')}</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -106,21 +108,21 @@ export function IncomeStatement() {
         <div className="rounded-md border">
             <Table>
                 <TableBody>
-                    <StatementRow label="Revenue" value={data.revenue} />
-                    <StatementRow label="Cost of Goods Sold (COGS)" value={data.cogs} isSub />
-                    <StatementRow label="Gross Profit" value={data.grossProfit} isBold />
+                    <StatementRow label={t('revenue')} value={data.revenue} />
+                    <StatementRow label={t('cogs')} value={data.cogs} isSub />
+                    <StatementRow label={t('grossProfit')} value={data.grossProfit} isBold />
                     
                     <TableRow><TableCell colSpan={2} className="h-4"></TableCell></TableRow>
 
-                    <StatementRow label="Operating Expenses" value={0} isBold />
+                    <StatementRow label={t('opEx')} value={0} isBold />
                     {Object.entries(data.operatingExpenses).map(([key, value]) => (
-                        <StatementRow key={key} label={key} value={value} isSub />
+                        <StatementRow key={key} label={key} value={value as number} isSub />
                     ))}
-                    <StatementRow label="Total Operating Expenses" value={data.totalOperatingExpenses} isSub isBold />
+                    <StatementRow label={t('totalOperationalCosts')} value={data.totalOperatingExpenses} isSub isBold />
                     
                     <TableRow><TableCell colSpan={2} className="h-4"></TableCell></TableRow>
 
-                    <StatementRow label="Net Income" value={data.netIncome} isBold isTotal />
+                    <StatementRow label={t('netProfit')} value={data.netIncome} isBold isTotal />
                 </TableBody>
             </Table>
         </div>
