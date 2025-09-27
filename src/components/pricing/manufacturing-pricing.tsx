@@ -24,6 +24,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import { Separator } from '../ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
+import { Switch } from '../ui/switch';
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', {
@@ -46,6 +47,7 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
   const [factoryFixedCosts, setFactoryFixedCosts] = useState(5000);
   const [monthlyUnits, setMonthlyUnits] = useState(1000);
   const [factoryMargin, setFactoryMargin] = useState(20);
+  const [includeFixedCost, setIncludeFixedCost] = useState(true);
 
   const selectedProduct = useMemo(
     () => products.find((p) => p.id === selectedProductId),
@@ -65,14 +67,17 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
   }, [materialCost, directLabor, variableOverhead]);
 
   const fixedCostPerUnit = useMemo(() => {
+    if (monthlyUnits === 0) return 0;
     return factoryFixedCosts / monthlyUnits;
   }, [factoryFixedCosts, monthlyUnits]);
 
   const totalManufacturingCost = useMemo(() => {
-    return totalVariableCost + fixedCostPerUnit;
-  }, [totalVariableCost, fixedCostPerUnit]);
+    const fixedCostComponent = includeFixedCost ? fixedCostPerUnit : 0;
+    return totalVariableCost + fixedCostComponent;
+  }, [totalVariableCost, fixedCostPerUnit, includeFixedCost]);
 
   const finalPriceToBrand = useMemo(() => {
+    if (1 - factoryMargin / 100 === 0) return 0;
     return totalManufacturingCost / (1 - factoryMargin / 100);
   }, [totalManufacturingCost, factoryMargin]);
 
@@ -181,6 +186,10 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
           <div className="flex justify-between items-center font-semibold pt-2">
             <span>{t('fixedCostPerUnit')}</span>
             <span>{formatCurrency(fixedCostPerUnit)}</span>
+          </div>
+           <div className="flex items-center space-x-2 pt-2">
+            <Switch id="include-fixed-cost" checked={includeFixedCost} onCheckedChange={setIncludeFixedCost} />
+            <Label htmlFor="include-fixed-cost">Include Fixed Cost in Calculation</Label>
           </div>
 
           <Separator className="my-6" />
