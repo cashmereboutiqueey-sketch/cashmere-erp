@@ -199,7 +199,7 @@ const ProductDescriptionGenerator = ({ product }: { product: Product }) => {
 
 
 export const getColumns = (
-  t: (key: TranslationKey) => string,
+  t: (key: TranslationKey, values?: any) => string,
   onEdit: (product: Product) => void,
   onDelete: (product: Product) => void
 ): ColumnDef<Product>[] => [
@@ -368,6 +368,7 @@ const productSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(1, "Product name is required"),
   category: z.string().min(1, "Category is required"),
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
   variants: z.array(variantSchema).min(1, "At least one variant is required"),
   fabrics: z.array(productFabricSchema).min(1, "At least one fabric is required for the recipe."),
 });
@@ -398,7 +399,7 @@ function ProductEditDialog({
 
   const methods = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
-    defaultValues: { id: '', name: '', category: '', variants: [], fabrics: [] },
+    defaultValues: { id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] },
   });
   const { control, handleSubmit, setValue, watch, reset } = methods;
 
@@ -421,6 +422,7 @@ function ProductEditDialog({
             id: product.id,
             name: product.name,
             category: product.category,
+            difficulty: product.difficulty || 'medium',
             variants: product.variants,
         });
 
@@ -435,7 +437,7 @@ function ProductEditDialog({
         };
         fetchProductFabrics();
     } else if (!isOpen) {
-        reset({ id: '', name: '', category: '', variants: [], fabrics: [] });
+        reset({ id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] });
         setSelectedSizes([]);
         setSelectedColors([]);
     }
@@ -516,7 +518,7 @@ function ProductEditDialog({
           <Form {...methods}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <ScrollArea className="h-[60vh] p-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField control={control} name="name" render={({ field }) => (
                   <FormItem>
                     <FormLabel>{t('productName')}</FormLabel>
@@ -531,6 +533,28 @@ function ProductEditDialog({
                     <FormMessage />
                   </FormItem>
                 )} />
+                <FormField
+                    control={control}
+                    name="difficulty"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>{t('productionDifficulty')}</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('selectDifficulty')} />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    <SelectItem value="easy">{t('easy')}</SelectItem>
+                                    <SelectItem value="medium">{t('medium')}</SelectItem>
+                                    <SelectItem value="hard">{t('hard')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
               </div>
 
             <div className="space-y-2 pt-4">

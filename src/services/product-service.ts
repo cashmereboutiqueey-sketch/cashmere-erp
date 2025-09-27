@@ -14,6 +14,7 @@ const fromFirestore = (doc: any): Product => {
     id: doc.id,
     name: data.name,
     category: data.category,
+    difficulty: data.difficulty,
     created_at: data.created_at?.toDate().toISOString() || new Date().toISOString(),
     variants: data.variants || [],
   };
@@ -42,6 +43,7 @@ export async function addProduct(productData: Omit<Product, 'id' | 'created_at'>
     batch.set(newProductRef, {
       name: productData.name,
       category: productData.category,
+      difficulty: productData.difficulty,
       variants: variantsWithIds,
       created_at: serverTimestamp(),
     });

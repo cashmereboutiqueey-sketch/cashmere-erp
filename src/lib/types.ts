@@ -49,6 +49,7 @@ export type Product = {
   id: string;
   name: string;
   category: string;
+  difficulty?: 'easy' | 'medium' | 'hard';
   created_at: string;
   variants: ProductVariant[];
   fabrics?: (ProductFabric & { name: string })[];
