@@ -27,6 +27,7 @@ import { Textarea } from '../ui/textarea';
 import { addExpense } from '@/services/finance-service';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
+import { useTranslation } from '@/hooks/use-translation';
 
 const expenseCategories = ['cogs', 'marketing', 'rent', 'salaries', 'utilities', 'other'];
 
@@ -41,6 +42,7 @@ type ExpenseFormData = z.infer<typeof expenseSchema>;
 export function AddExpenseDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
   const form = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
@@ -54,8 +56,8 @@ export function AddExpenseDialog() {
     try {
       await addExpense(data);
       toast({
-        title: 'Success',
-        description: 'New expense has been recorded.',
+        title: t('success'),
+        description: t('expenseAdded'),
       });
       setOpen(false);
       form.reset();
@@ -66,8 +68,8 @@ export function AddExpenseDialog() {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to record expense.',
+        title: t('error'),
+        description: t('failedToAddExpense'),
       });
     }
   };
@@ -80,14 +82,14 @@ export function AddExpenseDialog() {
       <DialogTrigger asChild>
         <Button size="sm" className="h-8">
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Expense
+          {t('addExpense')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Record New Expense</DialogTitle>
+          <DialogTitle>{t('recordNewExpense')}</DialogTitle>
           <DialogDescription>
-            Add a new business expense to your records. Use 'COGS' for supplier bills.
+            {t('recordNewExpenseDesc')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -97,17 +99,17 @@ export function AddExpenseDialog() {
               name="category"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Category</FormLabel>
+                  <FormLabel className="text-right">{t('category')}</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder="Select a category" />
+                        <SelectValue placeholder={t('selectCategory')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {expenseCategories.map((category) => (
                         <SelectItem key={category} value={category} className="capitalize">
-                          {category}
+                          {t(category as any)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -121,7 +123,7 @@ export function AddExpenseDialog() {
               name="amount"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Amount</FormLabel>
+                  <FormLabel className="text-right">{t('amount')}</FormLabel>
                   <FormControl>
                     <Input {...field} type="number" step="0.01" className="col-span-3" placeholder="e.g., 500.00"/>
                   </FormControl>
@@ -134,9 +136,9 @@ export function AddExpenseDialog() {
               name="note"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-start gap-4">
-                  <FormLabel className="text-right pt-2">Note</FormLabel>
+                  <FormLabel className="text-right pt-2">{t('note')}</FormLabel>
                   <FormControl>
-                     <Textarea {...field} className="col-span-3" placeholder="e.g., Monthly office rent"/>
+                     <Textarea {...field} className="col-span-3" placeholder={t('notePlaceholder')}/>
                   </FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
@@ -144,7 +146,7 @@ export function AddExpenseDialog() {
             />
             <DialogFooter>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? 'Recording...' : 'Add Expense'}
+                    {form.formState.isSubmitting ? t('recording') : t('addExpense')}
                 </Button>
             </DialogFooter>
           </form>

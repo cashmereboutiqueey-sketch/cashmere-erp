@@ -20,6 +20,7 @@ import { Landmark } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
 import { recordBankDeposit } from '@/services/finance-service';
+import { useTranslation } from '@/hooks/use-translation';
 
 const depositSchema = z.object({
   amount: z.preprocess((val) => Number(val), z.number().min(0.01, "Amount must be greater than 0")),
@@ -31,6 +32,7 @@ type DepositFormData = z.infer<typeof depositSchema>;
 export function BankDepositDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
   const form = useForm<DepositFormData>({
     resolver: zodResolver(depositSchema),
     defaultValues: {
@@ -43,8 +45,8 @@ export function BankDepositDialog() {
     try {
       await recordBankDeposit(data.amount, data.reference);
       toast({
-        title: 'Success',
-        description: 'Bank deposit has been recorded.',
+        title: t('success'),
+        description: t('bankDepositRecorded'),
       });
       setOpen(false);
       form.reset();
@@ -54,8 +56,8 @@ export function BankDepositDialog() {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to record bank deposit.',
+        title: t('error'),
+        description: t('failedToRecordBankDeposit'),
       });
     }
   };
@@ -68,14 +70,14 @@ export function BankDepositDialog() {
       <DialogTrigger asChild>
         <Button size="sm" className="h-8" variant="outline">
           <Landmark className="mr-2 h-4 w-4" />
-          Bank Deposit
+          {t('bankDeposit')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Record Bank Deposit</DialogTitle>
+          <DialogTitle>{t('recordBankDeposit')}</DialogTitle>
           <DialogDescription>
-            Transfer funds from "Cash on Hand" to your "Bank Account".
+            {t('recordBankDepositDesc')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -85,7 +87,7 @@ export function BankDepositDialog() {
               name="amount"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Amount</FormLabel>
+                  <FormLabel className="text-right">{t('amount')}</FormLabel>
                   <FormControl>
                     <Input {...field} type="number" step="0.01" className="col-span-3" placeholder="e.g., 1500.00"/>
                   </FormControl>
@@ -98,9 +100,9 @@ export function BankDepositDialog() {
               name="reference"
               render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Reference</FormLabel>
+                  <FormLabel className="text-right">{t('reference')}</FormLabel>
                   <FormControl>
-                    <Input {...field} className="col-span-3" placeholder="e.g., EOD 25-Jul"/>
+                    <Input {...field} className="col-span-3" placeholder={t('referencePlaceholder')}/>
                   </FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
@@ -108,7 +110,7 @@ export function BankDepositDialog() {
             />
             <DialogFooter>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? 'Recording...' : 'Record Deposit'}
+                    {form.formState.isSubmitting ? t('recording') : t('recordDeposit')}
                 </Button>
             </DialogFooter>
           </form>

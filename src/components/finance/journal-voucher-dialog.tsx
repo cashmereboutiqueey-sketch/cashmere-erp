@@ -29,6 +29,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { Account } from '@/lib/types';
 import { Textarea } from '../ui/textarea';
 import { Separator } from '../ui/separator';
+import { useTranslation } from '@/hooks/use-translation';
 
 const mockAccounts: Account[] = [
     { id: '1', name: 'Cash (1010)', code: '1010', type: 'asset', balance: 50000 },
@@ -64,6 +65,7 @@ type JournalVoucherFormData = z.infer<typeof journalVoucherSchema>;
 export function JournalVoucherDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
   
   const methods = useForm<JournalVoucherFormData>({
     resolver: zodResolver(journalVoucherSchema),
@@ -91,8 +93,8 @@ export function JournalVoucherDialog() {
     // This is where you would call a service to save the voucher
     console.log(data);
     toast({
-      title: 'Success',
-      description: 'Journal voucher has been created.',
+      title: t('success'),
+      description: t('journalVoucherCreated'),
     });
     setOpen(false);
   };
@@ -102,14 +104,14 @@ export function JournalVoucherDialog() {
       <DialogTrigger asChild>
         <Button size="sm" className="h-8" variant="outline">
           <BookCopy className="mr-2 h-4 w-4" />
-          New Journal Voucher
+          {t('newJournalVoucher')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>New Journal Voucher</DialogTitle>
+          <DialogTitle>{t('newJournalVoucher')}</DialogTitle>
           <DialogDescription>
-            Record a manual journal entry in the general ledger. Debits must equal credits.
+            {t('newJournalVoucherDesc')}
           </DialogDescription>
         </DialogHeader>
         <FormProvider {...methods}>
@@ -119,9 +121,9 @@ export function JournalVoucherDialog() {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t('description')}</FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="e.g., Record monthly payroll" />
+                    <Textarea {...field} placeholder={t('journalVoucherPlaceholder')} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -136,9 +138,9 @@ export function JournalVoucherDialog() {
                             name={`entries.${index}.account_id`}
                             render={({ field }) => (
                                 <FormItem className="col-span-6">
-                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Account</FormLabel>
+                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>{t('account')}</FormLabel>
                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger><SelectValue placeholder="Select an account" /></SelectTrigger></FormControl>
+                                        <FormControl><SelectTrigger><SelectValue placeholder={t('selectAccount')} /></SelectTrigger></FormControl>
                                         <SelectContent>
                                             {mockAccounts.map((account) => (
                                                 <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>
@@ -154,7 +156,7 @@ export function JournalVoucherDialog() {
                             name={`entries.${index}.debit`}
                             render={({ field }) => (
                                 <FormItem className="col-span-2">
-                                     <FormLabel className={index !== 0 ? "sr-only" : ""}>Debit</FormLabel>
+                                     <FormLabel className={index !== 0 ? "sr-only" : ""}>{t('debit')}</FormLabel>
                                     <FormControl><Input {...field} type="number" step="0.01" placeholder="0.00" /></FormControl>
                                      <FormMessage />
                                 </FormItem>
@@ -165,7 +167,7 @@ export function JournalVoucherDialog() {
                             name={`entries.${index}.credit`}
                             render={({ field }) => (
                                 <FormItem className="col-span-2">
-                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>Credit</FormLabel>
+                                    <FormLabel className={index !== 0 ? "sr-only" : ""}>{t('credit')}</FormLabel>
                                     <FormControl><Input {...field} type="number" step="0.01" placeholder="0.00" /></FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -193,28 +195,28 @@ export function JournalVoucherDialog() {
               size="sm"
               onClick={() => append({ account_id: '', debit: 0, credit: 0 })}
             >
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Row
+              <PlusCircle className="mr-2 h-4 w-4" /> {t('addRow')}
             </Button>
             
             <Separator />
             
             <div className="flex justify-end gap-8 font-mono text-sm">
                 <div className="text-right">
-                    <p className="text-muted-foreground">Total Debits</p>
+                    <p className="text-muted-foreground">{t('totalDebits')}</p>
                     <p>${totalDebits.toFixed(2)}</p>
                 </div>
                  <div className="text-right">
-                    <p className="text-muted-foreground">Total Credits</p>
+                    <p className="text-muted-foreground">{t('totalCredits')}</p>
                     <p>${totalCredits.toFixed(2)}</p>
                 </div>
                 <div className="text-right">
-                    <p className="text-muted-foreground">Balance</p>
+                    <p className="text-muted-foreground">{t('balance')}</p>
                     <p className={balance !== 0 ? 'text-destructive' : ''}>${balance.toFixed(2)}</p>
                 </div>
             </div>
 
             <DialogFooter>
-              <Button type="submit">Create Voucher</Button>
+              <Button type="submit">{t('createVoucher')}</Button>
             </DialogFooter>
           </form>
         </FormProvider>
