@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -629,8 +630,8 @@ function ProductEditDialog({
                         <TableRow>
                           <TableHead>{t('variant')}</TableHead>
                           <TableHead>{t('sku')}</TableHead>
-                           <TableHead>{t('cost')}</TableHead>
-                          <TableHead>{t('price')}</TableHead>
+                          {isEditMode && <TableHead>{t('cost')}</TableHead>}
+                          {isEditMode && <TableHead>{t('price')}</TableHead>}
                           <TableHead>{t('stock')}</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -646,16 +647,16 @@ function ProductEditDialog({
                                     <Input {...field} className="h-8" />
                                 )}/>
                             </TableCell>
-                             <TableCell>
+                             {isEditMode && <TableCell>
                                 <FormField name={`variants.${index}.cost`} control={control} render={({ field }) => (
                                     <Input {...field} type="number" step="0.01" className="h-8" />
                                 )}/>
-                            </TableCell>
-                            <TableCell>
+                            </TableCell>}
+                            {isEditMode && <TableCell>
                                 <FormField name={`variants.${index}.price`} control={control} render={({ field }) => (
                                     <Input {...field} type="number" step="0.01" className="h-8" />
                                 )}/>
-                            </TableCell>
+                            </TableCell>}
                             <TableCell>
                                 <FormField name={`variants.${index}.stock_quantity`} control={control} render={({ field }) => (
                                     <Input {...field} type="number" className="h-8" />
