@@ -24,7 +24,7 @@ import React, { useState, useMemo } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
 import { Separator } from '../ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Switch } from '../ui/switch';
+import { Slider } from '../ui/slider';
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat('en-US', {
@@ -47,7 +47,7 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
   const [factoryFixedCosts, setFactoryFixedCosts] = useState(5000);
   const [monthlyUnits, setMonthlyUnits] = useState(1000);
   const [factoryMargin, setFactoryMargin] = useState(20);
-  const [includeFixedCost, setIncludeFixedCost] = useState(true);
+  const [fixedCostAllocation, setFixedCostAllocation] = useState(100);
 
   const selectedProduct = useMemo(
     () => products.find((p) => p.id === selectedProductId),
@@ -72,9 +72,9 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
   }, [factoryFixedCosts, monthlyUnits]);
 
   const totalManufacturingCost = useMemo(() => {
-    const fixedCostComponent = includeFixedCost ? fixedCostPerUnit : 0;
-    return totalVariableCost + fixedCostComponent;
-  }, [totalVariableCost, fixedCostPerUnit, includeFixedCost]);
+    const allocatedFixedCost = fixedCostPerUnit * (fixedCostAllocation / 100);
+    return totalVariableCost + allocatedFixedCost;
+  }, [totalVariableCost, fixedCostPerUnit, fixedCostAllocation]);
 
   const finalPriceToBrand = useMemo(() => {
     if (1 - factoryMargin / 100 === 0) return 0;
@@ -187,9 +187,15 @@ export function ManufacturingPricing({ products, fabrics }: ManufacturingPricing
             <span>{t('fixedCostPerUnit')}</span>
             <span>{formatCurrency(fixedCostPerUnit)}</span>
           </div>
-           <div className="flex items-center space-x-2 pt-2">
-            <Switch id="include-fixed-cost" checked={includeFixedCost} onCheckedChange={setIncludeFixedCost} />
-            <Label htmlFor="include-fixed-cost">Include Fixed Cost in Calculation</Label>
+           <div className="space-y-4 pt-2">
+            <Label htmlFor="include-fixed-cost">{t('fixedCostAllocation')} - {fixedCostAllocation}%</Label>
+            <Slider
+                id="include-fixed-cost"
+                defaultValue={[fixedCostAllocation]}
+                onValueChange={(value) => setFixedCostAllocation(value[0])}
+                max={100}
+                step={1}
+            />
           </div>
 
           <Separator className="my-6" />
