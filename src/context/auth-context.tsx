@@ -41,11 +41,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             setUser(appUser);
         } else {
-            // If user is not in our mock data, they can't log in.
-            // This is a security measure.
+            // User is authenticated with Firebase but not found in our app's user list.
+            // Log a warning but don't log them out. This allows admins to add them later.
             console.warn("Firebase user not found in application user list:", fbUser.email);
+            // Create a user object with a default or 'guest' role if needed, or null.
+            // For now, we deny access by setting user to null, but don't sign out of Firebase.
             setUser(null); 
-            signOut(auth); // Sign them out of Firebase too.
         }
 
       } else {
@@ -68,9 +69,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userRoleData = mockUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
     
     if (!userRoleData) {
-        // If not, sign them out and throw an error.
-        await signOut(auth);
-        throw new Error("User authenticated but not found in the ERP system. Please contact an administrator to get access.");
+        // We do not sign them out. Instead, we prevent app access and throw an informative error.
+        throw new Error("Login successful, but this user has not been assigned a role in the ERP system. Please contact an administrator.");
     }
     
     const appUser: User = {

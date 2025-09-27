@@ -46,14 +46,17 @@ export default function LoginPage() {
             case 'warehouse_manager':
                 redirectPath = '/products';
                 break;
+            default:
+                redirectPath = '/dashboard' // Fallback
+                break;
         }
         router.push(redirectPath);
       } else {
-         // This path should ideally not be taken if firebase throws an error
-         throw new Error("Login failed: An unknown error occurred.");
+         // This path should ideally not be taken if the auth context throws an error
+         throw new Error("Login failed: User is not configured correctly.");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Login page error:", error);
       const errorMessage = (error as Error).message
         .replace('Firebase: ', '')
         .replace(/(\(auth\/.*\))/, '')
