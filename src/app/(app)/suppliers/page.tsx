@@ -14,9 +14,11 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { AtSign, Phone } from 'lucide-react';
+import { useTranslation } from '@/hooks/use-translation';
 
 
 export default function SuppliersPage() {
+  const { t } = useTranslation();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [fabrics, setFabrics] = useState<Fabric[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -63,7 +65,7 @@ export default function SuppliersPage() {
   return (
     <div className="flex flex-col h-full">
        <PageHeader>
-        <PageHeaderHeading>Suppliers</PageHeaderHeading>
+        <PageHeaderHeading>{t('suppliers')}</PageHeaderHeading>
       </PageHeader>
       <div className="grid md:grid-cols-3 gap-4 p-4 lg:p-6 flex-1">
         <div className="md:col-span-1">
@@ -113,7 +115,7 @@ export default function SuppliersPage() {
                 <Separator className="my-4" />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <h3 className="text-lg font-medium mb-2">Fabrics Supplied</h3>
+                        <h3 className="text-lg font-medium mb-2">{t('fabricsSupplied')}</h3>
                          {supplierFabrics.length > 0 ? (
                              <ScrollArea className="h-72">
                                 <div className="space-y-4">
@@ -136,19 +138,19 @@ export default function SuppliersPage() {
                                 </div>
                             </ScrollArea>
                          ) : (
-                            <p className="text-sm text-muted-foreground">No fabrics recorded from this supplier.</p>
+                            <p className="text-sm text-muted-foreground">{t('noFabricsFromSupplier')}</p>
                          )}
                     </div>
                      <div>
-                        <h3 className="text-lg font-medium mb-2">Account Balance</h3>
+                        <h3 className="text-lg font-medium mb-2">{t('accountBalance')}</h3>
                         <Card className="bg-muted">
                             <CardHeader>
-                                <CardDescription>Total Billed Amount</CardDescription>
+                                <CardDescription>{t('totalBilledAmount')}</CardDescription>
                                 <CardTitle className="text-3xl">{formatCurrency(totalBilled)}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-muted-foreground">
-                                    This represents the total value of all bills recorded from this supplier as a Cost of Goods Sold.
+                                    {t('totalBilledAmountDesc')}
                                 </p>
                             </CardContent>
                         </Card>
@@ -160,10 +162,10 @@ export default function SuppliersPage() {
              <div className="flex items-center justify-center h-full rounded-lg border border-dashed shadow-sm">
                 <div className="text-center">
                     <h3 className="text-2xl font-bold tracking-tight">
-                        {isLoading ? 'Loading Suppliers...' : 'No Suppliers Found'}
+                        {isLoading ? t('loadingSuppliers') : t('noSuppliersFound')}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                        {isLoading ? 'Please wait while we fetch your data.' : 'Add a new supplier to get started.'}
+                        {isLoading ? t('loadingSuppliersDesc') : t('noSuppliersFoundDesc')}
                     </p>
                 </div>
             </div>

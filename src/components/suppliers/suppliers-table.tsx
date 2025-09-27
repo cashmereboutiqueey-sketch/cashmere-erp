@@ -1,7 +1,7 @@
 'use client';
 
 import { ColumnDef, Row } from '@tanstack/react-table';
-import { Supplier } from '@/lib/types';
+import { Supplier, TranslationKey } from '@/lib/types';
 import {
   Table,
   TableBody,
@@ -32,6 +32,7 @@ import { DataTableToolbar } from '../shared/data-table-toolbar';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { cn } from '@/lib/utils';
 import { flexRender, useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel } from '@tanstack/react-table';
+import { useTranslation } from '@/hooks/use-translation';
 
 
 interface SuppliersTableProps {
@@ -53,6 +54,7 @@ type SupplierFormData = z.infer<typeof supplierSchema>;
 function AddSupplierDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
     defaultValues: { name: '', email: '', phone: '' },
@@ -62,8 +64,8 @@ function AddSupplierDialog() {
     try {
       await addSupplier(data);
       toast({
-        title: 'Success',
-        description: 'New supplier has been added.',
+        title: t('success'),
+        description: t('supplierAddedSuccess'),
       });
       setOpen(false);
       form.reset();
@@ -71,8 +73,8 @@ function AddSupplierDialog() {
     } catch (error) {
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to add supplier.',
+        title: t('error'),
+        description: t('supplierAddedError'),
       });
     }
   };
@@ -85,40 +87,40 @@ function AddSupplierDialog() {
       <DialogTrigger asChild>
          <Button size="sm" className="h-8 ml-auto">
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Supplier
+            {t('addSupplier')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Add New Supplier</DialogTitle>
-          <DialogDescription>Enter the details for the new supplier.</DialogDescription>
+          <DialogTitle>{t('addSupplier')}</DialogTitle>
+          <DialogDescription>{t('addSupplierDesc')}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
             <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Name</FormLabel>
+                  <FormLabel className="text-right">{t('name')}</FormLabel>
                   <FormControl><Input {...field} className="col-span-3" /></FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
             )}/>
              <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Email</FormLabel>
+                  <FormLabel className="text-right">{t('email')}</FormLabel>
                   <FormControl><Input {...field} type="email" className="col-span-3" /></FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
             )}/>
              <FormField control={form.control} name="phone" render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">Phone</FormLabel>
+                  <FormLabel className="text-right">{t('phone')}</FormLabel>
                   <FormControl><Input {...field} className="col-span-3" /></FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
             )}/>
             <DialogFooter>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? 'Adding...' : 'Add Supplier'}
+                    {form.formState.isSubmitting ? t('adding') : t('addSupplier')}
                 </Button>
             </DialogFooter>
           </form>
@@ -130,10 +132,11 @@ function AddSupplierDialog() {
 
 
 function SuppliersTableToolbar({ table }: { table: any }) {
+  const { t } = useTranslation();
   return (
     <DataTableToolbar table={table}>
         <Input
-            placeholder="Filter suppliers..."
+            placeholder={t('filterSuppliers')}
             value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
             onChange={(event) =>
             table.getColumn('name')?.setFilterValue(event.target.value)
@@ -147,10 +150,10 @@ function SuppliersTableToolbar({ table }: { table: any }) {
   );
 }
 
-export const columns: ColumnDef<Supplier>[] = [
+export const getColumns = (t: (key: TranslationKey) => string): ColumnDef<Supplier>[] => [
   {
     accessorKey: 'name',
-    header: 'Supplier',
+    header: t('supplier') as string,
     cell: ({ row }) => {
       const supplier = row.original;
       return (
@@ -179,8 +182,8 @@ export const columns: ColumnDef<Supplier>[] = [
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Edit</DropdownMenuItem>
-              <DropdownMenuItem>Delete</DropdownMenuItem>
+              <DropdownMenuItem>{t('edit')}</DropdownMenuItem>
+              <DropdownMenuItem>{t('delete')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -191,6 +194,9 @@ export const columns: ColumnDef<Supplier>[] = [
 
 
 export function SuppliersTable({ data, onRowClick, selectedSupplierId }: SuppliersTableProps) {
+  const { t } = useTranslation();
+  const columns = getColumns(t);
+
   const table = useReactTable({
     data,
     columns,
@@ -252,7 +258,7 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId }: Supplie
                     colSpan={columns.length}
                     className="h-24 text-center"
                     >
-                    No results.
+                    {t('noResults')}
                     </TableCell>
                 </TableRow>
                 )}
@@ -266,7 +272,7 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId }: Supplie
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
             >
-            Previous
+            {t('previous')}
             </Button>
             <Button
             variant="outline"
@@ -274,7 +280,7 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId }: Supplie
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
             >
-            Next
+            {t('next')}
             </Button>
         </div>
     </div>
