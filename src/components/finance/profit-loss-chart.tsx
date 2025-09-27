@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -27,6 +28,7 @@ import { getExpenses } from '@/services/finance-service';
 import { Order, Expense } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { format, startOfMonth } from 'date-fns';
+import { useTranslation } from '@/hooks/use-translation';
 
 const aggregateDataByMonth = (orders: Order[], expenses: Expense[]) => {
     const dataMap: { [key: string]: { revenue: number, costs: number } } = {};
@@ -61,21 +63,21 @@ const aggregateDataByMonth = (orders: Order[], expenses: Expense[]) => {
     }).slice(-12); // Get last 12 months
 };
 
-
-const chartConfig = {
-  revenue: {
-    label: 'Revenue',
-    color: 'hsl(var(--chart-1))',
-  },
-  costs: {
-    label: 'Costs',
-    color: 'hsl(var(--chart-2))',
-  },
-} satisfies ChartConfig;
-
 export function ProfitLossChart() {
+    const { t } = useTranslation();
     const [chartData, setChartData] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const chartConfig = {
+      revenue: {
+        label: t('revenue'),
+        color: 'hsl(var(--chart-1))',
+      },
+      costs: {
+        label: t('costs'),
+        color: 'hsl(var(--chart-2))',
+      },
+    } satisfies ChartConfig;
 
     useEffect(() => {
         const fetchData = async () => {
@@ -91,9 +93,9 @@ export function ProfitLossChart() {
   return (
     <Card className="shadow-sm">
       <CardHeader>
-        <CardTitle className="font-headline">Profit & Loss Overview</CardTitle>
+        <CardTitle className="font-headline">{t('profitLossOverview')}</CardTitle>
         <CardDescription>
-          Monthly revenue and costs overview.
+          {t('monthlyRevenueVsCosts')}
         </CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
@@ -135,7 +137,7 @@ export function ProfitLossChart() {
                 </defs>
                 <Area
                 dataKey="revenue"
-                name="Revenue"
+                name={t('revenue')}
                 type="natural"
                 fill="url(#fillRevenue)"
                 stroke="hsl(var(--chart-1))"
@@ -143,7 +145,7 @@ export function ProfitLossChart() {
                 />
                 <Area
                 dataKey="costs"
-                name="Costs"
+                name={t('costs')}
                 type="natural"
                 fill="url(#fillCosts)"
                 stroke="hsl(var(--chart-2))"

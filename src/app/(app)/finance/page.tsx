@@ -1,4 +1,6 @@
 
+'use client';
+
 import { FinancialSummaryCards } from '@/components/finance/financial-summary-cards';
 import { AddExpenseDialog } from '@/components/finance/add-expense-dialog';
 import { ProfitLossChart } from '@/components/finance/profit-loss-chart';
@@ -8,12 +10,14 @@ import { ChartOfAccounts } from '@/components/finance/chart-of-accounts';
 import { JournalVoucherDialog } from '@/components/finance/journal-voucher-dialog';
 import { Separator } from '@/components/ui/separator';
 import { BankDepositDialog } from '@/components/finance/bank-deposit-dialog';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function FinancePage() {
+  const { t } = useTranslation();
   return (
     <>
       <PageHeader>
-        <PageHeaderHeading>Finance Dashboard</PageHeaderHeading>
+        <PageHeaderHeading>{t('financeDashboard')}</PageHeaderHeading>
         <div className="ml-auto flex items-center gap-2">
             <BankDepositDialog />
             <JournalVoucherDialog />

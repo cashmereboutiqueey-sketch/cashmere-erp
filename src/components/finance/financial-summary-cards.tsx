@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -13,8 +14,10 @@ import { getExpenses } from '@/services/finance-service';
 import { Order, Expense } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { subDays, startOfDay, endOfDay } from 'date-fns';
+import { useTranslation } from '@/hooks/use-translation';
 
 export function FinancialSummaryCards() {
+    const { t } = useTranslation();
     const [orders, setOrders] = useState<Order[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [todayOrders, setTodayOrders] = useState<Order[]>([]);
@@ -105,83 +108,83 @@ export function FinancialSummaryCards() {
     <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-5">
       <Card className="shadow-sm lg:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('totalRevenue')}</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
-          <p className="text-xs text-muted-foreground">From all completed sales</p>
+          <p className="text-xs text-muted-foreground">{t('fromAllCompletedSales')}</p>
         </CardContent>
       </Card>
       <Card className="shadow-sm lg:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Cost of Goods Sold</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('cogs')}</CardTitle>
           <TrendingDown className="h-4 w-4 text-destructive" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(costOfGoodsSold)}</div>
-          <p className="text-xs text-muted-foreground">From supplier bills</p>
+          <p className="text-xs text-muted-foreground">{t('fromSupplierBills')}</p>
         </CardContent>
       </Card>
        <Card className="shadow-sm lg:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Gross Profit</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('grossProfit')}</CardTitle>
           <TrendingUp className="h-4 w-4 text-emerald-500" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(grossProfit)}</div>
-           <p className="text-xs text-muted-foreground">Revenue - COGS</p>
+           <p className="text-xs text-muted-foreground">{t('revenueMinusCogs')}</p>
         </CardContent>
       </Card>
       <Card className="shadow-sm lg:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">OpEx</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('opEx')}</CardTitle>
           <Landmark className="h-4 w-4 text-amber-500" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
-          <p className="text-xs text-muted-foreground">Total operational costs</p>
+          <p className="text-xs text-muted-foreground">{t('totalOperationalCosts')}</p>
         </CardContent>
       </Card>
       <Card className="shadow-sm lg:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Net Profit</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('netProfit')}</CardTitle>
           <TrendingUp className="h-4 w-4 text-emerald-500" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(netProfit)}</div>
-           <p className="text-xs text-muted-foreground">Gross Profit - OpEx</p>
+           <p className="text-xs text-muted-foreground">{t('grossProfitMinusOpEx')}</p>
         </CardContent>
       </Card>
 
       <Card className="shadow-sm lg:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Cash In (Today)</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('cashInToday')}</CardTitle>
           <ArrowUpCircle className="h-4 w-4 text-emerald-500" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(cashInToday)}</div>
-           <p className="text-xs text-muted-foreground">From all payments received today</p>
+           <p className="text-xs text-muted-foreground">{t('fromPaymentsReceivedToday')}</p>
         </CardContent>
       </Card>
       <Card className="shadow-sm lg:col-span-2">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Cash Out (Today)</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('cashOutToday')}</CardTitle>
           <ArrowDownCircle className="h-4 w-4 text-destructive" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(cashOutToday)}</div>
-           <p className="text-xs text-muted-foreground">For operational expenses paid today</p>
+           <p className="text-xs text-muted-foreground">{t('forOpExPaidToday')}</p>
         </CardContent>
       </Card>
       <Card className="shadow-sm lg:col-span-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Net Cash (Today)</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('netCashToday')}</CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{formatCurrency(netCashFlowToday)}</div>
-           <p className="text-xs text-muted-foreground">Cash In - Cash Out</p>
+           <p className="text-xs text-muted-foreground">{t('cashInMinusCashOut')}</p>
         </CardContent>
       </Card>
     </div>

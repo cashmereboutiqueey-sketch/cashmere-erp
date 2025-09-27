@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -23,6 +24,7 @@ import { Order, Expense } from '@/lib/types';
 import { getOrders } from '@/services/order-service';
 import { getExpenses } from '@/services/finance-service';
 import { Skeleton } from '../ui/skeleton';
+import { useTranslation } from '@/hooks/use-translation';
 
 
 type Transaction = {
@@ -34,6 +36,7 @@ type Transaction = {
 }
 
 export function RecentTransactions() {
+    const { t } = useTranslation();
     const [orders, setOrders] = useState<Order[]>([]);
     const [expenses, setExpenses] = useState<Expense[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +59,7 @@ export function RecentTransactions() {
         .filter(o => o.status === 'completed')
         .map(order => ({
             id: order.id,
-            description: `Order #${order.id.slice(0,4)}...`,
+            description: `${t('orders')} #${order.id.slice(0,4)}...`,
             amount: order.total_amount,
             type: 'revenue',
             date: order.created_at,
@@ -84,8 +87,8 @@ export function RecentTransactions() {
   return (
     <Card className="shadow-sm">
       <CardHeader>
-        <CardTitle className="font-headline">Recent Transactions</CardTitle>
-        <CardDescription>A log of recent financial activities.</CardDescription>
+        <CardTitle className="font-headline">{t('recentTransactions')}</CardTitle>
+        <CardDescription>{t('recentTransactionsDesc')}</CardDescription>
       </CardHeader>
       <CardContent>
         <ScrollArea className="h-[340px]">
@@ -105,8 +108,8 @@ export function RecentTransactions() {
                 <Table>
                 <TableHeader>
                     <TableRow>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>{t('description')}</TableHead>
+                    <TableHead className="text-right">{t('amount')}</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>

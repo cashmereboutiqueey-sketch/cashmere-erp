@@ -23,6 +23,7 @@ import { PlusCircle } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { Account } from '@/lib/types';
 import { capitalize } from 'string-ts';
+import { useTranslation } from '@/hooks/use-translation';
 
 // Mock data for now. This will be replaced with a service call.
 const mockAccounts: Account[] = [
@@ -46,6 +47,7 @@ const accountTypeVariant: { [key in Account['type']]: 'default' | 'secondary' | 
 }
 
 export function ChartOfAccounts() {
+  const { t } = useTranslation();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -59,14 +61,14 @@ export function ChartOfAccounts() {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-          <CardTitle>Chart of Accounts</CardTitle>
+          <CardTitle>{t('chartOfAccounts')}</CardTitle>
           <CardDescription>
-            A list of all financial accounts in the general ledger.
+            {t('chartOfAccountsDesc')}
           </CardDescription>
         </div>
         <Button size="sm" className="h-8" disabled>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Add Account
+          {t('addAccount')}
         </Button>
       </CardHeader>
       <CardContent>
@@ -79,10 +81,10 @@ export function ChartOfAccounts() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Account Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
+                  <TableHead>{t('code')}</TableHead>
+                  <TableHead>{t('accountName')}</TableHead>
+                  <TableHead>{t('type')}</TableHead>
+                  <TableHead className="text-right">{t('balance')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
