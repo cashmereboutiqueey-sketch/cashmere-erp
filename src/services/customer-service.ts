@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from './firebase';
@@ -26,7 +27,20 @@ const fromFirestore = (doc: any): Customer => {
 export async function getCustomers(): Promise<Customer[]> {
   try {
     const snapshot = await getDocs(customersCollection);
-    return snapshot.docs.map(fromFirestore);
+    const customers = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            id: doc.id,
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            address: data.address,
+            avatarUrl: data.avatarUrl,
+            notes: data.notes,
+            created_at: data.created_at?.toDate().toISOString() || new Date().toISOString(),
+        } as Customer;
+    });
+    return customers;
   } catch (error) {
     console.error('Error getting customers: ', error);
     return [];
