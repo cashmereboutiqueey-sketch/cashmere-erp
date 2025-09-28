@@ -26,7 +26,12 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
   if (data.customer_id) {
     const customerDocSnap = await getDoc(doc(db, 'customers', data.customer_id));
     if (customerDocSnap.exists()) {
-      customerData = { id: customerDocSnap.id, ...customerDocSnap.data(), created_at: customerDocSnap.data().created_at?.toDate()?.toISOString() || new Date().toISOString() } as Customer;
+      const custData = customerDocSnap.data();
+      customerData = { 
+        id: customerDocSnap.id, 
+        ...custData, 
+        created_at: custData.created_at?.toDate()?.toISOString() || new Date().toISOString() 
+      } as Customer;
     }
   }
 

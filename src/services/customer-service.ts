@@ -11,6 +11,14 @@ const customersCollection = collection(db, 'customers');
 // Helper to convert Firestore doc to Customer type
 const fromFirestore = (doc: any): Customer => {
   const data = doc.data();
+  // Ensure all timestamp fields are converted to strings
+  const convertTimestampToString = (timestamp: any) => {
+    if (timestamp && typeof timestamp.toDate === 'function') {
+      return timestamp.toDate().toISOString();
+    }
+    return new Date().toISOString();
+  };
+
   return {
     id: doc.id,
     name: data.name,
@@ -19,28 +27,14 @@ const fromFirestore = (doc: any): Customer => {
     address: data.address,
     avatarUrl: data.avatarUrl,
     notes: data.notes,
-    // Safely convert timestamp if it exists
-    created_at: data.created_at?.toDate().toISOString() || new Date().toISOString(),
+    created_at: convertTimestampToString(data.created_at || data.createdAt),
   };
 };
 
 export async function getCustomers(): Promise<Customer[]> {
   try {
     const snapshot = await getDocs(customersCollection);
-    const customers = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            id: doc.id,
-            name: data.name,
-            email: data.email,
-            phone: data.phone,
-            address: data.address,
-            avatarUrl: data.avatarUrl,
-            notes: data.notes,
-            created_at: data.created_at?.toDate().toISOString() || new Date().toISOString(),
-        } as Customer;
-    });
-    return customers;
+    return snapshot.docs.map(fromFirestore);
   } catch (error) {
     console.error('Error getting customers: ', error);
     return [];
