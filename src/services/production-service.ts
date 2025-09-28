@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from './firebase';
@@ -19,7 +20,12 @@ const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
   if (data.product_id) {
     const productDoc = await getDoc(doc(db, 'products', data.product_id));
     if (productDoc.exists()) {
-      const p = { id: productDoc.id, ...productDoc.data() } as Product;
+      const pData = productDoc.data();
+      const p = { 
+        id: productDoc.id, 
+        ...pData,
+        created_at: pData.created_at?.toDate().toISOString() || new Date().toISOString()
+      } as Product;
       productData = p;
       if (data.variant_id) {
         variantData = p.variants.find(v => v.id === data.variant_id);
