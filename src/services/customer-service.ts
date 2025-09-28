@@ -14,10 +14,8 @@ const fromFirestore = (doc: any): Customer => {
   
   const convertTimestampToString = (timestamp: any): string => {
     if (!timestamp) {
-        // Handle cases where the timestamp might be null or undefined
-        const now = new Date();
-        console.warn(`Timestamp was null or undefined for doc ${doc.id}, using current time as fallback.`);
-        return now.toISOString();
+        // Fallback for older records or if timestamp is somehow missing
+        return new Date().toISOString();
     }
     if (typeof timestamp.toDate === 'function') {
       return timestamp.toDate().toISOString();
@@ -25,9 +23,15 @@ const fromFirestore = (doc: any): Customer => {
     if (typeof timestamp === 'string') {
         return timestamp;
     }
-    // Fallback for unexpected formats
+    // Handle cases where it might be a plain object { seconds, nanoseconds }
+    if (timestamp.seconds !== undefined && timestamp.nanoseconds !== undefined) {
+        return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000).toISOString();
+    }
+    // Fallback for any other unexpected formats
     return new Date(timestamp).toISOString();
   };
+
+  const timestamp = data.created_at || data.createdAt;
 
   return {
     id: doc.id,
@@ -37,7 +41,7 @@ const fromFirestore = (doc: any): Customer => {
     address: data.address,
     avatarUrl: data.avatarUrl,
     notes: data.notes,
-    created_at: convertTimestampToString(data.created_at || data.createdAt),
+    created_at: convertTimestampToString(timestamp),
   };
 };
 
