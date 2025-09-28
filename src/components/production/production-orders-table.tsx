@@ -55,6 +55,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
 import type { TranslationKey } from '@/lib/types';
 import { DataTableFacetedFilter } from '../shared/data-table-faceted-filter';
+import { ProductionOrderDetailsDialog } from './production-order-details-dialog';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -76,6 +77,7 @@ const statuses: { label: string, value: ProductionOrder['status'] }[] = [
 export const getColumns = (
   t: (key: TranslationKey) => string,
   onStatusChange: (orderId: string, status: ProductionOrder['status']) => void,
+  onViewDetails: (order: ProductionOrder) => void,
   onDelete: (order: ProductionOrder) => void,
 ): ColumnDef<ProductionOrder>[] => [
   {
@@ -157,6 +159,7 @@ export const getColumns = (
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onViewDetails(order)}>{t('viewDetails')}</DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <span>{t('updateStatus')}</span>
@@ -171,7 +174,6 @@ export const getColumns = (
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
-              <DropdownMenuItem>{t('viewDetails')}</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="text-destructive" onClick={() => onDelete(order)}>{t('delete')}</DropdownMenuItem>
             </DropdownMenuContent>
@@ -455,6 +457,7 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
   const { t } = useTranslation();
   const { toast } = useToast();
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   
@@ -475,12 +478,17 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
     }
   };
 
+  const handleViewDetails = (order: ProductionOrder) => {
+    setSelectedOrder(order);
+    setIsDetailsOpen(true);
+  };
+
   const handleDelete = (order: ProductionOrder) => {
     setSelectedOrder(order);
     setIsDeleteOpen(true);
   };
 
-  const columns = getColumns(t, handleStatusChange, handleDelete);
+  const columns = getColumns(t, handleStatusChange, handleViewDetails, handleDelete);
 
   return (
     <>
@@ -490,6 +498,12 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
         toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} />} 
         columnFilters={columnFilters}
         onColumnFiltersChange={setColumnFilters}
+      />
+      <ProductionOrderDetailsDialog
+        order={selectedOrder}
+        salesOrders={salesOrders}
+        isOpen={isDetailsOpen}
+        onOpenChange={setIsDetailsOpen}
       />
       <DeleteProductionOrderDialog
           order={selectedOrder}

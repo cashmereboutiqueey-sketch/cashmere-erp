@@ -76,6 +76,7 @@ export const translations = {
     invalidSelectionsDesc: 'Please select a product, variant, and quantity.',
     productionOrderCreated: 'Production order created.',
     failedToCreateProductionOrder: 'Failed to create production order.',
+    detailsForProductionOrder: 'Details for the production order.',
     // Finance Page
     financeDashboard: 'Finance Dashboard',
     addExpense: 'Add Expense',
@@ -473,6 +474,7 @@ export const translations = {
     invalidSelectionsDesc: 'يرجى تحديد منتج ومتغير وكمية.',
     productionOrderCreated: 'تم إنشاء أمر الإنتاج.',
     failedToCreateProductionOrder: 'فشل إنشاء أمر الإنتاج.',
+    detailsForProductionOrder: 'تفاصيل أمر الإنتاج.',
     // Finance Page
     financeDashboard: 'لوحة التحكم المالية',
     addExpense: 'إضافة مصروف',
