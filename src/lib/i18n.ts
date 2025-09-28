@@ -1,4 +1,5 @@
 
+
 export const translations = {
   en: {
     // Sidebar
@@ -77,6 +78,10 @@ export const translations = {
     productionOrderCreated: 'Production order created.',
     failedToCreateProductionOrder: 'Failed to create production order.',
     detailsForProductionOrder: 'Details for the production order.',
+    worker: 'Worker',
+    assignWorker: 'Assign Worker',
+    selectWorker: 'Select a worker',
+    assign: 'Assign',
     // Finance Page
     financeDashboard: 'Finance Dashboard',
     addExpense: 'Add Expense',
@@ -475,6 +480,10 @@ export const translations = {
     productionOrderCreated: 'تم إنشاء أمر الإنتاج.',
     failedToCreateProductionOrder: 'فشل إنشاء أمر الإنتاج.',
     detailsForProductionOrder: 'تفاصيل أمر الإنتاج.',
+    worker: 'العامل',
+    assignWorker: 'تعيين عامل',
+    selectWorker: 'اختر عاملًا',
+    assign: 'تعيين',
     // Finance Page
     financeDashboard: 'لوحة التحكم المالية',
     addExpense: 'إضافة مصروف',

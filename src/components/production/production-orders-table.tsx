@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import { ColumnDef, ColumnFiltersState } from '@tanstack/react-table';
-import { ProductionOrder, Product, Order, OrderItem, ProductVariant } from '@/lib/types';
+import { ProductionOrder, Product, Order, OrderItem, ProductVariant, User } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { Badge } from '../ui/badge';
@@ -50,12 +51,13 @@ import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { useState } from 'react';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
-import { addProductionOrder, updateProductionOrderStatus, deleteProductionOrder } from '@/services/production-service';
+import { addProductionOrder, updateProductionOrderStatus, deleteProductionOrder, assignWorkerToProductionOrder } from '@/services/production-service';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
 import type { TranslationKey } from '@/lib/types';
 import { DataTableFacetedFilter } from '../shared/data-table-faceted-filter';
 import { ProductionOrderDetailsDialog } from './production-order-details-dialog';
+import { mockUsers } from '@/lib/data';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -75,10 +77,11 @@ const statuses: { label: string, value: ProductionOrder['status'] }[] = [
 ];
 
 export const getColumns = (
-  t: (key: TranslationKey) => string,
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string,
   onStatusChange: (orderId: string, status: ProductionOrder['status']) => void,
   onViewDetails: (order: ProductionOrder) => void,
   onDelete: (order: ProductionOrder) => void,
+  onAssignWorker: (order: ProductionOrder) => void,
 ): ColumnDef<ProductionOrder>[] => [
   {
     accessorKey: 'product',
@@ -115,6 +118,18 @@ export const getColumns = (
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title={t('quantity')} />
     ),
+  },
+    {
+    accessorKey: 'worker_name',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title={t('worker' as any)} />
+    ),
+    cell: ({ row }) => (
+      <div>{row.original.worker_name || <span className='text-xs text-muted-foreground'>Unassigned</span>}</div>
+    ),
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id));
+    },
   },
   {
     accessorKey: 'status',
@@ -160,6 +175,7 @@ export const getColumns = (
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onViewDetails(order)}>{t('viewDetails')}</DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onAssignWorker(order)}>{t('assignWorker' as any)}</DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <span>{t('updateStatus')}</span>
@@ -199,7 +215,10 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
   const [selectedSalesOrder, setSelectedSalesOrder] = useState<Order | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  
+  const workers = mockUsers.filter(u => u.role === 'production' || u.role === 'admin');
 
   const pendingSalesOrders = salesOrders.filter(o => o.status === 'pending' || o.status === 'processing');
 
@@ -257,6 +276,8 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
       return;
     }
     
+    const worker = workers.find(w => w.id === selectedWorkerId);
+
     try {
       const productionOrderData = {
         product_id: selectedProduct.id,
@@ -264,6 +285,8 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
         sales_order_id: orderType === 'order' && selectedSalesOrder ? selectedSalesOrder.id : null,
         required_quantity: quantity,
         status: 'pending' as ProductionOrder['status'],
+        worker_id: worker?.id,
+        worker_name: worker?.name,
       };
 
       await addProductionOrder(productionOrderData);
@@ -361,6 +384,23 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
             </Label>
             <Input id="quantity" type="number" className="col-span-3" placeholder="e.g., 25" value={quantity} onChange={(e) => setQuantity(parseInt(e.target.value))} disabled={orderType === 'order'} />
           </div>
+           <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="worker" className="text-right">
+                {t('worker' as any)}
+              </Label>
+              <Select onValueChange={setSelectedWorkerId}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder={t('assignWorker' as any)} />
+                </SelectTrigger>
+                <SelectContent>
+                  {workers.map((worker) => (
+                    <SelectItem key={worker.id} value={worker.id}>
+                      {worker.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
         </div>
         <DialogFooter>
           <Button onClick={handleSubmit}>{t('createOrder')}</Button>
@@ -368,6 +408,68 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
       </DialogContent>
     </Dialog>
   );
+}
+
+function AssignWorkerDialog({ order, isOpen, onOpenChange }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+    const { t } = useTranslation();
+    const { toast } = useToast();
+    const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+    
+    const workers = mockUsers.filter(u => u.role === 'production' || u.role === 'admin');
+
+    const handleSubmit = async () => {
+        if (!order || !selectedWorkerId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select a worker.' });
+            return;
+        }
+
+        const worker = workers.find(w => w.id === selectedWorkerId);
+        if (!worker) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Selected worker not found.' });
+            return;
+        }
+
+        try {
+            await assignWorkerToProductionOrder(order.id, worker.id, worker.name);
+            toast({ title: 'Success', description: `Order assigned to ${worker.name}.` });
+            onOpenChange(false);
+            window.location.reload();
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to assign worker.' });
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>{t('assignWorker' as any)}</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="worker" className="text-right">
+                            {t('worker' as any)}
+                        </Label>
+                        <Select onValueChange={setSelectedWorkerId} defaultValue={order?.worker_id}>
+                            <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder={t('selectWorker' as any)} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {workers.map((worker) => (
+                                <SelectItem key={worker.id} value={worker.id}>
+                                    {worker.name}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleSubmit}>{t('assign' as any)}</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
 }
 
 function ProductionOrdersToolbar({ table, products }: { table: any, products: Product[] }) {
@@ -378,6 +480,10 @@ function ProductionOrdersToolbar({ table, products }: { table: any, products: Pr
     label: p.name,
     value: p.name,
   }));
+  
+  const workerOptions = mockUsers
+    .filter(u => u.role === 'production' || u.role === 'admin')
+    .map(u => ({ label: u.name, value: u.name }));
 
   return (
     <div className="flex items-center justify-between">
@@ -391,6 +497,11 @@ function ProductionOrdersToolbar({ table, products }: { table: any, products: Pr
           column={table.getColumn('status')}
           title={t('status')}
           options={statuses.map(s => ({...s, label: t(s.value as TranslationKey) || s.label }))}
+        />
+         <DataTableFacetedFilter
+          column={table.getColumn('worker_name')}
+          title={t('worker' as any)}
+          options={workerOptions}
         />
         {isFiltered && (
           <Button
@@ -459,6 +570,7 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isAssignWorkerOpen, setIsAssignWorkerOpen] = useState(false);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   
   const handleStatusChange = async (orderId: string, status: ProductionOrder['status']) => {
@@ -488,7 +600,12 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
     setIsDeleteOpen(true);
   };
 
-  const columns = getColumns(t, handleStatusChange, handleViewDetails, handleDelete);
+  const handleAssignWorker = (order: ProductionOrder) => {
+    setSelectedOrder(order);
+    setIsAssignWorkerOpen(true);
+  };
+
+  const columns = getColumns(t, handleStatusChange, handleViewDetails, handleDelete, handleAssignWorker);
 
   return (
     <>
@@ -509,6 +626,11 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
           order={selectedOrder}
           isOpen={isDeleteOpen}
           onOpenChange={setIsDeleteOpen}
+      />
+       <AssignWorkerDialog
+          order={selectedOrder}
+          isOpen={isAssignWorkerOpen}
+          onOpenChange={setIsAssignWorkerOpen}
       />
     </>
   );

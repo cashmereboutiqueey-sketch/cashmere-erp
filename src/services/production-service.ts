@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from './firebase';
@@ -45,6 +46,8 @@ const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
     required_quantity: data.required_quantity,
     status: data.status,
     created_at: productionOrderTimestamp.toDate().toISOString(),
+    worker_id: data.worker_id,
+    worker_name: data.worker_name,
   };
 };
 
@@ -75,6 +78,21 @@ export async function addProductionOrder(orderData: Omit<ProductionOrder, 'id' |
     console.error('Error adding production order: ', error);
     throw new Error('Could not add production order');
   }
+}
+
+export async function assignWorkerToProductionOrder(orderId: string, workerId: string, workerName: string) {
+    try {
+        const orderDoc = doc(db, 'production_orders', orderId);
+        await updateDoc(orderDoc, {
+            worker_id: workerId,
+            worker_name: workerName,
+            updatedAt: serverTimestamp()
+        });
+        revalidatePath('/production');
+    } catch (error) {
+        console.error('Error assigning worker to production order: ', error);
+        throw new Error('Could not assign worker');
+    }
 }
 
 export async function updateProductionOrderStatus(id: string, status: ProductionOrder['status']) {

@@ -109,6 +109,8 @@ export type ProductionOrder = {
   required_quantity: number;
   status: 'pending' | 'in_progress' | 'done';
   created_at: string;
+  worker_id?: string;
+  worker_name?: string;
 };
 
 export type ProductionLog = {
