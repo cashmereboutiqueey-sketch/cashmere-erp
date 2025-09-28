@@ -20,13 +20,14 @@ const logJournalEntry = (description: string, entries: {account: string, debit?:
 
 const fromFirestore = (doc: any): Expense => {
   const data = doc.data();
+  const timestamp = data.created_at || data.createdAt;
   return {
     id: doc.id,
     category: data.category,
     amount: data.amount,
     supplier_id: data.supplier_id,
     note: data.note,
-    created_at: data.created_at.toDate().toISOString(),
+    created_at: timestamp.toDate().toISOString(),
   };
 };
 

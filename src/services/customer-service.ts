@@ -13,14 +13,20 @@ const fromFirestore = (doc: any): Customer => {
   const data = doc.data();
   
   const convertTimestampToString = (timestamp: any): string => {
-    if (timestamp && typeof timestamp.toDate === 'function') {
+    if (!timestamp) {
+        // Handle cases where the timestamp might be null or undefined
+        const now = new Date();
+        console.warn(`Timestamp was null or undefined for doc ${doc.id}, using current time as fallback.`);
+        return now.toISOString();
+    }
+    if (typeof timestamp.toDate === 'function') {
       return timestamp.toDate().toISOString();
     }
     if (typeof timestamp === 'string') {
         return timestamp;
     }
-    // Fallback for any other case
-    return new Date().toISOString();
+    // Fallback for unexpected formats
+    return new Date(timestamp).toISOString();
   };
 
   return {

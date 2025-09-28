@@ -21,10 +21,11 @@ const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
     const productDoc = await getDoc(doc(db, 'products', data.product_id));
     if (productDoc.exists()) {
       const pData = productDoc.data();
+      const productTimestamp = pData.created_at || pData.createdAt;
       const p = { 
         id: productDoc.id, 
         ...pData,
-        created_at: pData.created_at?.toDate().toISOString() || new Date().toISOString()
+        created_at: productTimestamp.toDate().toISOString()
       } as Product;
       productData = p;
       if (data.variant_id) {
@@ -32,6 +33,7 @@ const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
       }
     }
   }
+  const productionOrderTimestamp = data.created_at || data.createdAt;
 
   return {
     id: docSnap.id,
@@ -42,7 +44,7 @@ const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
     sales_order_id: data.sales_order_id,
     required_quantity: data.required_quantity,
     status: data.status,
-    created_at: data.created_at.toDate().toISOString(),
+    created_at: productionOrderTimestamp.toDate().toISOString(),
   };
 };
 

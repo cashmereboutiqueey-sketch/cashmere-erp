@@ -11,12 +11,13 @@ const productsCollection = collection(db, 'products');
 
 const fromFirestore = (doc: any): Product => {
   const data = doc.data();
+  const timestamp = data.created_at || data.createdAt;
   return {
     id: doc.id,
     name: data.name,
     category: data.category,
     difficulty: data.difficulty,
-    created_at: data.created_at?.toDate().toISOString() || new Date().toISOString(),
+    created_at: timestamp.toDate().toISOString(),
     variants: data.variants || [],
   };
 };
@@ -158,5 +159,3 @@ export async function deleteProduct(id: string) {
     throw new Error('Could not delete product');
   }
 }
-
-    

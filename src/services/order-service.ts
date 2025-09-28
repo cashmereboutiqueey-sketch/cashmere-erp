@@ -27,13 +27,15 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
     const customerDocSnap = await getDoc(doc(db, 'customers', data.customer_id));
     if (customerDocSnap.exists()) {
       const custData = customerDocSnap.data();
+      const customerTimestamp = custData.created_at || custData.createdAt;
       customerData = { 
         id: customerDocSnap.id, 
         ...custData, 
-        created_at: custData.created_at?.toDate()?.toISOString() || new Date().toISOString() 
+        created_at: customerTimestamp.toDate().toISOString() 
       } as Customer;
     }
   }
+  const orderTimestamp = data.created_at || data.createdAt;
 
   return {
     id: docSnap.id,
@@ -45,7 +47,7 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
     payment_method: data.payment_method,
     amount_paid: data.amount_paid,
     total_amount: data.total_amount,
-    created_at: data.created_at.toDate().toISOString(),
+    created_at: orderTimestamp.toDate().toISOString(),
     items: data.items,
     fulfillment_type: data.fulfillment_type,
     shipping_status: data.shipping_status,
