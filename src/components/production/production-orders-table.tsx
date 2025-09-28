@@ -1,6 +1,6 @@
 'use client';
 
-import { ColumnDef } from '@tanstack/react-table';
+import { ColumnDef, ColumnFiltersState } from '@tanstack/react-table';
 import { ProductionOrder, Product, Order, OrderItem, ProductVariant } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
@@ -455,6 +455,7 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
   const { toast } = useToast();
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   
   const handleStatusChange = async (orderId: string, status: ProductionOrder['status']) => {
     try {
@@ -482,8 +483,12 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
 
   return (
     <>
-      <DataTable columns={columns} data={data} 
+      <DataTable 
+        columns={columns} 
+        data={data} 
         toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} />} 
+        columnFilters={columnFilters}
+        onColumnFiltersChange={setColumnFilters}
       />
       <DeleteProductionOrderDialog
           order={selectedOrder}
