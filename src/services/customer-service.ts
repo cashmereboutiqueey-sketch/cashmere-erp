@@ -11,11 +11,15 @@ const customersCollection = collection(db, 'customers');
 // Helper to convert Firestore doc to Customer type
 const fromFirestore = (doc: any): Customer => {
   const data = doc.data();
-  // Ensure all timestamp fields are converted to strings
-  const convertTimestampToString = (timestamp: any) => {
+  
+  const convertTimestampToString = (timestamp: any): string => {
     if (timestamp && typeof timestamp.toDate === 'function') {
       return timestamp.toDate().toISOString();
     }
+    if (typeof timestamp === 'string') {
+        return timestamp;
+    }
+    // Fallback for any other case
     return new Date().toISOString();
   };
 
