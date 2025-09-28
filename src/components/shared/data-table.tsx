@@ -17,10 +17,11 @@ import {
   useReactTable,
   Row,
   ExpandedState,
+  Table,
 } from '@tanstack/react-table';
 
 import {
-  Table,
+  Table as UITable,
   TableBody,
   TableCell,
   TableHead,
@@ -34,7 +35,7 @@ import { Fragment } from 'react';
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  toolbar?: React.ReactNode;
+  toolbar?: React.ReactNode | ((table: Table<TData>) => React.ReactNode);
   renderSubComponent?: (props: { row: Row<TData> }) => React.ReactElement;
   getRowCanExpand?: (row: Row<TData>) => boolean;
 }
@@ -82,9 +83,9 @@ export function DataTable<TData, TValue>({
 
   return (
     <div className="space-y-4">
-      {toolbar && <DataTableToolbar table={table}>{toolbar}</DataTableToolbar>}
+      {toolbar && <DataTableToolbar table={table}>{typeof toolbar === 'function' ? toolbar(table) : toolbar}</DataTableToolbar>}
       <div className="rounded-md border">
-        <Table>
+        <UITable>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -137,7 +138,7 @@ export function DataTable<TData, TValue>({
               </TableRow>
             )}
           </TableBody>
-        </Table>
+        </UITable>
       </div>
       <DataTablePagination table={table} />
     </div>

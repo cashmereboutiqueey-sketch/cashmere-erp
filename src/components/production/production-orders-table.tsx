@@ -17,7 +17,7 @@ import {
   DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
 import { buttonVariants, Button } from '../ui/button';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, X } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
@@ -53,6 +53,7 @@ import { addProductionOrder, updateProductionOrderStatus, deleteProductionOrder 
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
 import type { TranslationKey } from '@/lib/types';
+import { DataTableFacetedFilter } from '../shared/data-table-faceted-filter';
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -65,7 +66,11 @@ const statusVariantMap: {
   done: 'default',
 };
 
-const statuses: ProductionOrder['status'][] = ['pending', 'in_progress', 'done'];
+const statuses: { label: string, value: ProductionOrder['status'] }[] = [
+    { label: 'Pending', value: 'pending'},
+    { label: 'In Progress', value: 'in_progress' },
+    { label: 'Done', value: 'done' }
+];
 
 export const getColumns = (
   t: (key: TranslationKey) => string,
@@ -100,6 +105,7 @@ export const getColumns = (
         </div>
       );
     },
+    accessorFn: (row) => row.product?.name,
   },
   {
     accessorKey: 'required_quantity',
@@ -120,6 +126,9 @@ export const getColumns = (
         {t(row.original.status as TranslationKey) || row.original.status.replace('_', ' ')}
       </Badge>
     ),
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id));
+    },
   },
   {
     id: 'source_order',
@@ -154,8 +163,8 @@ export const getColumns = (
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
                     {statuses.map(status => (
-                      <DropdownMenuItem key={status} onClick={() => onStatusChange(order.id, status)}>
-                          <span className="capitalize">{t(status as TranslationKey) || status.replace('_', ' ')}</span>
+                      <DropdownMenuItem key={status.value} onClick={() => onStatusChange(order.id, status.value)}>
+                          <span className="capitalize">{t(status.value as TranslationKey) || status.label.replace('_', ' ')}</span>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
@@ -358,18 +367,43 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
   );
 }
 
-function ProductionOrdersToolbar({ products, salesOrders }: { products: Product[], salesOrders: Order[] }) {
+function ProductionOrdersToolbar({ table, products }: { table: any, products: Product[] }) {
   const { t } = useTranslation();
+  const isFiltered = table.getState().columnFilters.length > 0;
+
+  const productOptions = products.map(p => ({
+    label: p.name,
+    value: p.name,
+  }));
+
   return (
-    <>
-      <Input
-        placeholder={t('filterProductionOrders')}
-        className="h-8 w-[150px] lg:w-[250px]"
-      />
-      <div className="ml-auto flex items-center gap-2">
-        <AddProductionOrderDialog products={products} salesOrders={salesOrders} />
+    <div className="flex items-center justify-between">
+      <div className="flex flex-1 items-center space-x-2">
+         <DataTableFacetedFilter
+          column={table.getColumn('product')}
+          title={t('product')}
+          options={productOptions}
+        />
+        <DataTableFacetedFilter
+          column={table.getColumn('status')}
+          title={t('status')}
+          options={statuses.map(s => ({...s, label: t(s.value as TranslationKey) || s.label }))}
+        />
+        {isFiltered && (
+          <Button
+            variant="ghost"
+            onClick={() => table.resetColumnFilters()}
+            className="h-8 px-2 lg:px-3"
+          >
+            Reset
+            <X className="ml-2 h-4 w-4" />
+          </Button>
+        )}
       </div>
-    </>
+      <div className="ml-auto flex items-center gap-2">
+        <AddProductionOrderDialog products={products} salesOrders={[]} />
+      </div>
+    </div>
   );
 }
 
@@ -448,7 +482,9 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
 
   return (
     <>
-      <DataTable columns={columns} data={data} toolbar={<ProductionOrdersToolbar products={products} salesOrders={salesOrders} />} />
+      <DataTable columns={columns} data={data} 
+        toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} />} 
+      />
       <DeleteProductionOrderDialog
           order={selectedOrder}
           isOpen={isDeleteOpen}
