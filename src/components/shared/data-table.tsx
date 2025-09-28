@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -48,7 +49,7 @@ export function DataTable<TData, TValue>({
   toolbar,
   renderSubComponent,
   getRowCanExpand,
-  columnFilters,
+  columnFilters = [],
   onColumnFiltersChange,
 }: DataTableProps<TData, TValue>) {
   const [rowSelection, setRowSelection] = React.useState({});
