@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User as FirebaseAuthUser } from 'firebase/auth';
 import { app } from '@/services/firebase';
 import { User } from '@/lib/types';
-import { getUsers } from '@/services/user-service';
+import { getUsers, addUser } from '@/services/user-service';
 
 interface AuthContextType {
   user: User | null;
@@ -28,11 +28,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
         const allUsers = await getUsers();
-        const userRoleData = allUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
+        let userRoleData = allUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
+
+        if (!userRoleData && fbUser.email) {
+            // If no user found, create one for the first authenticated user and make them an admin.
+            console.warn("User not found in ERP, creating new admin user for:", fbUser.email);
+            const newUser: Omit<User, 'id'> = {
+                name: fbUser.displayName || 'Admin User',
+                email: fbUser.email,
+                avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/100/100`,
+                role: 'admin',
+            };
+            const newUserId = await addUser(newUser);
+            userRoleData = { ...newUser, id: newUserId };
+        }
 
         if (userRoleData) {
             const appUser: User = {
-                id: userRoleData.id, // Use our DB id
+                id: userRoleData.id,
                 name: fbUser.displayName || userRoleData.name,
                 email: fbUser.email!,
                 avatarUrl: fbUser.photoURL || userRoleData.avatarUrl,
@@ -40,7 +53,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             };
             setUser(appUser);
         } else {
-            console.warn("Firebase user not found in application user list:", fbUser.email);
+            console.error("Firebase user could not be mapped to an application user:", fbUser.email);
             setUser(null); 
         }
 
@@ -61,10 +74,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     const fbUser = userCredential.user;
     const allUsers = await getUsers();
-    const userRoleData = allUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
+    let userRoleData = allUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
     
     if (!userRoleData) {
-        throw new Error("Login successful, but this user has not been assigned a role in the ERP system. Please contact an administrator.");
+         // Auto-create admin on first login
+        const newUser: Omit<User, 'id'> = {
+            name: fbUser.displayName || 'Admin User',
+            email: fbUser.email!,
+            avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/100/100`,
+            role: 'admin',
+        };
+        const newUserId = await addUser(newUser);
+        userRoleData = { ...newUser, id: newUserId };
     }
     
     const appUser: User = {
