@@ -26,17 +26,7 @@ import { capitalize } from 'string-ts';
 import { useTranslation } from '@/hooks/use-translation';
 
 // Mock data for now. This will be replaced with a service call.
-const mockAccounts: Account[] = [
-    { id: '1', name: 'Cash on Hand', code: '1010', type: 'asset', balance: 50000 },
-    { id: '9', name: 'Bank Account', code: '1020', type: 'asset', balance: 150000 },
-    { id: '2', name: 'Accounts Receivable', code: '1200', type: 'asset', balance: 15000 },
-    { id: '3', name: 'Inventory', code: '1400', type: 'asset', balance: 75000 },
-    { id: '4', name: 'Accounts Payable', code: '2010', type: 'liability', balance: 20000 },
-    { id: '5', name: 'Sales Revenue', code: '4010', type: 'revenue', balance: 120000 },
-    { id: '6', name: 'Cost of Goods Sold', code: '5010', type: 'expense', balance: 60000 },
-    { id: '7', name: 'Rent Expense', code: '5020', type: 'expense', balance: 5000 },
-    { id: '8', name: 'Owner\'s Equity', code: '3010', type: 'equity', balance: 55000 },
-];
+const mockAccounts: Account[] = [];
 
 const accountTypeVariant: { [key in Account['type']]: 'default' | 'secondary' | 'outline' | 'destructive' } = {
     asset: 'default',
@@ -88,23 +78,31 @@ export function ChartOfAccounts() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {accounts.map((account) => (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.code}</TableCell>
-                    <TableCell>{account.name}</TableCell>
-                    <TableCell>
-                      <Badge variant={accountTypeVariant[account.type]}>
-                        {t(account.type as any) || capitalize(account.type)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD',
-                      }).format(account.balance)}
+                {accounts.length > 0 ? (
+                  accounts.map((account) => (
+                    <TableRow key={account.id}>
+                      <TableCell className="font-medium">{account.code}</TableCell>
+                      <TableCell>{account.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={accountTypeVariant[account.type]}>
+                          {t(account.type as any) || capitalize(account.type)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {new Intl.NumberFormat('en-US', {
+                          style: 'currency',
+                          currency: 'USD',
+                        }).format(account.balance)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      {t('noResults')}
                     </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
