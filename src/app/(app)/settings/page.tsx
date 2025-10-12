@@ -28,36 +28,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { mockUsers as initialUsers } from '@/lib/data';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import type { Role, User } from '@/lib/types';
-import { capitalize } from 'string-ts';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { firebaseConfig } from '@/services/firebase';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { getUsers, addUser, updateUserRole } from '@/services/user-service';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
 
 export default function SettingsPage() {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<Role['name']>('sales');
 
+  useEffect(() => {
+      const fetchUsers = async () => {
+          setIsLoading(true);
+          const fetchedUsers = await getUsers();
+          setUsers(fetchedUsers);
+          setIsLoading(false);
+      }
+      fetchUsers();
+  }, []);
+
   const isAdmin = currentUser?.role === 'admin';
 
-  const handleRoleChange = (userId: string, newRole: Role['name']) => {
+  const handleRoleChange = async (userId: string, newRole: Role['name']) => {
     if (!isAdmin) {
       toast({
         variant: 'destructive',
@@ -66,14 +71,24 @@ export default function SettingsPage() {
       });
       return;
     }
-    setUsers(users.map(user => user.id === userId ? { ...user, role: newRole } : user));
-    toast({
-      title: 'Success',
-      description: 'User role has been updated locally. Note: This is a demo and changes are not saved to a database.',
-    });
+
+    try {
+        await updateUserRole(userId, newRole);
+        setUsers(users.map(user => user.id === userId ? { ...user, role: newRole } : user));
+        toast({
+            title: 'Success',
+            description: "User role has been updated.",
+        });
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to update user role.',
+        });
+    }
   };
 
-  const handleAddUser = () => {
+  const handleAddUser = async () => {
     if (!isAdmin) {
       toast({
         variant: 'destructive',
@@ -91,21 +106,29 @@ export default function SettingsPage() {
       return;
     }
 
-    const newUser: User = {
-      id: `user_${Math.random().toString(36).substr(2, 9)}`,
+    const newUser: Omit<User, 'id'> = {
       name: newUserName,
       email: newUserEmail,
       role: newUserRole,
       avatarUrl: `https://picsum.photos/seed/${newUserName}/100/100`,
     };
 
-    setUsers([...users, newUser]);
-    setNewUserName('');
-    setNewUserEmail('');
-    toast({
-      title: 'User Added',
-      description: 'The user has been added to the local list. Remember to create their account in the Firebase Console.',
-    });
+    try {
+        const newUserId = await addUser(newUser);
+        setUsers([...users, { ...newUser, id: newUserId }]);
+        setNewUserName('');
+        setNewUserEmail('');
+        toast({
+          title: 'User Added',
+          description: 'The user has been added. Remember to create their login in the Firebase Authentication console.',
+        });
+    } catch(error) {
+         toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to add user.',
+        });
+    }
   }
 
   return (
@@ -114,7 +137,7 @@ export default function SettingsPage() {
         <PageHeaderHeading>Settings</PageHeaderHeading>
       </PageHeader>
       <div className="p-4 lg:p-6">
-        <Tabs defaultValue="general">
+        <Tabs defaultValue="users">
           <TabsList className="mb-4">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="integrations">Integrations</TabsTrigger>
@@ -210,7 +233,7 @@ export default function SettingsPage() {
                         <div>
                             <CardTitle>User Management</CardTitle>
                             <CardDescription>
-                                Add users, assign roles, then create their login in the Firebase Console.
+                                Add users and assign roles. You must create their login separately in the Firebase Console.
                             </CardDescription>
                         </div>
                          <a href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/users`} target="_blank" rel="noopener noreferrer">
@@ -221,36 +244,42 @@ export default function SettingsPage() {
                         </a>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {users.map(user => (
-                            <div key={user.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                                <div className="flex items-center gap-4">
-                                    <Avatar>
-                                        <AvatarImage src={user.avatarUrl} alt={user.name} />
-                                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                        <p className="font-medium">{user.name}</p>
-                                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        {isLoading ? (
+                            <div className="space-y-4">
+                                {[...Array(3)].map((_,i) => <Skeleton key={i} className="h-16 w-full" />)}
+                            </div>
+                        ) : (
+                            users.map(user => (
+                                <div key={user.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                    <div className="flex items-center gap-4">
+                                        <Avatar>
+                                            <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium">{user.name}</p>
+                                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                    {isAdmin ? (
+                                        <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value as Role['name'])}>
+                                        <SelectTrigger className="w-[180px]">
+                                            <SelectValue placeholder="Select a role" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {roles.map(role => (
+                                            <SelectItem key={role} value={role} className="capitalize">{role.replace('_', ' ')}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <Badge variant="outline" className="capitalize">{user.role.replace('_', ' ')}</Badge>
+                                    )}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                  {isAdmin ? (
-                                    <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value as Role['name'])}>
-                                      <SelectTrigger className="w-[180px]">
-                                        <SelectValue placeholder="Select a role" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {roles.map(role => (
-                                          <SelectItem key={role} value={role} className="capitalize">{role.replace('_', ' ')}</SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  ) : (
-                                    <Badge variant="outline" className="capitalize">{user.role.replace('_', ' ')}</Badge>
-                                  )}
-                                </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </CardContent>
                     {isAdmin && (
                       <>
@@ -297,5 +326,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    

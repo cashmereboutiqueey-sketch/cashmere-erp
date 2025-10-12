@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { addProductionOrder, updateProductionOrderStatus, deleteProductionOrder, assignWorkerToProductionOrder } from '@/services/production-service';
 import { useToast } from '@/hooks/use-toast';
@@ -57,7 +57,8 @@ import { useTranslation } from '@/hooks/use-translation';
 import type { TranslationKey } from '@/lib/types';
 import { DataTableFacetedFilter } from '../shared/data-table-faceted-filter';
 import { ProductionOrderDetailsDialog } from './production-order-details-dialog';
-import { mockUsers } from '@/lib/data';
+import { getUsers } from '@/services/user-service';
+
 
 const findImage = (id: string) =>
   PlaceHolderImages.find((img) => img.id === id)?.imageUrl || '';
@@ -206,7 +207,7 @@ interface ProductionOrdersTableProps {
   salesOrders: Order[];
 }
 
-function AddProductionOrderDialog({ products, salesOrders }: { products: Product[], salesOrders: Order[] }) {
+function AddProductionOrderDialog({ products, salesOrders, workers }: { products: Product[], salesOrders: Order[], workers: User[] }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -218,8 +219,6 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   
-  const workers = mockUsers.filter(u => u.role === 'production' || u.role === 'admin');
-
   const pendingSalesOrders = salesOrders.filter(o => o.status === 'pending' || o.status === 'processing');
 
   const handleOrderTypeChange = (type: string) => {
@@ -410,12 +409,10 @@ function AddProductionOrderDialog({ products, salesOrders }: { products: Product
   );
 }
 
-function AssignWorkerDialog({ order, isOpen, onOpenChange }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+function AssignWorkerDialog({ order, isOpen, onOpenChange, workers }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, workers: User[] }) {
     const { t } = useTranslation();
     const { toast } = useToast();
     const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
-    
-    const workers = mockUsers.filter(u => u.role === 'production' || u.role === 'admin');
 
     const handleSubmit = async () => {
         if (!order || !selectedWorkerId) {
@@ -472,7 +469,7 @@ function AssignWorkerDialog({ order, isOpen, onOpenChange }: { order: Production
     )
 }
 
-function ProductionOrdersToolbar({ table, products }: { table: any, products: Product[] }) {
+function ProductionOrdersToolbar({ table, products, workerOptions }: { table: any, products: Product[], workerOptions: {label: string, value: string}[] }) {
   const { t } = useTranslation();
   const isFiltered = table.getState().columnFilters.length > 0;
 
@@ -481,10 +478,6 @@ function ProductionOrdersToolbar({ table, products }: { table: any, products: Pr
     value: p.name,
   }));
   
-  const workerOptions = mockUsers
-    .filter(u => u.role === 'production' || u.role === 'admin')
-    .map(u => ({ label: u.name, value: u.name }));
-
   return (
     <div className="flex items-center justify-between">
       <div className="flex flex-1 items-center space-x-2">
@@ -515,7 +508,7 @@ function ProductionOrdersToolbar({ table, products }: { table: any, products: Pr
         )}
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <AddProductionOrderDialog products={products} salesOrders={[]} />
+        <AddProductionOrderDialog products={products} salesOrders={[]} workers={[]} />
       </div>
     </div>
   );
@@ -567,11 +560,20 @@ function DeleteProductionOrderDialog({ order, isOpen, onOpenChange }: { order: P
 export function ProductionOrdersTable({ data, products, salesOrders }: ProductionOrdersTableProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [workers, setWorkers] = useState<User[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isAssignWorkerOpen, setIsAssignWorkerOpen] = useState(false);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+
+  useEffect(() => {
+    const fetchWorkers = async () => {
+      const allUsers = await getUsers();
+      setWorkers(allUsers.filter(u => u.role === 'production' || u.role === 'admin'));
+    };
+    fetchWorkers();
+  }, []);
   
   const handleStatusChange = async (orderId: string, status: ProductionOrder['status']) => {
     try {
@@ -606,13 +608,16 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
   };
 
   const columns = getColumns(t, handleStatusChange, handleViewDetails, handleDelete, handleAssignWorker);
+  
+  const workerOptions = workers.map(u => ({ label: u.name, value: u.name }));
+
 
   return (
     <>
       <DataTable 
         columns={columns} 
         data={data} 
-        toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} />} 
+        toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} workerOptions={workerOptions} />} 
         columnFilters={columnFilters}
         onColumnFiltersChange={setColumnFilters}
       />
@@ -631,6 +636,7 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
           order={selectedOrder}
           isOpen={isAssignWorkerOpen}
           onOpenChange={setIsAssignWorkerOpen}
+          workers={workers}
       />
     </>
   );

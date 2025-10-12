@@ -4,23 +4,6 @@ import { PlaceHolderImages } from './placeholder-images';
 // Note: Most mock data is now deprecated in favor of Firestore services.
 // This file is kept for initial data seeding and for data models not yet migrated.
 
-export const mockUser: User = {
-  id: 'user_123',
-  name: 'Admin User',
-  email: 'admin@cashmere.com',
-  avatarUrl: 'https://picsum.photos/seed/admin/100/100',
-  role: 'admin',
-};
-
-export const mockUsers: User[] = [
-    { id: 'user_admin', name: 'Admin User', email: 'abdelrahmanneamatallah@gmail.com', avatarUrl: 'https://picsum.photos/seed/admin/100/100', role: 'admin' },
-    { id: 'user_sales_1', name: 'Alia Hassan', email: 'alia.h@example.com', avatarUrl: 'https://picsum.photos/seed/user1/100/100', role: 'sales' },
-    { id: 'user_prod_1', name: 'Fatima Ahmed', email: 'fatima.a@example.com', avatarUrl: 'https://picsum.photos/seed/user2/100/100', role: 'production' },
-    { id: 'user_acc_1', name: 'Noor Khan', email: 'noor.k@example.com', avatarUrl: 'https://picsum.photos/seed/user3/100/100', role: 'accountant' },
-    { id: 'user_wh_1', name: 'Layla Ibrahim', email: 'layla.i@example.com', avatarUrl: 'https://picsum.photos/seed/user4/100/100', role: 'warehouse_manager' },
-    { id: 'user_sales_2', name: 'Ahmed', email: 'ahmed@cashmere.com', avatarUrl: 'https://picsum.photos/seed/user5/100/100', role: 'sales' },
-];
-
 export const INITIAL_MOCK_SUPPLIERS: Omit<Supplier, 'id'>[] = [
     { name: 'Luxury Fabrics Inc.', email: 'contact@luxuryfabrics.com', phone: '111-222-3333' },
     { name: 'Global Textiles Co.', email: 'sales@globaltextiles.com', phone: '444-555-6666' },
