@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from './firebase';
-import { collection, getDocs, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { User } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
@@ -54,5 +54,16 @@ export async function updateUserRole(id: string, role: User['role']) {
   } catch (error) {
     console.error('Error updating user role: ', error);
     throw new Error('Could not update user role');
+  }
+}
+
+export async function deleteUser(id: string) {
+  try {
+    const userDoc = doc(db, 'users', id);
+    await deleteDoc(userDoc);
+    revalidatePath('/settings');
+  } catch (error) {
+    console.error('Error deleting user: ', error);
+    throw new Error('Could not delete user');
   }
 }

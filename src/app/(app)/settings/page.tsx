@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import type { Role, User } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -36,8 +36,9 @@ import { firebaseConfig } from '@/services/firebase';
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { getUsers, addUser, updateUserRole } from '@/services/user-service';
+import { getUsers, addUser, updateUserRole, deleteUser } from '@/services/user-service';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
 
@@ -54,11 +55,11 @@ export default function SettingsPage() {
       const fetchUsers = async () => {
           setIsLoading(true);
           const fetchedUsers = await getUsers();
-          setUsers(fetchedUsers);
+          setUsers(fetchedUsers.filter(u => u.id !== currentUser?.id));
           setIsLoading(false);
       }
       fetchUsers();
-  }, []);
+  }, [currentUser]);
 
   const isAdmin = currentUser?.role === 'admin';
 
@@ -127,6 +128,32 @@ export default function SettingsPage() {
             variant: 'destructive',
             title: 'Error',
             description: 'Failed to add user.',
+        });
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!isAdmin) {
+      toast({
+        variant: 'destructive',
+        title: 'Permission Denied',
+        description: 'Only admins can delete users.',
+      });
+      return;
+    }
+
+    try {
+        await deleteUser(userId);
+        setUsers(users.filter(user => user.id !== userId));
+        toast({
+            title: 'Success',
+            description: "User has been deleted.",
+        });
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Failed to delete user.',
         });
     }
   }
@@ -261,18 +288,40 @@ export default function SettingsPage() {
                                             <p className="text-sm text-muted-foreground">{user.email}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
                                     {isAdmin ? (
-                                        <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value as Role['name'])}>
-                                        <SelectTrigger className="w-[180px]">
-                                            <SelectValue placeholder="Select a role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {roles.map(role => (
-                                            <SelectItem key={role} value={role} className="capitalize">{role.replace('_', ' ')}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                        </Select>
+                                        <>
+                                            <Select value={user.role} onValueChange={(value) => handleRoleChange(user.id, value as Role['name'])}>
+                                                <SelectTrigger className="w-[180px]">
+                                                    <SelectValue placeholder="Select a role" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {roles.map(role => (
+                                                    <SelectItem key={role} value={role} className="capitalize">{role.replace('_', ' ')}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action cannot be undone. This will permanently delete the user account
+                                                            for {user.name}.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteUser(user.id)}>Delete</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </>
                                     ) : (
                                         <Badge variant="outline" className="capitalize">{user.role.replace('_', ' ')}</Badge>
                                     )}
