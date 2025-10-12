@@ -47,6 +47,9 @@ const fromFirestore = (doc: any): Customer => {
 
 export async function getCustomers(): Promise<Customer[]> {
   try {
+    if (process.env.NODE_ENV === 'development') {
+        return [];
+    }
     const snapshot = await getDocs(customersCollection);
     return snapshot.docs.map(fromFirestore);
   } catch (error) {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -32,6 +33,7 @@ import { getCustomers } from '@/services/customer-service';
 import { addOrder } from '@/services/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type CartItem = {
   productId: string;
@@ -65,8 +67,7 @@ export default function PosPage() {
   const [paymentMethod, setPaymentMethod] = useState<Order['payment_method']>('cash');
   const [amountPaid, setAmountPaid] = useState(0);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchInitialData = async () => {
       setIsLoading(true);
       const [fetchedProducts, fetchedCustomers] = await Promise.all([
         getProducts(),
@@ -76,7 +77,9 @@ export default function PosPage() {
       setCustomers(fetchedCustomers);
       setIsLoading(false);
     };
-    fetchData();
+
+  useEffect(() => {
+    fetchInitialData();
   }, []);
 
 
@@ -276,6 +279,11 @@ export default function PosPage() {
     }
   };
   
+  const onCustomerAdded = async () => {
+    const fetchedCustomers = await getCustomers();
+    setCustomers(fetchedCustomers);
+  }
+  
   const availableSizes = selectedProductForVariant ? [...new Set(selectedProductForVariant.variants.map(v => v.size).filter(Boolean))] as string[] : [];
   const availableColors = selectedProductForVariant ? [...new Set(selectedProductForVariant.variants.map(v => v.color).filter(Boolean))] as string[] : [];
 
@@ -382,7 +390,7 @@ export default function PosPage() {
                             </CardContent>
                         </Card>
                     )}
-                    <AddCustomerDialog />
+                    <AddCustomerDialog onCustomerAdded={onCustomerAdded} />
                 </div>
             )}
             

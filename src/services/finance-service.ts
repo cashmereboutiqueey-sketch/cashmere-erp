@@ -42,6 +42,9 @@ const fromFirestore = (doc: any): Expense => {
 
 export async function getExpenses(dateRange?: DateRange): Promise<Expense[]> {
   try {
+    if (process.env.NODE_ENV === 'development') {
+        return [];
+    }
     let q = query(expensesCollection);
     if (dateRange?.from && dateRange?.to) {
         q = query(
@@ -130,5 +133,3 @@ export async function deleteExpense(id: string) {
     throw new Error('Could not delete expense');
   }
 }
-
-    

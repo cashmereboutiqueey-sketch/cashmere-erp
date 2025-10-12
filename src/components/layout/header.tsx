@@ -28,11 +28,16 @@ import { useAuth } from '@/context/auth-context';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/hooks/use-translation';
+import { onSnapshot, query, collection, where } from 'firebase/firestore';
+import { db } from '@/services/firebase';
+import { markAllNotificationsAsRead } from '@/services/notification-service';
+import { useToast } from '@/hooks/use-toast';
 
 
 export function Header() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
   const [notificationCount, setNotificationCount] = useState(0);
   const [isClient, setIsClient] = useState(false);
   const [language, setLanguage] = useState('en');
@@ -45,6 +50,15 @@ export function Header() {
     setLanguage(savedLang);
     document.documentElement.dir = savedLang === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = savedLang;
+
+    const q = query(collection(db, 'notifications'), where('read', '==', false));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        setNotificationCount(snapshot.size);
+    }, (error) => {
+        console.error("Error fetching notifications:", error);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = () => {
@@ -62,6 +76,19 @@ export function Header() {
     window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang: newLang } }));
   };
 
+  const handleNotificationsClick = async () => {
+    if (notificationCount > 0) {
+        try {
+            await markAllNotificationsAsRead();
+            toast({ title: "Notifications cleared", description: "All notifications have been marked as read." });
+        } catch (error) {
+            toast({ variant: 'destructive', title: "Error", description: "Could not clear notifications." });
+        }
+    } else {
+        toast({ title: "No new notifications" });
+    }
+  }
+
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
       <SidebarTrigger className="shrink-0 md:hidden" />
@@ -73,7 +100,7 @@ export function Header() {
         <Globe className="h-5 w-5" />
         <span className="sr-only">Toggle Language</span>
       </Button>
-      <Button variant="ghost" size="icon" className="relative">
+      <Button variant="ghost" size="icon" className="relative" onClick={handleNotificationsClick}>
         <Bell className="h-5 w-5" />
         {isClient && notificationCount > 0 && (
           <Badge

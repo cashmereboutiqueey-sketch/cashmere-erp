@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ColumnDef } from '@tanstack/react-table';
@@ -10,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import { Button } from '../ui/button';
+import { Button, buttonVariants } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
@@ -24,6 +25,16 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -36,7 +47,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { addFabric } from '@/services/fabric-service';
+import { addFabric, updateFabric, deleteFabric } from '@/services/fabric-service';
 import { addExpense } from '@/services/finance-service';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
 import { useTranslation } from '@/hooks/use-translation';
@@ -44,8 +55,166 @@ import { useTranslation } from '@/hooks/use-translation';
 
 type FabricWithSupplier = Fabric & { supplier?: Supplier };
 
+interface FabricsTableProps {
+  data: FabricWithSupplier[];
+  suppliers: Supplier[];
+}
+
+const fabricSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, "Name is required"),
+  code: z.string().min(1, "Code is required"),
+  color: z.string().min(1, "Color is required"),
+  length_in_meters: z.preprocess(val => Number(val), z.number().min(0)),
+  price_per_meter: z.preprocess(val => Number(val), z.number().min(0)),
+  min_stock_level: z.preprocess(val => Number(val), z.number().min(0)),
+  supplier_id: z.string().min(1, "Supplier is required"),
+});
+
+type FabricFormData = z.infer<typeof fabricSchema>;
+
+function AddEditFabricDialog({ fabric, suppliers, onFinished }: { fabric: Fabric | null, suppliers: Supplier[], onFinished: () => void }) {
+  const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  const { t } = useTranslation();
+  const isEditMode = !!fabric;
+
+  const form = useForm<FabricFormData>({
+    resolver: zodResolver(fabricSchema),
+  });
+
+  const { handleSubmit, control, reset } = form;
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      if (isEditMode) {
+        reset(fabric);
+      } else {
+        reset({
+          name: '', code: '', color: '', length_in_meters: 0, price_per_meter: 0, min_stock_level: 0, supplier_id: ''
+        });
+      }
+    }
+  }
+
+  const onSubmit = async (data: FabricFormData) => {
+    try {
+      if (isEditMode && data.id) {
+        await updateFabric(data.id, data);
+        toast({ title: t('success'), description: "Fabric updated successfully." });
+      } else {
+        await addFabric(data);
+        toast({ title: t('success'), description: t('fabricAddedSuccess') });
+      }
+      setOpen(false);
+      onFinished();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: t('error'),
+        description: isEditMode ? "Failed to update fabric." : t('fabricAddedError'),
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        {isEditMode ? (
+          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>{t('edit')}</DropdownMenuItem>
+        ) : (
+          <Button size="sm" className="h-8">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            {t('addFabric')}
+          </Button>
+        )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{isEditMode ? "Edit Fabric" : t('addFabric')}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
+             <FormField control={control} name="name" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">{t('name')}</FormLabel>
+                  <FormControl><Input {...field} className="col-span-3" placeholder={t('fabricNamePlaceholder')} /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )} />
+            <FormField control={control} name="code" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">{t('code')}</FormLabel>
+                  <FormControl><Input {...field} className="col-span-3" placeholder={t('fabricCodePlaceholder')} /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )} />
+             <FormField control={control} name="color" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">{t('color')}</FormLabel>
+                  <FormControl><Input {...field} className="col-span-3" placeholder={t('fabricColorPlaceholder')} /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )} />
+            <FormField control={control} name="length_in_meters" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">{isEditMode ? "Stock (m)" : t('initialStock')}</FormLabel>
+                  <FormControl><Input {...field} type="number" className="col-span-3" placeholder="100" /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )} />
+             <FormField control={control} name="price_per_meter" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">{t('costPerMeter')}</FormLabel>
+                  <FormControl><Input {...field} type="number" className="col-span-3" placeholder="25.50" /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )} />
+            <FormField control={control} name="min_stock_level" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">{t('minStockMeters')}</FormLabel>
+                  <FormControl><Input {...field} type="number" className="col-span-3" placeholder="20" /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )} />
+            <FormField control={control} name="supplier_id" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">{t('supplier')}</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="col-span-3">
+                        <SelectValue placeholder={t('selectSupplier')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {suppliers.map((supplier) => (
+                        <SelectItem key={supplier.id} value={supplier.id}>
+                          {supplier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+              )} />
+            <DialogFooter>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? (isEditMode ? "Saving..." : t('adding')) : (isEditMode ? "Save Changes" : t('addFabric'))}
+                </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 export const getColumns = (
-    t: (key: TranslationKey, values?: Record<string, string | number>) => string
+    t: (key: TranslationKey, values?: Record<string, string | number>) => string,
+    onEdit: (fabric: Fabric) => void,
+    onDelete: (fabric: Fabric) => void
 ): ColumnDef<FabricWithSupplier>[] => [
   {
     id: 'select',
@@ -133,9 +302,8 @@ export const getColumns = (
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>{t('edit')}</DropdownMenuItem>
-              <DropdownMenuItem>{t('delete')}</DropdownMenuItem>
-              <DropdownMenuItem>{t('viewDetails')}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>{t('edit')}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDelete(row.original)} className="text-destructive">{t('delete')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -143,190 +311,6 @@ export const getColumns = (
     },
   },
 ];
-
-interface FabricsTableProps {
-  data: FabricWithSupplier[];
-  suppliers: Supplier[];
-}
-
-const fabricSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  code: z.string().min(1, "Code is required"),
-  color: z.string().min(1, "Color is required"),
-  length_in_meters: z.preprocess(val => Number(val), z.number().min(0)),
-  price_per_meter: z.preprocess(val => Number(val), z.number().min(0)),
-  min_stock_level: z.preprocess(val => Number(val), z.number().min(0)),
-  supplier_id: z.string().min(1, "Supplier is required"),
-});
-
-type FabricFormData = z.infer<typeof fabricSchema>;
-
-function AddFabricDialog({ suppliers }: { suppliers: Supplier[] }) {
-  const [open, setOpen] = useState(false);
-  const { toast } = useToast();
-  const { t } = useTranslation();
-  const form = useForm<FabricFormData>({
-    resolver: zodResolver(fabricSchema),
-    defaultValues: {
-      name: '',
-      code: '',
-      color: '',
-      length_in_meters: 0,
-      price_per_meter: 0,
-      min_stock_level: 0,
-      supplier_id: '',
-    },
-  });
-
-  const onSubmit = async (data: FabricFormData) => {
-    try {
-      await addFabric(data);
-      toast({
-        title: t('success'),
-        description: t('fabricAddedSuccess'),
-      });
-      setOpen(false);
-      form.reset();
-      window.location.reload(); 
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: t('error'),
-        description: t('fabricAddedError'),
-      });
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) form.reset();
-    }}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="h-8">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          {t('addFabric')}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{t('addFabric')}</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
-             <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">{t('name')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} className="col-span-3" placeholder={t('fabricNamePlaceholder')} />
-                  </FormControl>
-                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">{t('code')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} className="col-span-3" placeholder={t('fabricCodePlaceholder')} />
-                  </FormControl>
-                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="color"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">{t('color')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} className="col-span-3" placeholder={t('fabricColorPlaceholder')} />
-                  </FormControl>
-                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="length_in_meters"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">{t('initialStock')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="number" className="col-span-3" placeholder="100" />
-                  </FormControl>
-                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="price_per_meter"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">{t('costPerMeter')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="number" className="col-span-3" placeholder="25.50" />
-                  </FormControl>
-                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="min_stock_level"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">{t('minStockMeters')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="number" className="col-span-3" placeholder="20" />
-                  </FormControl>
-                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="supplier_id"
-              render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">{t('supplier')}</FormLabel>
-                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="col-span-3">
-                        <SelectValue placeholder={t('selectSupplier')} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? t('adding') : t('addFabric')}
-                </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 const purchaseSchema = z.object({
   supplier_id: z.string().min(1, "Supplier is required"),
@@ -465,8 +449,47 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
   );
 }
 
+function DeleteFabricDialog({ fabric, isOpen, onOpenChange, onFinished }: { fabric: Fabric | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, onFinished: () => void }) {
+    const { toast } = useToast();
+    const { t } = useTranslation();
+    const [isDeleting, setIsDeleting] = useState(false);
 
-function FabricsTableToolbar({ suppliers }: { suppliers: Supplier[] }) {
+    const handleDelete = async () => {
+        if (!fabric) return;
+        setIsDeleting(true);
+        try {
+            await deleteFabric(fabric.id);
+            toast({ title: t('success'), description: "Fabric deleted successfully." });
+            onOpenChange(false);
+            onFinished();
+        } catch (error) {
+            toast({ variant: "destructive", title: t('error'), description: "Failed to delete fabric." });
+        } finally {
+            setIsDeleting(false);
+        }
+    }
+
+    return (
+        <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to delete this fabric?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the fabric "{fabric?.name}".
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
+                        {isDeleting ? t('deleting') : t('delete')}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
+}
+
+function FabricsTableToolbar({ suppliers, onFinished }: { suppliers: Supplier[], onFinished: () => void }) {
   const { t } = useTranslation();
   return (
     <>
@@ -475,7 +498,7 @@ function FabricsTableToolbar({ suppliers }: { suppliers: Supplier[] }) {
         className="h-8 w-[150px] lg:w-[250px]"
       />
       <div className="ml-auto flex items-center gap-2">
-        <AddFabricDialog suppliers={suppliers} />
+        <AddEditFabricDialog fabric={null} suppliers={suppliers} onFinished={onFinished} />
         <RecordPurchaseDialog suppliers={suppliers} />
       </div>
     </>
@@ -484,8 +507,33 @@ function FabricsTableToolbar({ suppliers }: { suppliers: Supplier[] }) {
 
 export function FabricsTable({ data, suppliers }: FabricsTableProps) {
   const { t } = useTranslation();
-  const columns = getColumns(t);
+  const [selectedFabric, setSelectedFabric] = useState<Fabric | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+
+  // This is a dummy state to force re-render, a better solution would use a state manager
+  const [_, setForceReRender] = useState(0); 
+  const onFinished = () => setForceReRender(c => c + 1);
+
+  const handleEdit = (fabric: Fabric) => {
+    setSelectedFabric(fabric);
+    // The dialog is opened via the DropdownMenuItem which is part of AddEditFabricDialog
+  };
+  
+  const handleDelete = (fabric: Fabric) => {
+    setSelectedFabric(fabric);
+    setIsDeleteOpen(true);
+  };
+  
+  const columns = getColumns(t, handleEdit, handleDelete);
   return (
-    <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar suppliers={suppliers} />} />
+    <>
+    <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar suppliers={suppliers} onFinished={onFinished} />} />
+    <DeleteFabricDialog 
+        fabric={selectedFabric}
+        isOpen={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        onFinished={onFinished}
+    />
+    </>
   );
 }

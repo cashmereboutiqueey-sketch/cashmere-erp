@@ -33,6 +33,9 @@ const fromFirestore = (doc: any): Product => {
 
 export async function getProducts(): Promise<Product[]> {
   try {
+    if (process.env.NODE_ENV === 'development') {
+        return [];
+    }
     const snapshot = await getDocs(productsCollection);
     return snapshot.docs.map(fromFirestore);
   } catch (error) {
@@ -168,5 +171,3 @@ export async function deleteProduct(id: string) {
     throw new Error('Could not delete product');
   }
 }
-
-    

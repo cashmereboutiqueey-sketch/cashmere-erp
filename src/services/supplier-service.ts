@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from './firebase';
@@ -21,6 +22,9 @@ const fromFirestore = (doc: any): Supplier => {
 
 export async function getSuppliers(): Promise<Supplier[]> {
   try {
+    if (process.env.NODE_ENV === 'development') {
+        return [];
+    }
     const snapshot = await getDocs(suppliersCollection);
     return snapshot.docs.map(fromFirestore);
   } catch (error) {

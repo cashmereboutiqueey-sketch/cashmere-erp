@@ -1,3 +1,4 @@
+
 import { Order, Customer, User, Product, Fabric, ProductFabric, Supplier, Payable, ProductionOrder, Expense, OrderItem } from '@/lib/types';
 import { PlaceHolderImages } from './placeholder-images';
 

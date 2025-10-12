@@ -167,9 +167,9 @@ export type Return = {
 
 export type Notification = {
   id: string;
-  type: string;
+  type: 'new_order' | 'low_stock';
   message: string;
-  user_id: string;
+  reference_id: string; // e.g., order ID or product ID
   read: boolean;
   created_at: string;
 };

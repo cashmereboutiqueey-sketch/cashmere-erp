@@ -7,6 +7,7 @@ import { Order, Customer, Product, OrderItem, Fabric, ProductionOrder, ProductVa
 import { revalidatePath } from 'next/cache';
 import { getProductFabricsForProduct } from './product-fabric-service';
 import type { DateRange } from 'react-day-picker';
+import { createNotification } from './notification-service';
 
 // Simplified journal entry logger
 const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
@@ -16,6 +17,9 @@ const logJournalEntry = (description: string, entries: {account: string, debit?:
     });
     console.log('------------------------------------');
 }
+
+const ordersCollection = collection(db, 'orders');
+
 
 const fromFirestore = async (docSnap: any): Promise<Order> => {
   const data = docSnap.data();
@@ -77,7 +81,6 @@ export async function getOrders(dateRange?: DateRange): Promise<Order[]> {
 
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
-        console.log('No orders found for the specified criteria.');
         return [];
     }
     return Promise.all(snapshot.docs.map(docSnap => fromFirestore(docSnap)));
@@ -212,6 +215,13 @@ export async function addOrder(orderData: Omit<Order, 'id' | 'created_at' | 'cus
 
       return newOrderRef.id;
     });
+
+    await createNotification({
+      type: 'new_order',
+      message: `New order #${newOrderId.slice(0, 5)} placed for $${orderData.total_amount.toFixed(2)}.`,
+      reference_id: newOrderId,
+    });
+
 
     revalidatePath('/orders');
     revalidatePath('/pos');
@@ -356,6 +366,4 @@ export async function deleteOrder(id: string) {
         throw new Error("Could not delete order");
     }
 }
-    
-
     

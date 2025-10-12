@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -32,8 +33,11 @@ const customerSchema = z.object({
 
 type CustomerFormData = z.infer<typeof customerSchema>;
 
+interface AddCustomerDialogProps {
+  onCustomerAdded: () => void;
+}
 
-export function AddCustomerDialog() {
+export function AddCustomerDialog({ onCustomerAdded }: AddCustomerDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -56,10 +60,7 @@ export function AddCustomerDialog() {
       });
       setOpen(false);
       form.reset();
-      // You might want to trigger a re-fetch of customers on the parent page
-      // For simplicity, we can use window.location.reload()
-      // A more advanced solution would use a state management library or context
-       window.location.reload();
+      onCustomerAdded();
     } catch (error) {
       toast({
         variant: 'destructive',

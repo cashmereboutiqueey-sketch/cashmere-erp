@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db } from './firebase';
@@ -23,6 +24,9 @@ const fromFirestore = (doc: any): Fabric => {
 
 export async function getFabrics(): Promise<Fabric[]> {
   try {
+    if (process.env.NODE_ENV === 'development') {
+        return [];
+    }
     const snapshot = await getDocs(fabricsCollection);
     return snapshot.docs.map(fromFirestore);
   } catch (error) {
