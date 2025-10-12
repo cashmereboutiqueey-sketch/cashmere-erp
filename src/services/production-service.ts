@@ -14,6 +14,14 @@ const productFabricsCollection = collection(db, 'product_fabrics');
 
 const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
   const data = docSnap.data();
+
+  const convertTimestampToString = (timestamp: any): string => {
+    if (!timestamp) return new Date().toISOString();
+    if (typeof timestamp.toDate === 'function') return timestamp.toDate().toISOString();
+    if (typeof timestamp === 'string') return timestamp;
+    if (timestamp.seconds !== undefined && timestamp.nanoseconds !== undefined) return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000).toISOString();
+    return new Date(timestamp).toISOString();
+  };
   
   let productData: Product | undefined = undefined;
   let variantData: ProductVariant | undefined = undefined;
@@ -26,7 +34,7 @@ const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
       const p = { 
         id: productDoc.id, 
         ...pData,
-        created_at: productTimestamp.toDate().toISOString()
+        created_at: convertTimestampToString(productTimestamp)
       } as Product;
       productData = p;
       if (data.variant_id) {
@@ -45,7 +53,7 @@ const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
     sales_order_id: data.sales_order_id,
     required_quantity: data.required_quantity,
     status: data.status,
-    created_at: productionOrderTimestamp.toDate().toISOString(),
+    created_at: convertTimestampToString(productionOrderTimestamp),
     worker_id: data.worker_id,
     worker_name: data.worker_name,
   };
@@ -185,3 +193,5 @@ export async function deleteProductionOrder(id: string) {
     throw new Error('Could not delete production order');
   }
 }
+
+    

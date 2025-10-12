@@ -21,13 +21,22 @@ const logJournalEntry = (description: string, entries: {account: string, debit?:
 const fromFirestore = (doc: any): Expense => {
   const data = doc.data();
   const timestamp = data.created_at || data.createdAt;
+
+  const convertTimestampToString = (ts: any): string => {
+    if (!ts) return new Date().toISOString();
+    if (typeof ts.toDate === 'function') return ts.toDate().toISOString();
+    if (typeof ts === 'string') return ts;
+    if (ts.seconds !== undefined && ts.nanoseconds !== undefined) return new Date(ts.seconds * 1000 + ts.nanoseconds / 1000000).toISOString();
+    return new Date(ts).toISOString();
+  };
+
   return {
     id: doc.id,
     category: data.category,
     amount: data.amount,
     supplier_id: data.supplier_id,
     note: data.note,
-    created_at: timestamp.toDate().toISOString(),
+    created_at: convertTimestampToString(timestamp),
   };
 };
 
@@ -121,3 +130,5 @@ export async function deleteExpense(id: string) {
     throw new Error('Could not delete expense');
   }
 }
+
+    

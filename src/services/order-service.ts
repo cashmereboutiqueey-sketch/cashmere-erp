@@ -8,8 +8,6 @@ import { revalidatePath } from 'next/cache';
 import { getProductFabricsForProduct } from './product-fabric-service';
 import type { DateRange } from 'react-day-picker';
 
-const ordersCollection = collection(db, 'orders');
-
 // Simplified journal entry logger
 const logJournalEntry = (description: string, entries: {account: string, debit?: number, credit?: number}[]) => {
     console.log(`-- JOURNAL ENTRY: ${description} --`);
@@ -21,6 +19,14 @@ const logJournalEntry = (description: string, entries: {account: string, debit?:
 
 const fromFirestore = async (docSnap: any): Promise<Order> => {
   const data = docSnap.data();
+
+  const convertTimestampToString = (timestamp: any): string => {
+    if (!timestamp) return new Date().toISOString();
+    if (typeof timestamp.toDate === 'function') return timestamp.toDate().toISOString();
+    if (typeof timestamp === 'string') return timestamp;
+    if (timestamp.seconds !== undefined && timestamp.nanoseconds !== undefined) return new Date(timestamp.seconds * 1000 + timestamp.nanoseconds / 1000000).toISOString();
+    return new Date(timestamp).toISOString();
+  };
   
   let customerData: Customer | undefined = undefined;
   if (data.customer_id) {
@@ -31,7 +37,7 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
       customerData = { 
         id: customerDocSnap.id, 
         ...custData, 
-        created_at: customerTimestamp.toDate().toISOString() 
+        created_at: convertTimestampToString(customerTimestamp) 
       } as Customer;
     }
   }
@@ -47,7 +53,7 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
     payment_method: data.payment_method,
     amount_paid: data.amount_paid,
     total_amount: data.total_amount,
-    created_at: orderTimestamp.toDate().toISOString(),
+    created_at: convertTimestampToString(orderTimestamp),
     items: data.items,
     fulfillment_type: data.fulfillment_type,
     shipping_status: data.shipping_status,
@@ -350,4 +356,6 @@ export async function deleteOrder(id: string) {
         throw new Error("Could not delete order");
     }
 }
+    
+
     
