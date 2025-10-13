@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,17 +12,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { getProductionOrders } from '@/services/production-service';
-import { ProductionOrder } from '@/lib/types';
+import { ProductionOrder, Worker } from '@/lib/types';
 import { Skeleton } from '../ui/skeleton';
 import { useTranslation } from '@/hooks/use-translation';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { getUsers } from '@/services/user-service';
+import { getWorkers } from '@/services/worker-service';
 
 type WorkerStats = {
     workerId: string;
     workerName: string;
     piecesCompleted: number;
-    avatarUrl?: string;
 }
 
 export function WorkerReport() {
@@ -32,14 +32,12 @@ export function WorkerReport() {
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
-      const [productionOrders, users] = await Promise.all([
+      const [productionOrders, workers] = await Promise.all([
         getProductionOrders(),
-        getUsers(),
+        getWorkers(),
       ]);
 
-      const productionWorkers = users.filter(u => u.role === 'production' || u.role === 'admin');
-
-      const stats = productionWorkers.map(worker => {
+      const stats = workers.map(worker => {
           const completedOrders = productionOrders.filter(
               order => order.status === 'done' && order.worker_id === worker.id
           );
@@ -50,7 +48,6 @@ export function WorkerReport() {
           return {
               workerId: worker.id,
               workerName: worker.name,
-              avatarUrl: worker.avatarUrl,
               piecesCompleted,
           };
       });
@@ -85,7 +82,6 @@ export function WorkerReport() {
                 <TableCell>
                      <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9">
-                        <AvatarImage src={stat.avatarUrl} alt={stat.workerName} />
                         <AvatarFallback>{stat.workerName.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <span className="font-medium">{stat.workerName}</span>

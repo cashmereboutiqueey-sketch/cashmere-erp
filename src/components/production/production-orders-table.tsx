@@ -3,7 +3,7 @@
 'use client';
 
 import { ColumnDef, ColumnFiltersState } from '@tanstack/react-table';
-import { ProductionOrder, Product, Order, OrderItem, ProductVariant, User } from '@/lib/types';
+import { ProductionOrder, Product, Order, OrderItem, ProductVariant, User, Worker } from '@/lib/types';
 import { DataTable } from '../shared/data-table';
 import { DataTableColumnHeader } from '../shared/data-table-column-header';
 import { Badge } from '../ui/badge';
@@ -58,7 +58,7 @@ import { useTranslation } from '@/hooks/use-translation';
 import type { TranslationKey } from '@/lib/types';
 import { DataTableFacetedFilter } from '../shared/data-table-faceted-filter';
 import { ProductionOrderDetailsDialog } from './production-order-details-dialog';
-import { getUsers, addUser } from '@/services/user-service';
+import { getWorkers, addWorker } from '@/services/worker-service';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -214,9 +214,10 @@ interface ProductionOrdersTableProps {
   data: ProductionOrder[];
   products: Product[];
   salesOrders: Order[];
+  onDataChange: () => void;
 }
 
-function AddProductionOrderDialog({ products, salesOrders, workers, onOrderAdded }: { products: Product[], salesOrders: Order[], workers: User[], onOrderAdded: () => void }) {
+function AddProductionOrderDialog({ products, salesOrders, workers, onOrderAdded }: { products: Product[], salesOrders: Order[], workers: Worker[], onOrderAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -418,7 +419,7 @@ function AddProductionOrderDialog({ products, salesOrders, workers, onOrderAdded
   );
 }
 
-function AssignWorkerDialog({ order, isOpen, onOpenChange, workers, onWorkerAssigned }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, workers: User[], onWorkerAssigned: () => void }) {
+function AssignWorkerDialog({ order, isOpen, onOpenChange, workers, onWorkerAssigned }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, workers: Worker[], onWorkerAssigned: () => void }) {
     const { t } = useTranslation();
     const { toast } = useToast();
     const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
@@ -486,24 +487,23 @@ function AssignWorkerDialog({ order, isOpen, onOpenChange, workers, onWorkerAssi
 
 const addWorkerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
-  email: z.string().email("Invalid email address."),
 });
 type AddWorkerForm = z.infer<typeof addWorkerSchema>;
 
-function ManageWorkersDialog({ isOpen, onOpenChange, workers, onWorkersUpdate }: { isOpen: boolean, onOpenChange: (open: boolean) => void, workers: User[], onWorkersUpdate: () => void }) {
+function ManageWorkersDialog({ isOpen, onOpenChange, workers, onWorkersUpdate }: { isOpen: boolean, onOpenChange: (open: boolean) => void, workers: Worker[], onWorkersUpdate: () => void }) {
     const { t } = useTranslation();
     const { toast } = useToast();
     const [isAdding, setIsAdding] = useState(false);
 
     const form = useForm<AddWorkerForm>({
         resolver: zodResolver(addWorkerSchema),
-        defaultValues: { name: "", email: "" },
+        defaultValues: { name: "" },
     });
 
     const handleAddWorker = async (data: AddWorkerForm) => {
         setIsAdding(true);
         try {
-            await addUser({ ...data, role: 'production', avatarUrl: `https://picsum.photos/seed/${data.name}/100/100` });
+            await addWorker({ name: data.name });
             toast({ title: t('success'), description: "Worker added successfully." });
             form.reset();
             onWorkersUpdate();
@@ -532,7 +532,6 @@ function ManageWorkersDialog({ isOpen, onOpenChange, workers, onWorkersUpdate }:
                                         </Avatar>
                                         <div>
                                             <p className="font-medium text-sm">{worker.name}</p>
-                                            <p className="text-xs text-muted-foreground">{worker.email}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -555,19 +554,6 @@ function ManageWorkersDialog({ isOpen, onOpenChange, workers, onWorkersUpdate }:
                                     </FormItem>
                                 )}
                                 />
-                                <FormField
-                                control={form.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>Email</FormLabel>
-                                    <FormControl>
-                                        <Input type="email" placeholder="worker@example.com" {...field} />
-                                    </FormControl>
-                                     <FormMessage />
-                                    </FormItem>
-                                )}
-                                />
                             <Button type="submit" disabled={isAdding}>
                                 {isAdding ? 'Adding...' : 'Add Worker'}
                             </Button>
@@ -579,7 +565,7 @@ function ManageWorkersDialog({ isOpen, onOpenChange, workers, onWorkersUpdate }:
     );
 }
 
-function ProductionOrdersToolbar({ table, products, salesOrders, workers, onDataChange }: { table: any, products: Product[], salesOrders: Order[], workers: User[], onDataChange: () => void }) {
+function ProductionOrdersToolbar({ table, products, salesOrders, workers, onDataChange }: { table: any, products: Product[], salesOrders: Order[], workers: Worker[], onDataChange: () => void }) {
   const { t } = useTranslation();
   const isFiltered = table.getState().columnFilters.length > 0;
   const [isManageWorkersOpen, setIsManageWorkersOpen] = useState(false);
@@ -681,7 +667,7 @@ function DeleteProductionOrderDialog({ order, isOpen, onOpenChange, onOrderDelet
 export function ProductionOrdersTable({ data, products, salesOrders, onDataChange }: { data: ProductionOrder[], products: Product[], salesOrders: Order[], onDataChange: () => void }) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [workers, setWorkers] = useState<User[]>([]);
+  const [workers, setWorkers] = useState<Worker[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -689,13 +675,13 @@ export function ProductionOrdersTable({ data, products, salesOrders, onDataChang
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
   const fetchWorkers = async () => {
-      const allUsers = await getUsers();
-      setWorkers(allUsers.filter(u => u.role === 'production' || u.role === 'admin'));
+      const allWorkers = await getWorkers();
+      setWorkers(allWorkers);
   };
 
   useEffect(() => {
     fetchWorkers();
-  }, []);
+  }, [onDataChange]);
   
   const handleStatusChange = async (orderId: string, status: ProductionOrder['status']) => {
     try {
@@ -736,7 +722,7 @@ export function ProductionOrdersTable({ data, products, salesOrders, onDataChang
       <DataTable 
         columns={columns} 
         data={data} 
-        toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} salesOrders={salesOrders} workers={workers} onDataChange={() => { onDataChange(); fetchWorkers(); }} />} 
+        toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} salesOrders={salesOrders} workers={workers} onDataChange={onDataChange} />} 
         columnFilters={columnFilters}
         onColumnFiltersChange={setColumnFilters}
       />

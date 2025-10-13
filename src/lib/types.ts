@@ -99,6 +99,11 @@ export type Order = {
   carrier_id?: 'a' | 'b';
 };
 
+export type Worker = {
+  id: string;
+  name: string;
+};
+
 export type ProductionOrder = {
   id: string;
   product_id: string;
