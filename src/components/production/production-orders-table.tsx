@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
 } from '../ui/dropdown-menu';
 import { buttonVariants, Button } from '../ui/button';
-import { MoreHorizontal, PlusCircle, X } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, X, Users as UsersIcon } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import {
@@ -29,6 +29,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -57,7 +58,13 @@ import { useTranslation } from '@/hooks/use-translation';
 import type { TranslationKey } from '@/lib/types';
 import { DataTableFacetedFilter } from '../shared/data-table-faceted-filter';
 import { ProductionOrderDetailsDialog } from './production-order-details-dialog';
-import { getUsers } from '@/services/user-service';
+import { getUsers, addUser } from '@/services/user-service';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
+import { ScrollArea } from '../ui/scroll-area';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 
 
 const findImage = (id: string) =>
@@ -209,7 +216,7 @@ interface ProductionOrdersTableProps {
   salesOrders: Order[];
 }
 
-function AddProductionOrderDialog({ products, salesOrders, workers }: { products: Product[], salesOrders: Order[], workers: User[] }) {
+function AddProductionOrderDialog({ products, salesOrders, workers, onOrderAdded }: { products: Product[], salesOrders: Order[], workers: User[], onOrderAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -293,7 +300,7 @@ function AddProductionOrderDialog({ products, salesOrders, workers }: { products
       await addProductionOrder(productionOrderData);
       toast({ title: t('success'), description: t('productionOrderCreated') });
       setOpen(false);
-      window.location.reload();
+      onOrderAdded();
     } catch (error) {
       toast({ variant: 'destructive', title: t('error'), description: t('failedToCreateProductionOrder') });
     }
@@ -411,7 +418,7 @@ function AddProductionOrderDialog({ products, salesOrders, workers }: { products
   );
 }
 
-function AssignWorkerDialog({ order, isOpen, onOpenChange, workers }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, workers: User[] }) {
+function AssignWorkerDialog({ order, isOpen, onOpenChange, workers, onWorkerAssigned }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, workers: User[], onWorkerAssigned: () => void }) {
     const { t } = useTranslation();
     const { toast } = useToast();
     const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
@@ -438,7 +445,7 @@ function AssignWorkerDialog({ order, isOpen, onOpenChange, workers }: { order: P
             await assignWorkerToProductionOrder(order.id, worker.id, worker.name);
             toast({ title: 'Success', description: `Order assigned to ${worker.name}.` });
             onOpenChange(false);
-            window.location.reload();
+            onWorkerAssigned();
         } catch (error) {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to assign worker.' });
         }
@@ -477,9 +484,105 @@ function AssignWorkerDialog({ order, isOpen, onOpenChange, workers }: { order: P
     )
 }
 
-function ProductionOrdersToolbar({ table, products, salesOrders, workers }: { table: any, products: Product[], salesOrders: Order[], workers: User[] }) {
+const addWorkerSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  email: z.string().email("Invalid email address."),
+});
+type AddWorkerForm = z.infer<typeof addWorkerSchema>;
+
+function ManageWorkersDialog({ isOpen, onOpenChange, workers, onWorkersUpdate }: { isOpen: boolean, onOpenChange: (open: boolean) => void, workers: User[], onWorkersUpdate: () => void }) {
+    const { t } = useTranslation();
+    const { toast } = useToast();
+    const [isAdding, setIsAdding] = useState(false);
+
+    const form = useForm<AddWorkerForm>({
+        resolver: zodResolver(addWorkerSchema),
+        defaultValues: { name: "", email: "" },
+    });
+
+    const handleAddWorker = async (data: AddWorkerForm) => {
+        setIsAdding(true);
+        try {
+            await addUser({ ...data, role: 'production', avatarUrl: `https://picsum.photos/seed/${data.name}/100/100` });
+            toast({ title: t('success'), description: "Worker added successfully." });
+            form.reset();
+            onWorkersUpdate();
+        } catch (error) {
+            toast({ variant: 'destructive', title: t('error'), description: "Failed to add worker." });
+        } finally {
+            setIsAdding(false);
+        }
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Manage Workers</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                    <div>
+                        <h3 className="text-sm font-medium mb-2">Current Workers</h3>
+                        <ScrollArea className="h-48">
+                            <div className="space-y-2">
+                                {workers.map(worker => (
+                                    <div key={worker.id} className="flex items-center gap-3 rounded-md border p-2">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarFallback>{worker.name.charAt(0)}</AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="font-medium text-sm">{worker.name}</p>
+                                            <p className="text-xs text-muted-foreground">{worker.email}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </div>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(handleAddWorker)} className="space-y-4 rounded-md border p-4">
+                            <h3 className="text-sm font-medium">Add New Worker</h3>
+                             <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Name</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Worker's full name" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                                <FormField
+                                control={form.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Email</FormLabel>
+                                    <FormControl>
+                                        <Input type="email" placeholder="worker@example.com" {...field} />
+                                    </FormControl>
+                                     <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            <Button type="submit" disabled={isAdding}>
+                                {isAdding ? 'Adding...' : 'Add Worker'}
+                            </Button>
+                        </form>
+                    </Form>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function ProductionOrdersToolbar({ table, products, salesOrders, workers, onDataChange }: { table: any, products: Product[], salesOrders: Order[], workers: User[], onDataChange: () => void }) {
   const { t } = useTranslation();
   const isFiltered = table.getState().columnFilters.length > 0;
+  const [isManageWorkersOpen, setIsManageWorkersOpen] = useState(false);
 
   const productOptions = products.map(p => ({
     label: p.name,
@@ -490,6 +593,7 @@ function ProductionOrdersToolbar({ table, products, salesOrders, workers }: { ta
   workerOptions.push({label: 'Unassigned', value: 'unassigned'});
   
   return (
+    <>
     <div className="flex items-center justify-between">
       <div className="flex flex-1 items-center space-x-2">
          <DataTableFacetedFilter
@@ -519,13 +623,19 @@ function ProductionOrdersToolbar({ table, products, salesOrders, workers }: { ta
         )}
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <AddProductionOrderDialog products={products} salesOrders={salesOrders} workers={workers} />
+        <Button size="sm" variant="outline" className="h-8" onClick={() => setIsManageWorkersOpen(true)}>
+            <UsersIcon className="mr-2 h-4 w-4" />
+            Manage Workers
+        </Button>
+        <AddProductionOrderDialog products={products} salesOrders={salesOrders} workers={workers} onOrderAdded={onDataChange} />
       </div>
     </div>
+    <ManageWorkersDialog isOpen={isManageWorkersOpen} onOpenChange={setIsManageWorkersOpen} workers={workers} onWorkersUpdate={onDataChange} />
+    </>
   );
 }
 
-function DeleteProductionOrderDialog({ order, isOpen, onOpenChange }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+function DeleteProductionOrderDialog({ order, isOpen, onOpenChange, onOrderDeleted }: { order: ProductionOrder | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, onOrderDeleted: () => void }) {
     const { toast } = useToast();
     const { t } = useTranslation();
     const [isDeleting, setIsDeleting] = useState(false);
@@ -537,7 +647,7 @@ function DeleteProductionOrderDialog({ order, isOpen, onOpenChange }: { order: P
             await deleteProductionOrder(order.id);
             toast({ title: t('success'), description: t('productionOrderDeleted') });
             onOpenChange(false);
-            window.location.reload();
+            onOrderDeleted();
         } catch (error) {
             toast({ variant: "destructive", title: t('error'), description: t('failedToDeleteProductionOrder') });
         } finally {
@@ -568,7 +678,7 @@ function DeleteProductionOrderDialog({ order, isOpen, onOpenChange }: { order: P
     );
 }
 
-export function ProductionOrdersTable({ data, products, salesOrders }: ProductionOrdersTableProps) {
+export function ProductionOrdersTable({ data, products, salesOrders, onDataChange }: { data: ProductionOrder[], products: Product[], salesOrders: Order[], onDataChange: () => void }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [workers, setWorkers] = useState<User[]>([]);
@@ -578,11 +688,12 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
   const [isAssignWorkerOpen, setIsAssignWorkerOpen] = useState(false);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
-  useEffect(() => {
-    const fetchWorkers = async () => {
+  const fetchWorkers = async () => {
       const allUsers = await getUsers();
       setWorkers(allUsers.filter(u => u.role === 'production' || u.role === 'admin'));
-    };
+  };
+
+  useEffect(() => {
     fetchWorkers();
   }, []);
   
@@ -593,7 +704,7 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
         title: t('success'),
         description: t('productionOrderStatusUpdated', { status: t(status as TranslationKey) || status.replace('_', ' ') }),
       });
-      window.location.reload();
+      onDataChange();
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -625,7 +736,7 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
       <DataTable 
         columns={columns} 
         data={data} 
-        toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} salesOrders={salesOrders} workers={workers} />} 
+        toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} salesOrders={salesOrders} workers={workers} onDataChange={() => { onDataChange(); fetchWorkers(); }} />} 
         columnFilters={columnFilters}
         onColumnFiltersChange={setColumnFilters}
       />
@@ -639,12 +750,14 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
           order={selectedOrder}
           isOpen={isDeleteOpen}
           onOpenChange={setIsDeleteOpen}
+          onOrderDeleted={onDataChange}
       />
        <AssignWorkerDialog
           order={selectedOrder}
           isOpen={isAssignWorkerOpen}
           onOpenChange={setIsAssignWorkerOpen}
           workers={workers}
+          onWorkerAssigned={onDataChange}
       />
     </>
   );

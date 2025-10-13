@@ -6,7 +6,7 @@ import { getProductionOrders } from '@/services/production-service';
 import { getProducts } from '@/services/product-service';
 import { getOrders } from '@/services/order-service';
 import { ProductionOrder, Product, Order } from '@/lib/types';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from '@/hooks/use-translation';
 
@@ -17,21 +17,22 @@ export default function ProductionPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      const [fetchedOrders, fetchedProducts, fetchedSalesOrders] = await Promise.all([
-        getProductionOrders(),
-        getProducts(),
-        getOrders(),
-      ]);
-      setProductionOrders(fetchedOrders);
-      setProducts(fetchedProducts);
-      setOrders(fetchedSalesOrders);
-      setIsLoading(false);
-    };
-    fetchData();
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    const [fetchedOrders, fetchedProducts, fetchedSalesOrders] = await Promise.all([
+      getProductionOrders(),
+      getProducts(),
+      getOrders(),
+    ]);
+    setProductionOrders(fetchedOrders);
+    setProducts(fetchedProducts);
+    setOrders(fetchedSalesOrders);
+    setIsLoading(false);
   }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   return (
     <>
@@ -41,7 +42,13 @@ export default function ProductionPage() {
       <div className="p-4 lg:p-6">
         {isLoading ? (
             <div className="space-y-4">
-                <Skeleton className="h-8 w-[250px]" />
+                <div className="flex items-center justify-between">
+                    <Skeleton className="h-8 w-1/3" />
+                     <div className="flex gap-2">
+                        <Skeleton className="h-8 w-32" />
+                        <Skeleton className="h-8 w-40" />
+                    </div>
+                </div>
                 <div className="rounded-md border">
                     <div className="space-y-2 p-4">
                         {[...Array(10)].map((_, i) => (
@@ -55,6 +62,7 @@ export default function ProductionPage() {
                 data={productionOrders} 
                 products={products}
                 salesOrders={orders}
+                onDataChange={fetchData}
             />
         )}
       </div>
