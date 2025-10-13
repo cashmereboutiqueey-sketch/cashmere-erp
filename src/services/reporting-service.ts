@@ -1,10 +1,12 @@
 
+
 'use server';
 
 import { getOrders } from './order-service';
 import { getExpenses } from './finance-service';
 import { getProducts } from './product-service';
 import { getFabrics } from './fabric-service';
+import { getProductionOrders } from './production-service';
 import type { DateRange } from 'react-day-picker';
 import { capitalize } from 'string-ts';
 
@@ -137,3 +139,5 @@ export async function getBalanceSheetData(): Promise<BalanceSheetData> {
         totalLiabilitiesAndEquity,
     };
 }
+
+export { getProductionOrders };

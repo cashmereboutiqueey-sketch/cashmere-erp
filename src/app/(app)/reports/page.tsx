@@ -20,6 +20,7 @@ import { InventoryReport } from '@/components/reports/inventory-report';
 import { ExpensesReport } from '@/components/reports/expenses-report';
 import { IncomeStatement } from '@/components/reports/income-statement';
 import { BalanceSheet } from '@/components/reports/balance-sheet';
+import { WorkerReport } from '@/components/reports/worker-report';
 import { useTranslation } from '@/hooks/use-translation';
 
 export default function ReportsPage() {
@@ -31,12 +32,13 @@ export default function ReportsPage() {
       </PageHeader>
       <div className="p-4 lg:p-6">
         <Tabs defaultValue="sales">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="sales">{t('sales')}</TabsTrigger>
             <TabsTrigger value="inventory">{t('inventory')}</TabsTrigger>
             <TabsTrigger value="expenses">{t('expenses')}</TabsTrigger>
             <TabsTrigger value="income">{t('incomeStatement')}</TabsTrigger>
             <TabsTrigger value="balance">{t('balanceSheet')}</TabsTrigger>
+            <TabsTrigger value="worker">{t('workerReport')}</TabsTrigger>
           </TabsList>
           <TabsContent value="sales" className="mt-4">
             <Card>
@@ -103,10 +105,21 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
           </TabsContent>
+           <TabsContent value="worker" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('workerReport')}</CardTitle>
+                <CardDescription>
+                  {t('workerReportDesc')}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <WorkerReport />
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </>
   );
 }
-
-    

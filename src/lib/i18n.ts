@@ -82,6 +82,7 @@ export const translations = {
     assignWorker: 'Assign Worker',
     selectWorker: 'Select a worker',
     assign: 'Assign',
+    unassigned: 'Unassigned',
     // Finance Page
     financeDashboard: 'Finance Dashboard',
     addExpense: 'Add Expense',
@@ -197,6 +198,10 @@ export const translations = {
     accountsReceivable: 'Accounts Receivable',
     retainedEarnings: 'Retained Earnings',
     accountsPayable: 'Accounts Payable',
+    workerReport: 'Worker Report',
+    workerReportDesc: 'Track productivity of your production workers.',
+    piecesCompleted: 'Pieces Completed',
+    noWorkerData: 'No completed work data found for any worker.',
     // Fabrics Page
     fabric: 'Fabric',
     color: 'Color',
@@ -484,6 +489,7 @@ export const translations = {
     assignWorker: 'تعيين عامل',
     selectWorker: 'اختر عاملًا',
     assign: 'تعيين',
+    unassigned: 'غير معين',
     // Finance Page
     financeDashboard: 'لوحة التحكم المالية',
     addExpense: 'إضافة مصروف',
@@ -599,6 +605,10 @@ export const translations = {
     accountsReceivable: 'الذمم المدينة',
     retainedEarnings: 'الأرباح المحتجزة',
     accountsPayable: 'الذمم الدائنة',
+    workerReport: 'تقرير العامل',
+    workerReportDesc: 'تتبع إنتاجية عمال الإنتاج.',
+    piecesCompleted: 'القطع المنجزة',
+    noWorkerData: 'لم يتم العثور على بيانات عمل مكتملة لأي عامل.',
     // Fabrics Page
     fabric: 'القماش',
     color: 'اللون',

@@ -123,13 +123,15 @@ export const getColumns = (
     {
     accessorKey: 'worker_name',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('worker' as any)} />
+      <DataTableColumnHeader column={column} title={t('worker')} />
     ),
     cell: ({ row }) => (
-      <div>{row.original.worker_name || <span className='text-xs text-muted-foreground'>Unassigned</span>}</div>
+      <div>{row.original.worker_name || <span className='text-xs text-muted-foreground'>{t('unassigned')}</span>}</div>
     ),
     filterFn: (row, id, value) => {
-      return value.includes(row.getValue(id));
+      const workerName = row.original.worker_name;
+      if (!workerName) return value.includes('unassigned');
+      return value.includes(workerName);
     },
   },
   {
@@ -176,7 +178,7 @@ export const getColumns = (
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => onViewDetails(order)}>{t('viewDetails')}</DropdownMenuItem>
-               <DropdownMenuItem onClick={() => onAssignWorker(order)}>{t('assignWorker' as any)}</DropdownMenuItem>
+               <DropdownMenuItem onClick={() => onAssignWorker(order)}>{t('assignWorker')}</DropdownMenuItem>
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <span>{t('updateStatus')}</span>
@@ -385,11 +387,11 @@ function AddProductionOrderDialog({ products, salesOrders, workers }: { products
           </div>
            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="worker" className="text-right">
-                {t('worker' as any)}
+                {t('worker')}
               </Label>
               <Select onValueChange={setSelectedWorkerId}>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder={t('assignWorker' as any)} />
+                  <SelectValue placeholder={t('assignWorker')} />
                 </SelectTrigger>
                 <SelectContent>
                   {workers.map((worker) => (
@@ -413,6 +415,12 @@ function AssignWorkerDialog({ order, isOpen, onOpenChange, workers }: { order: P
     const { t } = useTranslation();
     const { toast } = useToast();
     const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if(order) {
+            setSelectedWorkerId(order.worker_id || null);
+        }
+    }, [order]);
 
     const handleSubmit = async () => {
         if (!order || !selectedWorkerId) {
@@ -440,16 +448,16 @@ function AssignWorkerDialog({ order, isOpen, onOpenChange, workers }: { order: P
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>{t('assignWorker' as any)}</DialogTitle>
+                    <DialogTitle>{t('assignWorker')}</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="worker" className="text-right">
-                            {t('worker' as any)}
+                            {t('worker')}
                         </Label>
                         <Select onValueChange={setSelectedWorkerId} defaultValue={order?.worker_id}>
                             <SelectTrigger className="col-span-3">
-                                <SelectValue placeholder={t('selectWorker' as any)} />
+                                <SelectValue placeholder={t('selectWorker')} />
                             </SelectTrigger>
                             <SelectContent>
                                 {workers.map((worker) => (
@@ -462,14 +470,14 @@ function AssignWorkerDialog({ order, isOpen, onOpenChange, workers }: { order: P
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleSubmit}>{t('assign' as any)}</Button>
+                    <Button onClick={handleSubmit}>{t('assign')}</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     )
 }
 
-function ProductionOrdersToolbar({ table, products, workerOptions }: { table: any, products: Product[], workerOptions: {label: string, value: string}[] }) {
+function ProductionOrdersToolbar({ table, products, salesOrders, workers }: { table: any, products: Product[], salesOrders: Order[], workers: User[] }) {
   const { t } = useTranslation();
   const isFiltered = table.getState().columnFilters.length > 0;
 
@@ -477,6 +485,9 @@ function ProductionOrdersToolbar({ table, products, workerOptions }: { table: an
     label: p.name,
     value: p.name,
   }));
+  
+  const workerOptions = workers.map(u => ({ label: u.name, value: u.name }));
+  workerOptions.push({label: 'Unassigned', value: 'unassigned'});
   
   return (
     <div className="flex items-center justify-between">
@@ -493,7 +504,7 @@ function ProductionOrdersToolbar({ table, products, workerOptions }: { table: an
         />
          <DataTableFacetedFilter
           column={table.getColumn('worker_name')}
-          title={t('worker' as any)}
+          title={t('worker')}
           options={workerOptions}
         />
         {isFiltered && (
@@ -508,7 +519,7 @@ function ProductionOrdersToolbar({ table, products, workerOptions }: { table: an
         )}
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <AddProductionOrderDialog products={products} salesOrders={[]} workers={[]} />
+        <AddProductionOrderDialog products={products} salesOrders={salesOrders} workers={workers} />
       </div>
     </div>
   );
@@ -609,15 +620,12 @@ export function ProductionOrdersTable({ data, products, salesOrders }: Productio
 
   const columns = getColumns(t, handleStatusChange, handleViewDetails, handleDelete, handleAssignWorker);
   
-  const workerOptions = workers.map(u => ({ label: u.name, value: u.name }));
-
-
   return (
     <>
       <DataTable 
         columns={columns} 
         data={data} 
-        toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} workerOptions={workerOptions} />} 
+        toolbar={(table) => <ProductionOrdersToolbar table={table} products={products} salesOrders={salesOrders} workers={workers} />} 
         columnFilters={columnFilters}
         onColumnFiltersChange={setColumnFilters}
       />
