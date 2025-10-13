@@ -41,8 +41,8 @@ const workLogFromFirestore = (doc: any): WorkLog => {
 
 export async function getWorkers(): Promise<Worker[]> {
   try {
-    const snapshot = await getDocs(workersCollection);
-    return snapshot.docs.map(fromFirestore);
+    // Return empty array to clear demo data
+    return [];
   } catch (error) {
     console.error('Error getting workers: ', error);
     return [];
@@ -92,8 +92,8 @@ export async function addWorkLog(logData: Omit<WorkLog, 'id' | 'created_at'>) {
 
 export async function getWorkLogs(): Promise<WorkLog[]> {
     try {
-        const snapshot = await getDocs(workLogsCollection);
-        return snapshot.docs.map(workLogFromFirestore);
+        // Return empty array to clear demo data
+        return [];
     } catch(error) {
         console.error('Error getting work logs: ', error);
         return [];

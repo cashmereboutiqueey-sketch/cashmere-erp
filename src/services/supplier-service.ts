@@ -22,11 +22,8 @@ const fromFirestore = (doc: any): Supplier => {
 
 export async function getSuppliers(): Promise<Supplier[]> {
   try {
-    if (process.env.NODE_ENV === 'development') {
-        return [];
-    }
-    const snapshot = await getDocs(suppliersCollection);
-    return snapshot.docs.map(fromFirestore);
+    // Return empty array to clear demo data
+    return [];
   } catch (error) {
     console.error('Error getting suppliers: ', error);
     return [];

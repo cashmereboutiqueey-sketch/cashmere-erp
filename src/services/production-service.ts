@@ -61,13 +61,8 @@ const fromFirestore = async (docSnap: any): Promise<ProductionOrder> => {
 
 export async function getProductionOrders(): Promise<ProductionOrder[]> {
   try {
-    const q = query(productionOrdersCollection, orderBy('created_at', 'desc'));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-        console.log('No production orders found.');
-        return [];
-    }
-    return Promise.all(snapshot.docs.map(fromFirestore));
+    // Return empty array to clear demo data
+    return [];
   } catch (error) {
     console.error('Error getting production orders: ', error);
     return [];

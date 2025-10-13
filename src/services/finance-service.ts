@@ -42,19 +42,8 @@ const fromFirestore = (doc: any): Expense => {
 
 export async function getExpenses(dateRange?: DateRange): Promise<Expense[]> {
   try {
-    if (process.env.NODE_ENV === 'development') {
-        return [];
-    }
-    let q = query(expensesCollection);
-    if (dateRange?.from && dateRange?.to) {
-        q = query(
-            expensesCollection, 
-            where('created_at', '>=', Timestamp.fromDate(dateRange.from)),
-            where('created_at', '<=', Timestamp.fromDate(dateRange.to))
-        );
-    }
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(fromFirestore);
+    // Return empty array to clear demo data
+    return [];
   } catch (error) {
     console.error('Error getting expenses: ', error);
     return [];
