@@ -97,6 +97,8 @@ export type Order = {
   fulfillment_type?: OrderFulfillmentType;
   shipping_status?: ShippingStatus;
   carrier_id?: 'a' | 'b';
+  salesperson_id?: string;
+  salesperson_name?: string;
 };
 
 export type Worker = {

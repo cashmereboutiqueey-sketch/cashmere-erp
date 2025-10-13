@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -33,6 +34,7 @@ import { addOrder } from '@/services/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRouter } from 'next/navigation';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useAuth } from '@/context/auth-context';
 
 type CartItem = {
   productId: string;
@@ -47,6 +49,7 @@ const findImage = (id: string) =>
 export default function PosPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,8 +69,7 @@ export default function PosPage() {
   const [paymentMethod, setPaymentMethod] = useState<Order['payment_method']>('cash');
   const [amountPaid, setAmountPaid] = useState(0);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchInitialData = async () => {
       setIsLoading(true);
       const [fetchedProducts, fetchedCustomers] = await Promise.all([
         getProducts(),
@@ -77,7 +79,9 @@ export default function PosPage() {
       setCustomers(fetchedCustomers);
       setIsLoading(false);
     };
-    fetchData();
+
+  useEffect(() => {
+    fetchInitialData();
   }, []);
 
 
@@ -162,7 +166,7 @@ export default function PosPage() {
   }
 
   const handlePlaceOrder = async () => {
-    if (!selectedCustomer) return; // Should not happen if button is disabled
+    if (!selectedCustomer || !user) return; // Should not happen if button is disabled
 
     let paymentStatus: Order['payment_status'] = 'unpaid';
     if (amountPaid >= total) {
@@ -186,6 +190,8 @@ export default function PosPage() {
           variant,
           quantity
         })),
+        salesperson_id: user.id,
+        salesperson_name: user.name,
       };
 
       const orderId = await addOrder(newOrder);
@@ -276,6 +282,11 @@ export default function PosPage() {
       });
     }
   };
+  
+  const onCustomerAdded = async () => {
+    const fetchedCustomers = await getCustomers();
+    setCustomers(fetchedCustomers);
+  }
   
   const availableSizes = selectedProductForVariant ? [...new Set(selectedProductForVariant.variants.map(v => v.size).filter(Boolean))] as string[] : [];
   const availableColors = selectedProductForVariant ? [...new Set(selectedProductForVariant.variants.map(v => v.color).filter(Boolean))] as string[] : [];
@@ -383,24 +394,23 @@ export default function PosPage() {
                             </CardContent>
                         </Card>
                     )}
-                    <AddCustomerDialog />
+                    <AddCustomerDialog onCustomerAdded={onCustomerAdded} />
                 </div>
             )}
             
-            <div className="grid gap-2">
-                <Label htmlFor="source">Order Source</Label>
-                <Select value={source} onValueChange={(v) => setSource(v as Order['source'])}>
-                    <SelectTrigger>
-                    <SelectValue placeholder="Select order source" />
-                    </SelectTrigger>
-                    <SelectContent>
-                    <SelectItem value="store">In-Store</SelectItem>
-                    <SelectItem value="shopify">Shopify</SelectItem>
-                    <SelectItem value="social">Social Media</SelectItem>
-                    </SelectContent>
-                </Select>
+             <div className="grid gap-2">
+              <Label htmlFor="source">Order Source</Label>
+              <Select value={source} onValueChange={(v) => setSource(v as Order['source'])}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select order source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="store">In-Store</SelectItem>
+                  <SelectItem value="shopify">Shopify</SelectItem>
+                  <SelectItem value="social">Social Media</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
             <Separator />
             <ScrollArea className="h-[350px]">
               {cart.length > 0 ? (

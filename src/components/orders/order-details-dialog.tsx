@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -107,6 +108,7 @@ export function OrderDetailsDialog({ order, isOpen, onOpenChange }: OrderDetails
                         <div className="flex justify-between"><span>Payment:</span> <Badge variant={paymentStatusVariantMap[order.payment_status]} className="capitalize">{order.payment_status.replace('_', ' ')}</Badge></div>
                         <div className="flex justify-between"><span>Date:</span> <span>{new Date(order.created_at).toLocaleString()}</span></div>
                         <div className="flex justify-between"><span>Source:</span> <span className='capitalize'>{order.source}</span></div>
+                        {order.salesperson_name && <div className="flex justify-between"><span>Salesperson:</span> <span className='font-medium'>{order.salesperson_name}</span></div>}
                     </div>
                 </div>
                  <div className="space-y-4">
