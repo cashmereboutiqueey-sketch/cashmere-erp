@@ -17,6 +17,7 @@ import {
   MonitorPlay,
   Package,
   BadgePercent,
+  Users2
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -66,6 +67,12 @@ const allMenuItems: {
     labelKey: 'orders',
     icon: ShoppingCart,
     roles: ['admin', 'sales'],
+  },
+   {
+    href: '/workers',
+    labelKey: 'workers',
+    icon: Users2,
+    roles: ['admin', 'production'],
   },
   {
     href: '/shipping',

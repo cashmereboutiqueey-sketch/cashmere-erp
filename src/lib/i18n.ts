@@ -18,6 +18,7 @@ export const translations = {
     needHelp: 'Need Help?',
     contactSupport: 'Contact Support',
     pricing: 'Pricing',
+    workers: 'Workers',
     // Header Dropdown
     profile: 'Profile',
     logout: 'Logout',
@@ -106,7 +107,7 @@ export const translations = {
     costs: 'Costs',
     recentTransactions: 'Recent Transactions',
     recentTransactionsDesc: 'A log of recent financial activities.',
-    description: 'الوصف',
+    description: 'Description',
     chartOfAccounts: 'Chart of Accounts',
     chartOfAccountsDesc: 'A list of all financial accounts in the general ledger.',
     addAccount: 'Add Account',
@@ -407,6 +408,19 @@ export const translations = {
     updateProductCost: 'Update Product Cost',
     updateRetailPrice: 'Update Retail Price',
     updating: 'Updating...',
+    // Workers Page
+    logHours: 'Log Hours',
+    logWorkHoursFor: 'Log Work Hours for',
+    logWorkHoursForDesc: 'Enter the date and hours worked for this worker.',
+    hoursWorked: 'Hours Worked',
+    totalWorkers: 'Total Workers',
+    totalPiecesCompleted: 'Total Pieces Completed',
+    totalSalariesPaid: 'Total Salaries (Est.)',
+    hourlyRate: 'Hourly Rate',
+    productivityRate: 'Productivity Rate',
+    calculatedSalary: 'Calculated Salary',
+    update: 'Update',
+    piecesPerHour: 'pcs/hr',
   },
   ar: {
     // Sidebar
@@ -425,6 +439,7 @@ export const translations = {
     needHelp: 'تحتاج مساعدة؟',
     contactSupport: 'تواصل مع الدعم',
     pricing: 'التسعير',
+    workers: 'العمال',
     // Header Dropdown
     profile: 'الملف الشخصي',
     logout: 'تسجيل الخروج',
@@ -814,6 +829,19 @@ export const translations = {
     updateProductCost: 'تحديث تكلفة المنتج',
     updateRetailPrice: 'تحديث سعر التجزئة',
     updating: 'جاري التحديث...',
+    // Workers Page
+    logHours: 'تسجيل الساعات',
+    logWorkHoursFor: 'تسجيل ساعات العمل لـ',
+    logWorkHoursForDesc: 'أدخل التاريخ والساعات التي عملها هذا العامل.',
+    hoursWorked: 'ساعات العمل',
+    totalWorkers: 'إجمالي العمال',
+    totalPiecesCompleted: 'إجمالي القطع المنجزة',
+    totalSalariesPaid: 'إجمالي الرواتب (تقديري)',
+    hourlyRate: 'المعدل بالساعة',
+    productivityRate: 'معدل الإنتاجية',
+    calculatedSalary: 'الراتب المحسوب',
+    update: 'تحديث',
+    piecesPerHour: 'قطعة/ساعة',
   },
 };
 

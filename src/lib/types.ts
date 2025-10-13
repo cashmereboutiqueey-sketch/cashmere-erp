@@ -102,7 +102,16 @@ export type Order = {
 export type Worker = {
   id: string;
   name: string;
+  hourly_rate: number;
 };
+
+export type WorkLog = {
+    id: string;
+    worker_id: string;
+    date: string; // ISO date string: "YYYY-MM-DD"
+    hours: number;
+    created_at: string;
+}
 
 export type ProductionOrder = {
   id: string;
