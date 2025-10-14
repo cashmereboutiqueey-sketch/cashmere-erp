@@ -55,7 +55,7 @@ const supplierSchema = z.object({
 type SupplierFormData = z.infer<typeof supplierSchema>;
 
 
-function AddEditSupplierDialog({ supplier, onFinished }: { supplier: Supplier | null, onFinished: () => void}) {
+function AddEditSupplierDialog({ supplier, onFinished, children }: { supplier: Supplier | null, onFinished: () => void, children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -101,16 +101,7 @@ function AddEditSupplierDialog({ supplier, onFinished }: { supplier: Supplier | 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        {isEditMode ? (
-            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-              {t('edit')}
-            </DropdownMenuItem>
-        ) : (
-            <Button size="sm" className="h-8 ml-auto">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                {t('addSupplier')}
-            </Button>
-        )}
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -166,7 +157,12 @@ function SuppliersTableToolbar({ table, onDataChange }: { table: any, onDataChan
             className="h-8 w-[150px] lg:w-[250px]"
         />
         <div className="ml-auto">
-            <AddEditSupplierDialog supplier={null} onFinished={onDataChange} />
+            <AddEditSupplierDialog supplier={null} onFinished={onDataChange}>
+              <Button size="sm" className="h-8">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  {t('addSupplier')}
+              </Button>
+            </AddEditSupplierDialog>
         </div>
     </DataTableToolbar>
   );
@@ -208,7 +204,11 @@ export const getColumns = (
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(row.original)}>{t('edit')}</DropdownMenuItem>
+              <AddEditSupplierDialog supplier={row.original} onFinished={() => {}}>
+                  <button className='relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full'>
+                    {t('edit')}
+                  </button>
+              </AddEditSupplierDialog>
               <DropdownMenuItem onClick={() => onDelete(row.original)} className="text-destructive">{t('delete')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -267,7 +267,7 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataCha
 
   const handleEdit = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
-    setIsEditDialogOpen(true);
+    // This is now handled by the AddEditSupplierDialog trigger in the dropdown
   };
 
   const handleDelete = (supplier: Supplier) => {
@@ -368,13 +368,6 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataCha
             isOpen={isDeleteDialogOpen}
             onOpenChange={setIsDeleteDialogOpen}
             onFinished={onDataChange}
-        />
-         <AddEditSupplierDialog 
-            supplier={selectedSupplier}
-            onFinished={() => {
-                onDataChange();
-                setIsEditDialogOpen(false);
-            }}
         />
     </div>
   );
