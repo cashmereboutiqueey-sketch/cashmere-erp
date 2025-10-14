@@ -33,14 +33,13 @@ const fromFirestore = (doc: any): Product => {
 
 export async function getProducts(): Promise<Product[]> {
   try {
-    // Return empty array to clear demo data
-    return [];
+    const snapshot = await getDocs(productsCollection);
+    return snapshot.docs.map(fromFirestore);
   } catch (error) {
     console.error('Error getting products: ', error);
     return [];
   }
 }
-
 export async function addProduct(productData: Omit<Product, 'id' | 'created_at'> & { fabrics: Omit<ProductFabric, 'product_id'>[] }) {
   try {
     const batch = writeBatch(db);
