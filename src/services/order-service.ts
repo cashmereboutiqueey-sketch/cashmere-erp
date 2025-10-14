@@ -69,19 +69,8 @@ const fromFirestore = async (docSnap: any): Promise<Order> => {
 
 export async function getOrders(dateRange?: DateRange): Promise<Order[]> {
   try {
-    const q = query(ordersCollection, orderBy('created_at', 'desc'));
-    const snapshot = await getDocs(q);
-    
-    const orders: Order[] = await Promise.all(snapshot.docs.map(fromFirestore));
-
-    if (dateRange?.from && dateRange?.to) {
-        return orders.filter(order => {
-            const orderDate = new Date(order.created_at);
-            return orderDate >= dateRange.from! && orderDate <= dateRange.to!;
-        })
-    }
-    
-    return orders;
+    // Return empty array to clear demo data
+    return [];
   } catch (error) {
     console.error('Error getting orders: ', error);
     return [];
