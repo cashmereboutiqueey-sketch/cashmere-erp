@@ -1,87 +1,135 @@
-
 [
   {
     "href": "/dashboard",
     "labelKey": "dashboard",
     "icon": "LayoutDashboard",
-    "roles": ["admin", "accountant"]
+    "roles": [
+      "admin",
+      "accountant"
+    ]
   },
   {
     "href": "/pos",
     "labelKey": "pos",
     "icon": "MonitorPlay",
-    "roles": ["admin", "sales"]
+    "roles": [
+      "admin",
+      "sales"
+    ]
   },
   {
     "href": "/orders",
     "labelKey": "orders",
     "icon": "ShoppingCart",
-    "roles": ["admin", "sales"]
+    "roles": [
+      "admin",
+      "sales",
+      "accountant"
+    ]
   },
   {
     "href": "/workers",
     "labelKey": "workers",
     "icon": "Users2",
-    "roles": ["admin", "production"]
+    "roles": [
+      "admin",
+      "production",
+      "accountant"
+    ]
   },
   {
     "href": "/shipping",
     "labelKey": "shipping",
     "icon": "Package",
-    "roles": ["admin", "sales", "warehouse_manager"]
+    "roles": [
+      "admin",
+      "sales",
+      "warehouse_manager",
+      "accountant"
+    ]
   },
   {
     "href": "/products",
     "labelKey": "products",
     "icon": "Box",
-    "roles": ["admin", "production", "warehouse_manager"]
+    "roles": [
+      "admin",
+      "production",
+      "warehouse_manager",
+      "sales",
+      "accountant"
+    ]
   },
   {
     "href": "/customers",
     "labelKey": "customers",
     "icon": "Users",
-    "roles": ["admin", "sales"]
+    "roles": [
+      "admin",
+      "sales",
+      "accountant"
+    ]
   },
   {
     "href": "/suppliers",
     "labelKey": "suppliers",
     "icon": "Truck",
-    "roles": ["admin", "production"]
+    "roles": [
+      "admin",
+      "production"
+    ]
   },
   {
     "href": "/fabrics",
     "labelKey": "fabrics",
     "icon": "Scissors",
-    "roles": ["admin", "production"]
+    "roles": [
+      "admin",
+      "production"
+    ]
   },
   {
     "href": "/production",
     "labelKey": "production",
     "icon": "Factory",
-    "roles": ["admin", "production"]
+    "roles": [
+      "admin",
+      "production"
+    ]
   },
   {
     "href": "/finance",
     "labelKey": "finance",
     "icon": "DollarSign",
-    "roles": ["admin", "accountant"]
+    "roles": [
+      "admin",
+      "accountant"
+    ]
   },
   {
     "href": "/pricing",
     "labelKey": "pricing",
     "icon": "BadgePercent",
-    "roles": ["admin", "accountant"]
+    "roles": [
+      "admin",
+      "accountant"
+    ]
   },
   {
     "href": "/reports",
     "labelKey": "reports",
     "icon": "BarChart",
-    "roles": ["admin", "accountant"]
+    "roles": [
+      "admin",
+      "accountant"
+    ]
   },
   {
     "href": "/settings",
     "labelKey": "settings",
     "icon": "Settings",
-    "roles": ["admin"]
+    "roles": [
+      "admin"
+    ]
   }
 ]

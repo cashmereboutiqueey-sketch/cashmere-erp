@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
@@ -44,6 +43,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useTranslation } from '@/hooks/use-translation';
 import allMenuItems from '@/lib/permissions.json';
 import { updatePermissions } from '@/services/permissions-service';
+import { useRouter } from 'next/navigation';
 
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
@@ -55,10 +55,11 @@ type Permissions = {
 }[];
 
 
-function PermissionsManager() {
+function PermissionsManager({ initialPermissions }: { initialPermissions: Permissions }) {
     const { t } = useTranslation();
     const { toast } = useToast();
-    const [permissions, setPermissions] = useState<Permissions>(allMenuItems);
+    const router = useRouter();
+    const [permissions, setPermissions] = useState<Permissions>(initialPermissions);
     const [isSaving, setIsSaving] = useState(false);
 
     const handlePermissionChange = (href: string, role: Role['name'], checked: boolean) => {
@@ -85,6 +86,7 @@ function PermissionsManager() {
                 title: "Permissions Saved",
                 description: "User role permissions have been updated successfully.",
             });
+            router.refresh();
         } catch(e) {
              toast({
                 variant: 'destructive',
@@ -416,7 +418,7 @@ export default function SettingsPage() {
                 </Card>
            </TabsContent>
            <TabsContent value="permissions">
-                <PermissionsManager />
+                <PermissionsManager initialPermissions={allMenuItems} />
            </TabsContent>
            <TabsContent value="integrations" className="space-y-6">
             <Card>
@@ -465,3 +467,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
