@@ -58,7 +58,7 @@ export default function SuppliersPage() {
     };
 
     fetchData();
-  }, [dataVersion, selectedSupplier]);
+  }, [dataVersion]);
 
   const supplierFabrics = selectedSupplier
     ? fabrics.filter((fabric) => fabric.supplier_id === selectedSupplier.id)
