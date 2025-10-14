@@ -43,8 +43,10 @@ import type { Role, TranslationKey } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { capitalize } from 'string-ts';
 import { useTranslation } from '@/hooks/use-translation';
-import allMenuItems from '@/lib/permissions.json';
 import React from 'react';
+
+// Use require to ensure the file is re-read on the server after cache invalidation
+const allMenuItems = require('@/lib/permissions.json');
 
 
 const icons: { [key: string]: Icon } = {
@@ -86,7 +88,7 @@ export function AppSidebar({ side }: { side: 'left' | 'right' }) {
     router.push('/login');
   };
 
-  const menuItems = allMenuItems.filter((item) =>
+  const menuItems = allMenuItems.filter((item: any) =>
     hasAccess(user?.role, item.roles as Role['name'][])
   );
 
@@ -111,7 +113,7 @@ export function AppSidebar({ side }: { side: 'left' | 'right' }) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {menuItems.map((item) => {
+          {menuItems.map((item: any) => {
             const Icon = icons[item.icon];
             return (
                 <SidebarMenuItem key={item.href}>
