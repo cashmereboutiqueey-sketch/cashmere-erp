@@ -4,90 +4,93 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper functions
-    function isAuth() {
-      return request.auth != null;
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
-
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
+    
     function isAdmin() {
-      return getUserRole() == 'admin';
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-
-    function isProduction() {
-      return getUserRole() in ['admin', 'production'];
+    
+    function isAccountant() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'accountant';
     }
 
     function isSales() {
-        return getUserRole() in ['admin', 'sales'];
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'sales';
     }
 
-    function isAccountant() {
-        return getUserRole() in ['admin', 'accountant'];
+    function isProduction() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'production';
     }
 
-    // Rules for each collection
+    function isWarehouseManager() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'warehouse_manager';
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Collection Rules
     match /users/{userId} {
-      allow read: if isAuth();
-      allow create, update, delete: if isAdmin();
+      // Admins can manage any user. Users can read their own data.
+      allow read, write: if isAdmin() || isOwner(userId);
     }
-
-    match /suppliers/{supplierId} {
-      allow read: if isProduction() || isAccountant();
-      allow create: if isProduction();
-      allow update, delete: if isAdmin();
-    }
-
+    
     match /customers/{customerId} {
-        allow read: if isSales() || isAccountant();
-        allow create: if isSales();
-        allow update, delete: if isAdmin();
+      allow read, write: if isAdmin() || isSales();
     }
-
+    
     match /products/{productId} {
-        allow read: if isAuth(); // All authenticated users can see products
-        allow create, update, delete: if isProduction();
+      // Production and Warehouse can manage products. Other roles can read.
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isProduction() || isWarehouseManager();
     }
-
-    match /product_fabrics/{productFabricId} {
-        allow read, create, update, delete: if isProduction();
-    }
-
-    match /orders/{orderId} {
-        allow read: if isAuth();
-        allow create: if isSales();
-        allow update, delete: if isAdmin();
-    }
-
-    match /production_orders/{productionOrderId} {
-        allow read: if isProduction();
-        allow create, update, delete: if isProduction();
-    }
-
+    
     match /fabrics/{fabricId} {
-        allow read: if isProduction() || isAccountant();
-        allow create, update, delete: if isProduction();
+      // Production can manage fabrics. Other roles can read.
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isProduction();
+    }
+    
+    match /suppliers/{supplierId} {
+      // Admin and Production can manage suppliers.
+      allow read, write: if isAdmin() || isProduction();
+    }
+    
+    match /orders/{orderId} {
+      // Sales can create orders. Admins can manage them.
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isSales();
+    }
+    
+    match /production_orders/{productionOrderId} {
+      // Production can manage production orders.
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isProduction();
     }
 
+    match /workers/{workerId} {
+      allow read, write: if isAdmin() || isProduction();
+    }
+     match /work_logs/{workLogId} {
+      allow read, write: if isAdmin() || isProduction();
+    }
+    
     match /expenses/{expenseId} {
-        allow read: if isAccountant();
-        allow create: if isAccountant();
-        allow update, delete: if isAdmin();
+      // Accountants and Admins can manage expenses
+      allow read, write: if isAdmin() || isAccountant();
+    }
+    
+    match /product_fabrics/{productFabricId} {
+      // This is managed via product updates.
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isProduction() || isWarehouseManager();
     }
 
     match /notifications/{notificationId} {
-      allow read, write: if isAuth();
+        allow read, write: if isSignedIn();
     }
-    
-    match /workers/{workerId} {
-        allow read, write: if isProduction();
-    }
-
-    match /work_logs/{workLogId} {
-        allow read, write: if isProduction();
-    }
-
   }
 }
