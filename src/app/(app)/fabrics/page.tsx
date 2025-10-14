@@ -3,23 +3,37 @@
 
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
 import { FabricsTable } from '@/components/fabrics/fabrics-table';
+import { getFabrics } from '@/services/fabric-service';
+import { getSuppliers } from '@/services/supplier-service';
+import { Fabric, Supplier } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from '@/hooks/use-translation';
-import { useFabricStore } from '@/stores/fabric-store';
-import { useSupplierStore } from '@/stores/supplier-store';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function FabricsPage() {
   const { t } = useTranslation();
-  const { fabrics, isLoading: fabricsLoading, fetchFabrics } = useFabricStore();
-  const { suppliers, isLoading: suppliersLoading, fetchSuppliers } = useSupplierStore();
-  
-  const isLoading = fabricsLoading || suppliersLoading;
+  const [fabrics, setFabrics] = useState<Fabric[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
 
+  const onDataChange = () => {
+    setDataVersion(prev => prev + 1);
+  };
+  
   useEffect(() => {
-    fetchFabrics();
-    fetchSuppliers();
-  }, [fetchFabrics, fetchSuppliers]);
+    const fetchData = async () => {
+        setIsLoading(true);
+        const [fetchedFabrics, fetchedSuppliers] = await Promise.all([
+            getFabrics(),
+            getSuppliers()
+        ]);
+        setFabrics(fetchedFabrics);
+        setSuppliers(fetchedSuppliers);
+        setIsLoading(false);
+    };
+    fetchData();
+  }, [dataVersion]);
 
   const fabricsWithSuppliers = fabrics.map((fabric) => {
     const supplier = suppliers.find(
@@ -49,7 +63,7 @@ export default function FabricsPage() {
             </div>
           </div>
         ) : (
-          <FabricsTable data={fabricsWithSuppliers} suppliers={suppliers} />
+          <FabricsTable data={fabricsWithSuppliers} suppliers={suppliers} onDataChange={onDataChange} />
         )}
       </div>
     </>

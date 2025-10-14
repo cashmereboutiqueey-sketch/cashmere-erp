@@ -3,6 +3,7 @@
 
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
 import { SuppliersTable } from '@/components/suppliers/suppliers-table';
+import { getSuppliers } from '@/services/supplier-service';
 import { getFabrics } from '@/services/fabric-service';
 import { getExpenses } from '@/services/finance-service';
 import { Supplier, Fabric, Expense } from '@/lib/types';
@@ -15,36 +16,42 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { AtSign, Phone } from 'lucide-react';
 import { useTranslation } from '@/hooks/use-translation';
-import { useSupplierStore } from '@/stores/supplier-store';
 
 
 export default function SuppliersPage() {
   const { t } = useTranslation();
-  const { suppliers, isLoading, fetchSuppliers, selectedSupplier, setSelectedSupplier } = useSupplierStore();
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [fabrics, setFabrics] = useState<Fabric[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDetailsLoading, setIsDetailsLoading] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const onDataChange = () => {
+    setDataVersion(prev => prev + 1);
+  };
 
   useEffect(() => {
-    fetchSuppliers();
-  }, [fetchSuppliers]);
-
-  useEffect(() => {
-    const fetchDetails = async () => {
-      setIsDetailsLoading(true);
-      const [fetchedFabrics, fetchedExpenses] = await Promise.all([
-        getFabrics(),
-        getExpenses(),
-      ]);
-      setFabrics(fetchedFabrics);
-      setExpenses(fetchedExpenses);
-      setIsDetailsLoading(false);
+    const fetchData = async () => {
+        setIsLoading(true);
+        const [fetchedSuppliers, fetchedFabrics, fetchedExpenses] = await Promise.all([
+            getSuppliers(),
+            getFabrics(),
+            getExpenses()
+        ]);
+        setSuppliers(fetchedSuppliers);
+        setFabrics(fetchedFabrics);
+        setExpenses(fetchedExpenses);
+        
+        if (fetchedSuppliers.length > 0 && !selectedSupplier) {
+            setSelectedSupplier(fetchedSuppliers[0]);
+        }
+        setIsLoading(false);
+        setIsDetailsLoading(false);
     };
-
-    if (suppliers.length > 0) {
-      fetchDetails();
-    }
-  }, [suppliers]);
+    fetchData();
+  }, [dataVersion, selectedSupplier]);
 
   const supplierFabrics = selectedSupplier
     ? fabrics.filter((fabric) => fabric.supplier_id === selectedSupplier.id)
@@ -92,6 +99,7 @@ export default function SuppliersPage() {
                     data={suppliers}
                     onRowClick={setSelectedSupplier}
                     selectedSupplierId={selectedSupplier?.id}
+                    onDataChange={onDataChange}
                 />
             )}
         </div>

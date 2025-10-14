@@ -33,13 +33,14 @@ import { Avatar, AvatarFallback } from '../ui/avatar';
 import { cn } from '@/lib/utils';
 import { flexRender, useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel } from '@tanstack/react-table';
 import { useTranslation } from '@/hooks/use-translation';
-import { useSupplierStore } from '@/stores/supplier-store';
+import { addSupplier, updateSupplier, deleteSupplier } from '@/services/supplier-service';
 
 
 interface SuppliersTableProps {
   data: Supplier[];
   onRowClick: (supplier: Supplier) => void;
   selectedSupplierId?: string | null;
+  onDataChange: () => void;
 }
 
 
@@ -53,11 +54,11 @@ const supplierSchema = z.object({
 type SupplierFormData = z.infer<typeof supplierSchema>;
 
 
-function AddEditSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: Supplier | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+function AddEditSupplierDialog({ supplier, isOpen, onOpenChange, onDataChange }: { supplier: Supplier | null, isOpen: boolean, onOpenChange: (open: boolean) => void, onDataChange: () => void }) {
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { addSupplier, updateSupplier, isLoading } = useSupplierStore();
   const isEditMode = !!supplier;
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
@@ -77,6 +78,7 @@ function AddEditSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: S
   }, [isOpen, isEditMode, supplier, reset]);
 
   const onSubmit = async (data: SupplierFormData) => {
+    setIsSubmitting(true);
     try {
       if (isEditMode && data.id) {
         await updateSupplier(data.id, data);
@@ -86,6 +88,7 @@ function AddEditSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: S
         toast({ title: t('success'), description: t('supplierAddedSuccess') });
       }
       onOpenChange(false);
+      onDataChange();
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         toast({
@@ -93,6 +96,8 @@ function AddEditSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: S
             title: t('error'),
             description: isEditMode ? `Failed to update supplier: ${errorMessage}` : `Failed to add supplier: ${errorMessage}`,
         });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -127,8 +132,8 @@ function AddEditSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: S
                 </FormItem>
             )}/>
             <DialogFooter>
-                <Button type="submit" disabled={isLoading}>
-                    {isLoading ? (isEditMode ? "Saving..." : t('adding')) : (isEditMode ? "Save Changes" : t('addSupplier'))}
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (isEditMode ? "Saving..." : t('adding')) : (isEditMode ? "Save Changes" : t('addSupplier'))}
                 </Button>
             </DialogFooter>
           </form>
@@ -210,19 +215,23 @@ export const getColumns = (
   },
 ];
 
-function DeleteSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: Supplier | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+function DeleteSupplierDialog({ supplier, isOpen, onOpenChange, onDataChange }: { supplier: Supplier | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, onDataChange: () => void }) {
     const { toast } = useToast();
     const { t } = useTranslation();
-    const { deleteSupplier, isLoading } = useSupplierStore();
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = async () => {
         if (!supplier) return;
+        setIsDeleting(true);
         try {
             await deleteSupplier(supplier.id);
             toast({ title: t('success'), description: "Supplier deleted successfully." });
             onOpenChange(false);
+            onDataChange();
         } catch (error) {
             toast({ variant: "destructive", title: t('error'), description: "Failed to delete supplier." });
+        } finally {
+            setIsDeleting(false);
         }
     }
 
@@ -237,8 +246,8 @@ function DeleteSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: Su
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} disabled={isLoading} className={buttonVariants({ variant: "destructive" })}>
-                        {isLoading ? t('deleting') : t('delete')}
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
+                        {isDeleting ? t('deleting') : t('delete')}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -246,7 +255,7 @@ function DeleteSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: Su
     );
 }
 
-export function SuppliersTable({ data, onRowClick, selectedSupplierId }: SuppliersTableProps) {
+export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataChange }: SuppliersTableProps) {
   const { t } = useTranslation();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -360,11 +369,13 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId }: Supplie
             supplier={selectedSupplier}
             isOpen={isDialogOpen}
             onOpenChange={setIsDialogOpen}
+            onDataChange={onDataChange}
         />
         <DeleteSupplierDialog 
             supplier={selectedSupplier}
             isOpen={isDeleteDialogOpen}
             onOpenChange={setIsDeleteDialogOpen}
+            onDataChange={onDataChange}
         />
     </div>
   );

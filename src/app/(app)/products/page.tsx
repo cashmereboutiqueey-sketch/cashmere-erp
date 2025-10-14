@@ -1,20 +1,45 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
 import { ProductsTable } from '@/components/products/products-table';
+import { getProducts } from '@/services/product-service';
+import { getAllProductFabrics } from '@/services/product-fabric-service';
+import { Product, ProductFabric } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from '@/hooks/use-translation';
-import { useProductStore } from '@/stores/product-store';
 
 export default function ProductsPage() {
   const { t } = useTranslation();
-  const { products, isLoading, fetchProducts } = useProductStore();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productFabrics, setProductFabrics] = useState<ProductFabric[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
 
+  const onDataChange = () => {
+    setDataVersion(prev => prev + 1);
+  };
+  
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    const fetchData = async () => {
+      setIsLoading(true);
+      const [fetchedProducts, fetchedProductFabrics] = await Promise.all([
+          getProducts(),
+          getAllProductFabrics()
+      ]);
+
+      const productsWithRecipes = fetchedProducts.map(p => {
+          const recipe = fetchedProductFabrics.filter(pf => pf.product_id === p.id);
+          return { ...p, fabrics: recipe as any };
+      });
+
+      setProducts(productsWithRecipes);
+      setProductFabrics(fetchedProductFabrics);
+      setIsLoading(false);
+    };
+    fetchData();
+  }, [dataVersion]);
 
   return (
     <>
@@ -40,7 +65,7 @@ export default function ProductsPage() {
                 </div>
           </div>
         ) : (
-          <ProductsTable data={products} />
+          <ProductsTable data={products} onDataChange={onDataChange} />
         )}
       </div>
     </>

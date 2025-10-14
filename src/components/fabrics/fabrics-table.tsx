@@ -50,14 +50,14 @@ import { useToast } from '@/hooks/use-toast';
 import { addExpense } from '@/services/finance-service';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '../ui/form';
 import { useTranslation } from '@/hooks/use-translation';
-import { useFabricStore } from '@/stores/fabric-store';
-
+import { addFabric, updateFabric, deleteFabric } from '@/services/fabric-service';
 
 type FabricWithSupplier = Fabric & { supplier?: Supplier };
 
 interface FabricsTableProps {
   data: FabricWithSupplier[];
   suppliers: Supplier[];
+  onDataChange: () => void;
 }
 
 const fabricSchema = z.object({
@@ -73,11 +73,11 @@ const fabricSchema = z.object({
 
 type FabricFormData = z.infer<typeof fabricSchema>;
 
-function AddEditFabricDialog({ fabric, suppliers, isOpen, onOpenChange }: { fabric: Fabric | null, suppliers: Supplier[], isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+function AddEditFabricDialog({ fabric, suppliers, isOpen, onOpenChange, onDataChange }: { fabric: Fabric | null, suppliers: Supplier[], isOpen: boolean, onOpenChange: (open: boolean) => void, onDataChange: () => void }) {
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { addFabric, updateFabric, isLoading } = useFabricStore();
   const isEditMode = !!fabric;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FabricFormData>({
     resolver: zodResolver(fabricSchema),
@@ -98,6 +98,7 @@ function AddEditFabricDialog({ fabric, suppliers, isOpen, onOpenChange }: { fabr
 
 
   const onSubmit = async (data: FabricFormData) => {
+    setIsSubmitting(true);
     try {
       if (isEditMode && data.id) {
         await updateFabric(data.id, data);
@@ -107,12 +108,15 @@ function AddEditFabricDialog({ fabric, suppliers, isOpen, onOpenChange }: { fabr
         toast({ title: t('success'), description: t('fabricAddedSuccess') });
       }
       onOpenChange(false);
+      onDataChange();
     } catch (error) {
       toast({
         variant: 'destructive',
         title: t('error'),
         description: isEditMode ? "Failed to update fabric." : t('fabricAddedError'),
       });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -187,8 +191,8 @@ function AddEditFabricDialog({ fabric, suppliers, isOpen, onOpenChange }: { fabr
                 </FormItem>
               )} />
             <DialogFooter>
-                <Button type="submit" disabled={isLoading}>
-                    {isLoading ? (isEditMode ? "Saving..." : t('adding')) : (isEditMode ? "Save Changes" : t('addFabric'))}
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (isEditMode ? "Saving..." : t('adding')) : (isEditMode ? "Save Changes" : t('addFabric'))}
                 </Button>
             </DialogFooter>
           </form>
@@ -308,7 +312,7 @@ const purchaseSchema = z.object({
 
 type PurchaseFormData = z.infer<typeof purchaseSchema>;
 
-function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[]}) {
+function RecordPurchaseDialog({ suppliers, onDataChange }: { suppliers: Supplier[], onDataChange: () => void}) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -337,6 +341,7 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[]}) {
       });
       setOpen(false);
       form.reset();
+      onDataChange();
     } catch (error) {
        toast({
         variant: 'destructive',
@@ -436,19 +441,23 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[]}) {
   );
 }
 
-function DeleteFabricDialog({ fabric, isOpen, onOpenChange }: { fabric: Fabric | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+function DeleteFabricDialog({ fabric, isOpen, onOpenChange, onDataChange }: { fabric: Fabric | null, isOpen: boolean, onOpenChange: (open: boolean) => void, onDataChange: () => void }) {
     const { toast } = useToast();
     const { t } = useTranslation();
-    const { deleteFabric, isLoading } = useFabricStore();
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const handleDelete = async () => {
         if (!fabric) return;
+        setIsDeleting(true);
         try {
             await deleteFabric(fabric.id);
             toast({ title: t('success'), description: "Fabric deleted successfully." });
             onOpenChange(false);
+            onDataChange();
         } catch (error) {
             toast({ variant: "destructive", title: t('error'), description: "Failed to delete fabric." });
+        } finally {
+            setIsDeleting(false);
         }
     }
 
@@ -463,8 +472,8 @@ function DeleteFabricDialog({ fabric, isOpen, onOpenChange }: { fabric: Fabric |
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} disabled={isLoading} className={buttonVariants({ variant: "destructive" })}>
-                        {isLoading ? t('deleting') : t('delete')}
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
+                        {isDeleting ? t('deleting') : t('delete')}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -472,7 +481,7 @@ function DeleteFabricDialog({ fabric, isOpen, onOpenChange }: { fabric: Fabric |
     );
 }
 
-function FabricsTableToolbar({ onAdd, suppliers }: { onAdd: () => void, suppliers: Supplier[]}) {
+function FabricsTableToolbar({ onAdd, suppliers, onDataChange }: { onAdd: () => void, suppliers: Supplier[], onDataChange: () => void}) {
   const { t } = useTranslation();
   return (
     <>
@@ -485,13 +494,13 @@ function FabricsTableToolbar({ onAdd, suppliers }: { onAdd: () => void, supplier
             <PlusCircle className="mr-2 h-4 w-4" />
             {t('addFabric')}
         </Button>
-        <RecordPurchaseDialog suppliers={suppliers} />
+        <RecordPurchaseDialog suppliers={suppliers} onDataChange={onDataChange} />
       </div>
     </>
   );
 }
 
-export function FabricsTable({ data, suppliers }: FabricsTableProps) {
+export function FabricsTable({ data, suppliers, onDataChange }: FabricsTableProps) {
   const { t } = useTranslation();
   const [selectedFabric, setSelectedFabric] = useState<Fabric | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -515,17 +524,19 @@ export function FabricsTable({ data, suppliers }: FabricsTableProps) {
   const columns = getColumns(t, handleEdit, handleDelete);
   return (
     <>
-    <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar onAdd={handleAdd} suppliers={suppliers} />} />
+    <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar onAdd={handleAdd} suppliers={suppliers} onDataChange={onDataChange} />} />
     <AddEditFabricDialog
       fabric={selectedFabric}
       suppliers={suppliers}
       isOpen={isDialogOpen}
       onOpenChange={setIsDialogOpen}
+      onDataChange={onDataChange}
     />
     <DeleteFabricDialog 
         fabric={selectedFabric}
         isOpen={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
+        onDataChange={onDataChange}
     />
     </>
   );
