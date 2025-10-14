@@ -353,8 +353,8 @@ interface ProductsTableProps {
   data: Product[];
 }
 
-const INITIAL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
-const INITIAL_COLORS = ["Black", "White", "Gray", "Navy", "Beige", "Gold", "Rose Gold", "Blue"];
+const INITIAL_SIZES: string[] = [];
+const INITIAL_COLORS: string[] = [];
 
 const variantSchema = z.object({
     id: z.string().optional(),

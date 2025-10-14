@@ -31,16 +31,7 @@ import { Textarea } from '../ui/textarea';
 import { Separator } from '../ui/separator';
 import { useTranslation } from '@/hooks/use-translation';
 
-const mockAccounts: Account[] = [
-    { id: '1', name: 'Cash (1010)', code: '1010', type: 'asset', balance: 50000 },
-    { id: '2', name: 'Accounts Receivable (1200)', code: '1200', type: 'asset', balance: 15000 },
-    { id: '3', name: 'Inventory (1400)', code: '1400', type: 'asset', balance: 75000 },
-    { id: '4', name: 'Accounts Payable (2010)', code: '2010', type: 'liability', balance: 20000 },
-    { id: '5', name: 'Sales Revenue (4010)', code: '4010', type: 'revenue', balance: 120000 },
-    { id: '6', name: 'Cost of Goods Sold (5010)', code: '5010', type: 'expense', balance: 60000 },
-    { id: '7', name: 'Rent Expense (5020)', code: '5020', type: 'expense', balance: 5000 },
-    { id: '8', name: 'Owner\'s Equity (3010)', code: '3010', type: 'equity', balance: 55000 },
-];
+const mockAccounts: Account[] = [];
 
 const journalEntrySchema = z.object({
   account_id: z.string().min(1, "Account is required."),
