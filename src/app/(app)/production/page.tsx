@@ -6,7 +6,7 @@ import { getProductionOrders } from '@/services/production-service';
 import { getProducts } from '@/services/product-service';
 import { getOrders } from '@/services/order-service';
 import { ProductionOrder, Product, Order } from '@/lib/types';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from '@/hooks/use-translation';
 
@@ -16,23 +16,27 @@ export default function ProductionPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    const [fetchedOrders, fetchedProducts, fetchedSalesOrders] = await Promise.all([
-      getProductionOrders(),
-      getProducts(),
-      getOrders(),
-    ]);
-    setProductionOrders(fetchedOrders);
-    setProducts(fetchedProducts);
-    setOrders(fetchedSalesOrders);
-    setIsLoading(false);
-  }, []);
+  const onDataChange = () => {
+    setDataVersion(prev => prev + 1);
+  };
 
   useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      const [fetchedOrders, fetchedProducts, fetchedSalesOrders] = await Promise.all([
+        getProductionOrders(),
+        getProducts(),
+        getOrders(),
+      ]);
+      setProductionOrders(fetchedOrders);
+      setProducts(fetchedProducts);
+      setOrders(fetchedSalesOrders);
+      setIsLoading(false);
+    };
     fetchData();
-  }, [fetchData]);
+  }, [dataVersion]);
 
   return (
     <>
@@ -62,7 +66,7 @@ export default function ProductionPage() {
                 data={productionOrders} 
                 products={products}
                 salesOrders={orders}
-                onDataChange={fetchData}
+                onDataChange={onDataChange}
             />
         )}
       </div>

@@ -20,6 +20,11 @@ export default function CustomersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const onDataChange = () => {
+    setDataVersion(prev => prev + 1);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,7 +43,7 @@ export default function CustomersPage() {
       setIsLoading(false);
     };
     fetchData();
-  }, []);
+  }, [dataVersion]);
 
   const customerOrders = selectedCustomer
     ? orders.filter((order) => order.customer_id === selectedCustomer.id)

@@ -42,7 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '../ui/label';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -58,6 +58,7 @@ type FabricWithSupplier = Fabric & { supplier?: Supplier };
 interface FabricsTableProps {
   data: FabricWithSupplier[];
   suppliers: Supplier[];
+  onDataChange: () => void;
 }
 
 const fabricSchema = z.object({
@@ -73,22 +74,21 @@ const fabricSchema = z.object({
 
 type FabricFormData = z.infer<typeof fabricSchema>;
 
-function AddEditFabricDialog({ fabric, suppliers, onFinished }: { fabric: Fabric | null, suppliers: Supplier[], onFinished: () => void }) {
-  const [open, setOpen] = useState(false);
+function AddEditFabricDialog({ fabric, suppliers, onFinished, children, isOpen, onOpenChange }: { fabric: Fabric | null, suppliers: Supplier[], onFinished: () => void, children: React.ReactNode, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const isEditMode = !!fabric;
 
   const form = useForm<FabricFormData>({
     resolver: zodResolver(fabricSchema),
+    defaultValues: { name: '', code: '', color: '', length_in_meters: 0, price_per_meter: 0, min_stock_level: 0, supplier_id: '' }
   });
 
   const { handleSubmit, control, reset } = form;
 
-  const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen);
+  useEffect(() => {
     if (isOpen) {
-      if (isEditMode) {
+      if (isEditMode && fabric) {
         reset(fabric);
       } else {
         reset({
@@ -96,7 +96,8 @@ function AddEditFabricDialog({ fabric, suppliers, onFinished }: { fabric: Fabric
         });
       }
     }
-  }
+  }, [isOpen, isEditMode, fabric]);
+
 
   const onSubmit = async (data: FabricFormData) => {
     try {
@@ -107,7 +108,7 @@ function AddEditFabricDialog({ fabric, suppliers, onFinished }: { fabric: Fabric
         await addFabric(data);
         toast({ title: t('success'), description: t('fabricAddedSuccess') });
       }
-      setOpen(false);
+      onOpenChange(false);
       onFinished();
     } catch (error) {
       toast({
@@ -119,16 +120,9 @@ function AddEditFabricDialog({ fabric, suppliers, onFinished }: { fabric: Fabric
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        {isEditMode ? (
-          <DropdownMenuItem onSelect={(e) => e.preventDefault()}>{t('edit')}</DropdownMenuItem>
-        ) : (
-          <Button size="sm" className="h-8">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            {t('addFabric')}
-          </Button>
-        )}
+        {children}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
@@ -320,7 +314,7 @@ const purchaseSchema = z.object({
 
 type PurchaseFormData = z.infer<typeof purchaseSchema>;
 
-function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
+function RecordPurchaseDialog({ suppliers, onDataChange }: { suppliers: Supplier[], onDataChange: () => void }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -349,7 +343,7 @@ function RecordPurchaseDialog({ suppliers }: { suppliers: Supplier[] }) {
       });
       setOpen(false);
       form.reset();
-      window.location.reload(); 
+      onDataChange();
     } catch (error) {
        toast({
         variant: 'destructive',
@@ -489,7 +483,7 @@ function DeleteFabricDialog({ fabric, isOpen, onOpenChange, onFinished }: { fabr
     );
 }
 
-function FabricsTableToolbar({ suppliers, onFinished }: { suppliers: Supplier[], onFinished: () => void }) {
+function FabricsTableToolbar({ onAdd, suppliers, onDataChange }: { onAdd: () => void, suppliers: Supplier[], onDataChange: () => void }) {
   const { t } = useTranslation();
   return (
     <>
@@ -498,25 +492,30 @@ function FabricsTableToolbar({ suppliers, onFinished }: { suppliers: Supplier[],
         className="h-8 w-[150px] lg:w-[250px]"
       />
       <div className="ml-auto flex items-center gap-2">
-        <AddEditFabricDialog fabric={null} suppliers={suppliers} onFinished={onFinished} />
-        <RecordPurchaseDialog suppliers={suppliers} />
+        <Button size="sm" className="h-8" onClick={onAdd}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            {t('addFabric')}
+        </Button>
+        <RecordPurchaseDialog suppliers={suppliers} onDataChange={onDataChange} />
       </div>
     </>
   );
 }
 
-export function FabricsTable({ data, suppliers }: FabricsTableProps) {
+export function FabricsTable({ data, suppliers, onDataChange }: FabricsTableProps) {
   const { t } = useTranslation();
   const [selectedFabric, setSelectedFabric] = useState<Fabric | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  // This is a dummy state to force re-render, a better solution would use a state manager
-  const [_, setForceReRender] = useState(0); 
-  const onFinished = () => setForceReRender(c => c + 1);
+  const handleAdd = () => {
+    setSelectedFabric(null);
+    setIsDialogOpen(true);
+  }
 
   const handleEdit = (fabric: Fabric) => {
     setSelectedFabric(fabric);
-    // The dialog is opened via the DropdownMenuItem which is part of AddEditFabricDialog
+    setIsDialogOpen(true);
   };
   
   const handleDelete = (fabric: Fabric) => {
@@ -527,12 +526,22 @@ export function FabricsTable({ data, suppliers }: FabricsTableProps) {
   const columns = getColumns(t, handleEdit, handleDelete);
   return (
     <>
-    <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar suppliers={suppliers} onFinished={onFinished} />} />
+    <DataTable columns={columns} data={data} toolbar={<FabricsTableToolbar onAdd={handleAdd} suppliers={suppliers} onDataChange={onDataChange} />} />
+    <AddEditFabricDialog
+      fabric={selectedFabric}
+      suppliers={suppliers}
+      onFinished={onDataChange}
+      isOpen={isDialogOpen}
+      onOpenChange={setIsDialogOpen}
+    >
+      {/* Trigger is handled by the toolbar and dropdown menu items */}
+      <></>
+    </AddEditFabricDialog>
     <DeleteFabricDialog 
         fabric={selectedFabric}
         isOpen={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
-        onFinished={onFinished}
+        onFinished={onDataChange}
     />
     </>
   );

@@ -10,6 +10,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const onDataChange = () => {
+    setDataVersion(prev => prev + 1);
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -24,7 +29,7 @@ export default function OrdersPage() {
       }
     };
     fetchOrders();
-  }, []);
+  }, [dataVersion]);
 
   return (
     <>
@@ -44,7 +49,7 @@ export default function OrdersPage() {
                 </div>
           </div>
         ) : (
-            <OrdersTable data={orders} />
+            <OrdersTable data={orders} onDataChange={onDataChange} />
         )}
       </div>
     </>

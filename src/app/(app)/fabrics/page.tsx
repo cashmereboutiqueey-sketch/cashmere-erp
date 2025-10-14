@@ -14,6 +14,11 @@ export default function FabricsPage() {
   const [fabrics, setFabrics] = useState<(Fabric & { supplier?: Supplier })[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const onDataChange = () => {
+    setDataVersion(prev => prev + 1);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,7 +40,7 @@ export default function FabricsPage() {
       setIsLoading(false);
     };
     fetchData();
-  }, []);
+  }, [dataVersion]);
 
 
   return (
@@ -59,7 +64,7 @@ export default function FabricsPage() {
             </div>
           </div>
         ) : (
-          <FabricsTable data={fabrics} suppliers={suppliers} />
+          <FabricsTable data={fabrics} suppliers={suppliers} onDataChange={onDataChange} />
         )}
       </div>
     </>

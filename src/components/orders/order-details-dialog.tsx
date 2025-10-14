@@ -46,9 +46,10 @@ interface OrderDetailsDialogProps {
   order: Order | null;
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  onDataChange: () => void;
 }
 
-export function OrderDetailsDialog({ order, isOpen, onOpenChange }: OrderDetailsDialogProps) {
+export function OrderDetailsDialog({ order, isOpen, onOpenChange, onDataChange }: OrderDetailsDialogProps) {
   const { toast } = useToast();
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,7 +73,7 @@ export function OrderDetailsDialog({ order, isOpen, onOpenChange }: OrderDetails
         await addPaymentToOrder(order.id, paymentAmount);
         toast({ title: 'Success', description: 'Payment added successfully.' });
         onOpenChange(false);
-        window.location.reload(); // Reload to see changes. A more advanced solution would use state management.
+        onDataChange();
     } catch(e) {
         const error = e as Error;
         toast({ variant: 'destructive', title: 'Payment Failed', description: error.message });

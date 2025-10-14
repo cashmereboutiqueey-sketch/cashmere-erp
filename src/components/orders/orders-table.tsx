@@ -175,7 +175,7 @@ export function getColumns(
     ];
 }
 
-function DeleteOrderDialog({ order, isOpen, onOpenChange }: { order: Order | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+function DeleteOrderDialog({ order, isOpen, onOpenChange, onDataChange }: { order: Order | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, onDataChange: () => void }) {
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -186,7 +186,7 @@ function DeleteOrderDialog({ order, isOpen, onOpenChange }: { order: Order | nul
             await deleteOrder(order.id);
             toast({ title: "Success", description: "Order deleted successfully and stock replenished." });
             onOpenChange(false);
-            window.location.reload();
+            onDataChange();
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Failed to delete order." });
         } finally {
@@ -216,9 +216,10 @@ function DeleteOrderDialog({ order, isOpen, onOpenChange }: { order: Order | nul
 
 interface OrdersTableProps {
   data: Order[];
+  onDataChange: () => void;
 }
 
-export function OrdersTable({ data }: OrdersTableProps) {
+export function OrdersTable({ data, onDataChange }: OrdersTableProps) {
   const { toast } = useToast();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -231,9 +232,7 @@ export function OrdersTable({ data }: OrdersTableProps) {
         title: 'Success',
         description: `Order status updated to ${status}.`,
       });
-      // This will cause a full page reload. For a smoother UX,
-      // consider a state management solution to update just the table.
-      window.location.reload();
+      onDataChange();
     } catch (error) {
       toast({
         variant: 'destructive',
@@ -262,11 +261,13 @@ export function OrdersTable({ data }: OrdersTableProps) {
             order={selectedOrder}
             isOpen={isDetailsOpen}
             onOpenChange={setIsDetailsOpen}
+            onDataChange={onDataChange}
         />
          <DeleteOrderDialog
             order={selectedOrder}
             isOpen={isDeleteOpen}
             onOpenChange={setIsDeleteOpen}
+            onDataChange={onDataChange}
         />
     </>
   );

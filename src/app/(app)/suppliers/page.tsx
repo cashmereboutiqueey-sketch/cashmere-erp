@@ -7,7 +7,7 @@ import { getSuppliers } from '@/services/supplier-service';
 import { getFabrics } from '@/services/fabric-service';
 import { getExpenses } from '@/services/finance-service';
 import { Supplier, Fabric, Expense } from '@/lib/types';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,35 +25,40 @@ export default function SuppliersPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [dataVersion, setDataVersion] = useState(0);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    const [fetchedSuppliers, fetchedFabrics, fetchedExpenses] = await Promise.all([
-      getSuppliers(),
-      getFabrics(),
-      getExpenses(),
-    ]);
-    setSuppliers(fetchedSuppliers);
-    setFabrics(fetchedFabrics);
-    setExpenses(fetchedExpenses);
-
-    if (fetchedSuppliers.length > 0) {
-      if(selectedSupplier) {
-        // Reselect the supplier if it still exists
-        const reselected = fetchedSuppliers.find(s => s.id === selectedSupplier.id);
-        setSelectedSupplier(reselected || fetchedSuppliers[0]);
-      } else {
-        setSelectedSupplier(fetchedSuppliers[0]);
-      }
-    } else {
-        setSelectedSupplier(null);
-    }
-    setIsLoading(false);
-  }, [selectedSupplier]);
+  const onDataChange = () => {
+    setDataVersion(prev => prev + 1);
+  };
 
   useEffect(() => {
+    const fetchData = async () => {
+        setIsLoading(true);
+        const [fetchedSuppliers, fetchedFabrics, fetchedExpenses] = await Promise.all([
+          getSuppliers(),
+          getFabrics(),
+          getExpenses(),
+        ]);
+        setSuppliers(fetchedSuppliers);
+        setFabrics(fetchedFabrics);
+        setExpenses(fetchedExpenses);
+
+        if (fetchedSuppliers.length > 0) {
+          if(selectedSupplier) {
+            // Reselect the supplier if it still exists
+            const reselected = fetchedSuppliers.find(s => s.id === selectedSupplier.id);
+            setSelectedSupplier(reselected || fetchedSuppliers[0]);
+          } else {
+            setSelectedSupplier(fetchedSuppliers[0]);
+          }
+        } else {
+            setSelectedSupplier(null);
+        }
+        setIsLoading(false);
+    };
+
     fetchData();
-  }, []);
+  }, [dataVersion]);
 
   const supplierFabrics = selectedSupplier
     ? fabrics.filter((fabric) => fabric.supplier_id === selectedSupplier.id)
@@ -101,7 +106,7 @@ export default function SuppliersPage() {
                     data={suppliers}
                     onRowClick={setSelectedSupplier}
                     selectedSupplierId={selectedSupplier?.id}
-                    onDataChange={fetchData}
+                    onDataChange={onDataChange}
                 />
             )}
         </div>

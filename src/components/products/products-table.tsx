@@ -351,10 +351,11 @@ export const getColumns = (
 
 interface ProductsTableProps {
   data: Product[];
+  onDataChange: () => void;
 }
 
-const INITIAL_SIZES: string[] = [];
-const INITIAL_COLORS: string[] = [];
+const INITIAL_SIZES: string[] = ["S", "M", "L", "XL"];
+const INITIAL_COLORS: string[] = ["Black", "White", "Gray", "Beige"];
 
 const variantSchema = z.object({
     id: z.string().optional(),
@@ -389,12 +390,14 @@ function ProductEditDialog({
     product,
     isOpen,
     onOpenChange,
+    onDataChange,
     allSizes,
     allColors 
 }: { 
     product: Product | null,
     isOpen: boolean,
     onOpenChange: (isOpen: boolean) => void,
+    onDataChange: () => void;
     allSizes: string[],
     allColors: string[] 
 }) {
@@ -412,7 +415,7 @@ function ProductEditDialog({
   });
   const { control, handleSubmit, setValue, watch, reset } = methods;
 
-  const { fields: variantFields, update: updateVariant } = useFieldArray({ control, name: "variants" });
+  const { fields: variantFields, replace: replaceVariants } = useFieldArray({ control, name: "variants" });
   const { fields: fabricFields, append: appendFabric, remove: removeFabric } = useFieldArray({ control, name: "fabrics" });
 
   const productName = watch("name");
@@ -427,34 +430,25 @@ function ProductEditDialog({
 
   useEffect(() => {
     if (isOpen && product) {
-        reset({
-            id: product.id,
-            name: product.name,
-            category: product.category,
-            difficulty: product.difficulty || 'medium',
-            variants: product.variants,
-        });
+      reset({
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        difficulty: product.difficulty || 'medium',
+        variants: product.variants,
+      });
 
-        const sizes = [...new Set(product.variants.map(v => v.size).filter(Boolean))] as string[];
-        const colors = [...new Set(product.variants.map(v => v.color).filter(Boolean))] as string[];
-        setSelectedSizes(sizes);
-        setSelectedColors(colors);
-
-        const fetchProductFabrics = async () => {
-            const fetchedFabrics = await getProductFabricsForProduct(product.id);
-            setValue('fabrics', fetchedFabrics);
-        };
-        fetchProductFabrics();
-    } else if (!isOpen) {
-        reset({ id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] });
-        setSelectedSizes([]);
-        setSelectedColors([]);
+      const fetchProductFabrics = async () => {
+        const fetchedFabrics = await getProductFabricsForProduct(product.id);
+        setValue('fabrics', fetchedFabrics);
+      };
+      fetchProductFabrics();
     }
   }, [isOpen, product, reset, setValue]);
 
 
-  useEffect(() => {
-    if (isEditMode || !productName || selectedSizes.length === 0 || selectedColors.length === 0) {
+  const generateVariants = () => {
+     if (isEditMode || !productName || selectedSizes.length === 0 || selectedColors.length === 0) {
       return;
     }
 
@@ -476,8 +470,14 @@ function ProductEditDialog({
         };
       })
     );
-    setValue("variants", newVariants);
-  }, [selectedSizes, selectedColors, productName, setValue, isEditMode]);
+    replaceVariants(newVariants);
+  };
+
+  useEffect(() => {
+    if (!isEditMode) {
+      generateVariants();
+    }
+  }, [selectedSizes, selectedColors, productName, isEditMode]);
 
   const onSubmit = async (data: ProductFormData) => {
     try {
@@ -489,7 +489,7 @@ function ProductEditDialog({
         toast({ title: t('success'), description: t('productAdded') });
       }
       onOpenChange(false);
-      window.location.reload();
+      onDataChange();
     } catch (error) {
       const action = isEditMode ? 'update' : 'add';
       toast({ variant: "destructive", title: t('error'), description: t('failedToActionProduct', { action }) });
@@ -498,7 +498,7 @@ function ProductEditDialog({
   
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
-        reset();
+        reset({ id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] });
         setSelectedSizes([]);
         setSelectedColors([]);
     }
@@ -685,7 +685,7 @@ function ProductEditDialog({
   );
 }
 
-function DeleteProductDialog({ product, isOpen, onOpenChange }: { product: Product | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
+function DeleteProductDialog({ product, isOpen, onOpenChange, onDataChange }: { product: Product | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, onDataChange: () => void }) {
     const { t } = useTranslation();
     const { toast } = useToast();
     const [isDeleting, setIsDeleting] = useState(false);
@@ -697,7 +697,7 @@ function DeleteProductDialog({ product, isOpen, onOpenChange }: { product: Produ
             await deleteProduct(product.id);
             toast({ title: t('success'), description: t('productDeleted') });
             onOpenChange(false);
-            window.location.reload();
+            onDataChange();
         } catch (error) {
             toast({ variant: "destructive", title: t('error'), description: t('failedToDeleteProduct') });
         } finally {
@@ -811,18 +811,18 @@ function ProductsTableToolbar({
   );
 }
 
-export function ProductsTable({ data }: ProductsTableProps) {
+export function ProductsTable({ data, onDataChange }: ProductsTableProps) {
   const { t } = useTranslation();
   const [allSizes, setAllSizes] = useState(INITIAL_SIZES);
   const [allColors, setAllColors] = useState(INITIAL_COLORS);
 
-  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const handleEdit = (product: Product) => {
     setSelectedProduct(product);
-    setIsEditOpen(true);
+    setIsDialogOpen(true);
   };
   
   const handleDelete = (product: Product) => {
@@ -832,7 +832,7 @@ export function ProductsTable({ data }: ProductsTableProps) {
 
   const handleAdd = () => {
     setSelectedProduct(null);
-    setIsEditOpen(true);
+    setIsDialogOpen(true);
   };
 
   const columns = getColumns(t, handleEdit, handleDelete);
@@ -855,8 +855,9 @@ export function ProductsTable({ data }: ProductsTableProps) {
     />
     <ProductEditDialog 
         product={selectedProduct}
-        isOpen={isEditOpen}
-        onOpenChange={setIsEditOpen}
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onDataChange={onDataChange}
         allSizes={allSizes}
         allColors={allColors}
     />
@@ -864,9 +865,8 @@ export function ProductsTable({ data }: ProductsTableProps) {
         product={selectedProduct}
         isOpen={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
+        onDataChange={onDataChange}
     />
     </>
   );
 }
-
-    

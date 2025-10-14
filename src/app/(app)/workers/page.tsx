@@ -7,7 +7,7 @@ import { useTranslation } from '@/hooks/use-translation';
 import { Worker, WorkLog, ProductionOrder } from '@/lib/types';
 import { getWorkers, getWorkLogs } from '@/services/worker-service';
 import { getProductionOrders } from '@/services/production-service';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function WorkersPage() {
@@ -16,23 +16,27 @@ export default function WorkersPage() {
     const [workLogs, setWorkLogs] = useState<WorkLog[]>([]);
     const [productionOrders, setProductionOrders] = useState<ProductionOrder[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    
-    const fetchData = useCallback(async () => {
-        setIsLoading(true);
-        const [fetchedWorkers, fetchedWorkLogs, fetchedProdOrders] = await Promise.all([
-            getWorkers(),
-            getWorkLogs(),
-            getProductionOrders(),
-        ]);
-        setWorkers(fetchedWorkers);
-        setWorkLogs(fetchedWorkLogs);
-        setProductionOrders(fetchedProdOrders);
-        setIsLoading(false);
-    }, []);
+    const [dataVersion, setDataVersion] = useState(0);
 
+    const onDataChange = () => {
+        setDataVersion(prev => prev + 1);
+    }
+    
     useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            const [fetchedWorkers, fetchedWorkLogs, fetchedProdOrders] = await Promise.all([
+                getWorkers(),
+                getWorkLogs(),
+                getProductionOrders(),
+            ]);
+            setWorkers(fetchedWorkers);
+            setWorkLogs(fetchedWorkLogs);
+            setProductionOrders(fetchedProdOrders);
+            setIsLoading(false);
+        };
         fetchData();
-    }, [fetchData]);
+    }, [dataVersion]);
 
     return (
         <>
@@ -59,7 +63,7 @@ export default function WorkersPage() {
                         workers={workers}
                         workLogs={workLogs}
                         productionOrders={productionOrders}
-                        onDataChange={fetchData}
+                        onDataChange={onDataChange}
                     />
                 )}
             </div>

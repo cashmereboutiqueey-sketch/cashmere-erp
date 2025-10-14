@@ -14,6 +14,11 @@ export default function ProductsPage() {
   const { t } = useTranslation();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
+
+  const onDataChange = () => {
+    setDataVersion(prev => prev + 1);
+  };
 
   useEffect(() => {
     const fetchProductsData = async () => {
@@ -40,7 +45,7 @@ export default function ProductsPage() {
       setIsLoading(false);
     };
     fetchProductsData();
-  }, []);
+  }, [dataVersion]);
 
   return (
     <>
@@ -66,7 +71,7 @@ export default function ProductsPage() {
                 </div>
           </div>
         ) : (
-          <ProductsTable data={products} />
+          <ProductsTable data={products} onDataChange={onDataChange} />
         )}
       </div>
     </>

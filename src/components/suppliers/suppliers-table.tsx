@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
@@ -54,28 +54,27 @@ const supplierSchema = z.object({
 type SupplierFormData = z.infer<typeof supplierSchema>;
 
 
-function AddEditSupplierDialog({ supplier, onFinished, children }: { supplier: Supplier | null, onFinished: () => void, children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+function AddEditSupplierDialog({ supplier, onFinished, children, isOpen, onOpenChange }: { supplier: Supplier | null, onFinished: () => void, children: React.ReactNode, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const isEditMode = !!supplier;
   
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
+    defaultValues: { name: '', phone: '' }
   });
 
   const { handleSubmit, control, reset } = form;
 
-  const handleOpenChange = (isOpen: boolean) => {
-      setOpen(isOpen);
+  useEffect(() => {
       if (isOpen) {
-          if (isEditMode) {
+          if (isEditMode && supplier) {
             reset(supplier);
           } else {
             reset({ name: '', phone: '' });
           }
       }
-  };
+  }, [isOpen, isEditMode, supplier]);
 
   const onSubmit = async (data: SupplierFormData) => {
     try {
@@ -86,7 +85,7 @@ function AddEditSupplierDialog({ supplier, onFinished, children }: { supplier: S
         await addSupplier(data);
         toast({ title: t('success'), description: t('supplierAddedSuccess') });
       }
-      setOpen(false);
+      onOpenChange(false);
       onFinished();
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -99,7 +98,7 @@ function AddEditSupplierDialog({ supplier, onFinished, children }: { supplier: S
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -137,7 +136,7 @@ function AddEditSupplierDialog({ supplier, onFinished, children }: { supplier: S
 }
 
 
-function SuppliersTableToolbar({ table, onDataChange }: { table: any, onDataChange: () => void }) {
+function SuppliersTableToolbar({ table, onAdd }: { table: any, onAdd: () => void }) {
   const { t } = useTranslation();
   return (
     <DataTableToolbar table={table}>
@@ -150,12 +149,10 @@ function SuppliersTableToolbar({ table, onDataChange }: { table: any, onDataChan
             className="h-8 w-[150px] lg:w-[250px]"
         />
         <div className="ml-auto">
-            <AddEditSupplierDialog supplier={null} onFinished={onDataChange}>
-                <Button size="sm" className="h-8">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    {t('addSupplier')}
-                </Button>
-            </AddEditSupplierDialog>
+            <Button size="sm" className="h-8" onClick={onAdd}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                {t('addSupplier')}
+            </Button>
         </div>
     </DataTableToolbar>
   );
@@ -200,11 +197,7 @@ export const getColumns = (
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <AddEditSupplierDialog supplier={row.original} onFinished={() => {}}>
-                  <button className='relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full'>
-                    {t('edit')}
-                  </button>
-              </AddEditSupplierDialog>
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>{t('edit')}</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onDelete(row.original)} className="text-destructive">{t('delete')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -258,12 +251,17 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataCha
   const { t } = useTranslation();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+
+  const handleAdd = () => {
+    setSelectedSupplier(null);
+    setIsDialogOpen(true);
+  }
 
   const handleEdit = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
-    // This is now handled by the AddEditSupplierDialog trigger in the dropdown
+    setIsDialogOpen(true);
   };
 
   const handleDelete = (supplier: Supplier) => {
@@ -288,7 +286,7 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataCha
 
   return (
       <div className="space-y-4">
-        <SuppliersTableToolbar table={table} onDataChange={onDataChange} />
+        <SuppliersTableToolbar table={table} onAdd={handleAdd} />
         <div className="rounded-md border">
             <Table>
             <TableHeader>
@@ -359,6 +357,14 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataCha
             {t('next')}
             </Button>
         </div>
+        <AddEditSupplierDialog 
+            supplier={selectedSupplier}
+            onFinished={onDataChange}
+            isOpen={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+        >
+            <></>
+        </AddEditSupplierDialog>
         <DeleteSupplierDialog 
             supplier={selectedSupplier}
             isOpen={isDeleteDialogOpen}
