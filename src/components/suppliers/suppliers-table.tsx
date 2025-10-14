@@ -74,7 +74,7 @@ function AddEditSupplierDialog({ supplier, onFinished, isOpen, onOpenChange }: {
             reset({ name: '', phone: '' });
           }
       }
-  }, [isOpen, isEditMode, supplier, reset]);
+  }, [isOpen, isEditMode, supplier]);
 
   const onSubmit = async (data: SupplierFormData) => {
     try {

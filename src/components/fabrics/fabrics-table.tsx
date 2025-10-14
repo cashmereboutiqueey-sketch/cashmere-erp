@@ -94,7 +94,7 @@ function AddEditFabricDialog({ fabric, suppliers, onFinished, isOpen, onOpenChan
             reset({ name: '', code: '', color: '', length_in_meters: 0, price_per_meter: 0, min_stock_level: 0, supplier_id: '' });
         }
     }
-  }, [isOpen, isEditMode, fabric, reset]);
+  }, [isOpen, fabric, isEditMode]);
 
 
   const onSubmit = async (data: FabricFormData) => {

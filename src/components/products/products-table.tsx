@@ -450,7 +450,7 @@ function ProductEditDialog({
             setSelectedColors([]);
         }
     }
-  }, [isOpen, product, reset, setValue]);
+  }, [isOpen, product]);
 
 
   const generateVariants = () => {
