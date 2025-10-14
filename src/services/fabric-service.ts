@@ -24,8 +24,8 @@ const fromFirestore = (doc: any): Fabric => {
 
 export async function getFabrics(): Promise<Fabric[]> {
   try {
-    // Return empty array to clear demo data
-    return [];
+    const snapshot = await getDocs(fabricsCollection);
+    return snapshot.docs.map(fromFirestore);
   } catch (error) {
     console.error('Error getting fabrics: ', error);
     return [];
