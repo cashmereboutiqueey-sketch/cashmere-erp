@@ -74,7 +74,7 @@ const fabricSchema = z.object({
 
 type FabricFormData = z.infer<typeof fabricSchema>;
 
-function AddEditFabricDialog({ fabric, suppliers, onFinished, children, isOpen, onOpenChange }: { fabric: Fabric | null, suppliers: Supplier[], onFinished: () => void, children: React.ReactNode, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+function AddEditFabricDialog({ fabric, suppliers, onFinished, isOpen, onOpenChange }: { fabric: Fabric | null, suppliers: Supplier[], onFinished: () => void, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const isEditMode = !!fabric;
@@ -88,15 +88,13 @@ function AddEditFabricDialog({ fabric, suppliers, onFinished, children, isOpen, 
 
   useEffect(() => {
     if (isOpen) {
-      if (isEditMode && fabric) {
-        reset(fabric);
-      } else {
-        reset({
-          name: '', code: '', color: '', length_in_meters: 0, price_per_meter: 0, min_stock_level: 0, supplier_id: ''
-        });
-      }
+        if (isEditMode && fabric) {
+            reset(fabric);
+        } else {
+            reset({ name: '', code: '', color: '', length_in_meters: 0, price_per_meter: 0, min_stock_level: 0, supplier_id: '' });
+        }
     }
-  }, [isOpen, isEditMode, fabric]);
+  }, [isOpen, isEditMode, fabric, reset]);
 
 
   const onSubmit = async (data: FabricFormData) => {
@@ -121,9 +119,6 @@ function AddEditFabricDialog({ fabric, suppliers, onFinished, children, isOpen, 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{isEditMode ? "Edit Fabric" : t('addFabric')}</DialogTitle>
@@ -533,10 +528,7 @@ export function FabricsTable({ data, suppliers, onDataChange }: FabricsTableProp
       onFinished={onDataChange}
       isOpen={isDialogOpen}
       onOpenChange={setIsDialogOpen}
-    >
-      {/* Trigger is handled by the toolbar and dropdown menu items */}
-      <></>
-    </AddEditFabricDialog>
+    />
     <DeleteFabricDialog 
         fabric={selectedFabric}
         isOpen={isDeleteOpen}

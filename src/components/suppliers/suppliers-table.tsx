@@ -54,7 +54,7 @@ const supplierSchema = z.object({
 type SupplierFormData = z.infer<typeof supplierSchema>;
 
 
-function AddEditSupplierDialog({ supplier, onFinished, children, isOpen, onOpenChange }: { supplier: Supplier | null, onFinished: () => void, children: React.ReactNode, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+function AddEditSupplierDialog({ supplier, onFinished, isOpen, onOpenChange }: { supplier: Supplier | null, onFinished: () => void, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
   const { toast } = useToast();
   const { t } = useTranslation();
   const isEditMode = !!supplier;
@@ -74,7 +74,7 @@ function AddEditSupplierDialog({ supplier, onFinished, children, isOpen, onOpenC
             reset({ name: '', phone: '' });
           }
       }
-  }, [isOpen, isEditMode, supplier]);
+  }, [isOpen, isEditMode, supplier, reset]);
 
   const onSubmit = async (data: SupplierFormData) => {
     try {
@@ -99,9 +99,6 @@ function AddEditSupplierDialog({ supplier, onFinished, children, isOpen, onOpenC
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{isEditMode ? "Edit Supplier" : t('addSupplier')}</DialogTitle>
@@ -362,9 +359,7 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataCha
             onFinished={onDataChange}
             isOpen={isDialogOpen}
             onOpenChange={setIsDialogOpen}
-        >
-            <></>
-        </AddEditSupplierDialog>
+        />
         <DeleteSupplierDialog 
             supplier={selectedSupplier}
             isOpen={isDeleteDialogOpen}

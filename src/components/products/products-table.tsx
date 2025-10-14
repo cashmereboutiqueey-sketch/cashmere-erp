@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -413,7 +412,7 @@ function ProductEditDialog({
     resolver: zodResolver(productSchema),
     defaultValues: { id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] },
   });
-  const { control, handleSubmit, setValue, watch, reset } = methods;
+  const { control, handleSubmit, setValue, watch, reset, trigger } = methods;
 
   const { fields: variantFields, replace: replaceVariants } = useFieldArray({ control, name: "variants" });
   const { fields: fabricFields, append: appendFabric, remove: removeFabric } = useFieldArray({ control, name: "fabrics" });
@@ -429,20 +428,27 @@ function ProductEditDialog({
   }, []);
 
   useEffect(() => {
-    if (isOpen && product) {
-      reset({
-        id: product.id,
-        name: product.name,
-        category: product.category,
-        difficulty: product.difficulty || 'medium',
-        variants: product.variants,
-      });
-
-      const fetchProductFabrics = async () => {
-        const fetchedFabrics = await getProductFabricsForProduct(product.id);
-        setValue('fabrics', fetchedFabrics);
-      };
-      fetchProductFabrics();
+    if (isOpen) {
+        if (product) { // Edit mode
+            reset({
+                id: product.id,
+                name: product.name,
+                category: product.category,
+                difficulty: product.difficulty || 'medium',
+                variants: product.variants,
+                fabrics: product.fabrics || []
+            });
+            // Fetch and set fabrics for edit mode
+            const fetchProductFabrics = async () => {
+                const fetchedFabrics = await getProductFabricsForProduct(product.id);
+                setValue('fabrics', fetchedFabrics);
+            };
+            fetchProductFabrics();
+        } else { // Add mode
+            reset({ id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] });
+            setSelectedSizes([]);
+            setSelectedColors([]);
+        }
     }
   }, [isOpen, product, reset, setValue]);
 
@@ -477,6 +483,7 @@ function ProductEditDialog({
     if (!isEditMode) {
       generateVariants();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSizes, selectedColors, productName, isEditMode]);
 
   const onSubmit = async (data: ProductFormData) => {
@@ -496,13 +503,8 @@ function ProductEditDialog({
     }
   };
   
-  const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
-        reset({ id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] });
-        setSelectedSizes([]);
-        setSelectedColors([]);
-    }
-    onOpenChange(isOpen);
+  const handleOpenChange = (open: boolean) => {
+    onOpenChange(open);
   }
 
   const toggleSelection = (item: string, list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>) => {
