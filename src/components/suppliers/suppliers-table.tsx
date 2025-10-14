@@ -48,7 +48,6 @@ interface SuppliersTableProps {
 const supplierSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
   phone: z.string().optional(),
 });
 
@@ -73,7 +72,7 @@ function AddEditSupplierDialog({ supplier, onFinished, children }: { supplier: S
           if (isEditMode) {
             reset(supplier);
           } else {
-            reset({ name: '', email: '', phone: '' });
+            reset({ name: '', phone: '' });
           }
       }
   };
@@ -114,13 +113,6 @@ function AddEditSupplierDialog({ supplier, onFinished, children }: { supplier: S
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">{t('name')}</FormLabel>
                   <FormControl><Input {...field} className="col-span-3" /></FormControl>
-                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                </FormItem>
-            )}/>
-             <FormField control={control} name="email" render={({ field }) => (
-                <FormItem className="grid grid-cols-4 items-center gap-4">
-                  <FormLabel className="text-right">{t('email')}</FormLabel>
-                  <FormControl><Input {...field} type="email" className="col-span-3" /></FormControl>
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
             )}/>
