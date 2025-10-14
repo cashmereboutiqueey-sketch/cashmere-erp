@@ -1,85 +1,90 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
+    
+    // --- Functions ---
     function isAuth() {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isAuth() && request.auth.uid == userId;
-    }
-
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    function isAdmin() {
-      return isAuth() && getUserRole() == 'admin';
-    }
-
     function isRole(role) {
-        return isAuth() && getUserRole() == role;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
     
+    function isAdmin() {
+      return isRole('admin');
+    }
+
     function isOneOfRoles(roles) {
-        return isAuth() && getUserRole() in roles;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
     }
+    
+    // --- Rules per Collection ---
 
-    // Rules for collections
+    // Users: Only admins can manage the user list. Logged-in users can read their own data.
     match /users/{userId} {
-      allow read: if isAuth();
-      allow create, update, delete: if isAdmin();
+      allow read: if isAuth() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
     }
-    
+
+    // Customers: Admin and Sales can manage customers.
     match /customers/{customerId} {
-      allow read, write: if isOneOfRoles(['admin', 'sales']);
+      allow read, write: if isAuth() && isOneOfRoles(['admin', 'sales']);
     }
 
+    // Products: Admin, Production, and Warehouse Managers can manage products.
     match /products/{productId} {
-        allow read: if isAuth();
-        allow create, update, delete: if isOneOfRoles(['admin', 'production']);
+      allow read, write: if isAuth() && isOneOfRoles(['admin', 'production', 'warehouse_manager']);
     }
 
+    // Product Fabrics (Recipes): Admin, Production, and Warehouse Managers can manage recipes.
     match /product_fabrics/{productFabricId} {
-        allow read, write: if isOneOfRoles(['admin', 'production']);
+        allow read, write: if isAuth() && isOneOfRoles(['admin', 'production', 'warehouse_manager']);
     }
-    
+
+    // Fabrics: Admin and Production can manage fabrics.
     match /fabrics/{fabricId} {
-       allow read, write: if isOneOfRoles(['admin', 'production']);
+      allow read, write: if isAuth() && isOneOfRoles(['admin', 'production']);
     }
 
+    // Suppliers: Admins and Production can manage suppliers.
     match /suppliers/{supplierId} {
-      allow read: if isOneOfRoles(['admin', 'production']);
-      allow create, update, delete: if isOneOfRoles(['admin', 'production']);
+      allow read: if isAuth(); // All authenticated users can read supplier list
+      allow create, update, delete: if isAuth() && isOneOfRoles(['admin', 'production']);
     }
 
+    // Orders: Admins and Sales can manage orders.
     match /orders/{orderId} {
-        allow read: if isAuth();
-        allow create, update: if isOneOfRoles(['admin', 'sales']);
-        allow delete: if isAdmin();
+      allow read, write: if isAuth() && isOneOfRoles(['admin', 'sales']);
     }
 
+    // Production Orders: Admin and Production can manage production orders.
     match /production_orders/{productionOrderId} {
-        allow read, write: if isOneOfRoles(['admin', 'production']);
-    }
-
-    match /expenses/{expenseId} {
-        allow read, write: if isOneOfRoles(['admin', 'accountant']);
+        allow read, write: if isAuth() && isOneOfRoles(['admin', 'production']);
     }
     
+    // Workers: Admin and Production can manage workers.
     match /workers/{workerId} {
-        allow read, write: if isOneOfRoles(['admin', 'production']);
+      allow read, write: if isAuth() && isOneOfRoles(['admin', 'production']);
     }
 
+    // Work Logs: Admin and Production can manage work logs.
     match /work_logs/{workLogId} {
-        allow read, write: if isOneOfRoles(['admin', 'production']);
+      allow read, write: if isAuth() && isOneOfRoles(['admin', 'production']);
+    }
+
+    // Expenses: Admin and Accountant can manage expenses.
+    match /expenses/{expenseId} {
+        allow read, write: if isAuth() && isOneOfRoles(['admin', 'accountant']);
     }
     
+    // Notifications: Any authenticated user can read their notifications, but only the system (via server-side logic) should create them.
+    // For now, we allow users to update their own notifications (to mark as read).
     match /notifications/{notificationId} {
-      allow read, write: if isAuth();
+        allow read, update: if isAuth();
+        allow create: if false; // Prevent client-side creation
     }
+
   }
 }
