@@ -46,9 +46,45 @@ import { useTranslation } from '@/hooks/use-translation';
 
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
+type Permissions = Record<string, Role['name'][]>;
 
 function PermissionsManager() {
     const { t } = useTranslation();
+    const { toast } = useToast();
+    const [permissions, setPermissions] = useState<Permissions>({});
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        const initialPermissions = allMenuItems.reduce((acc, item) => {
+            acc[item.href] = item.roles;
+            return acc;
+        }, {} as Permissions);
+        setPermissions(initialPermissions);
+    }, []);
+
+    const handlePermissionChange = (href: string, role: Role['name'], checked: boolean) => {
+        setPermissions(prev => {
+            const currentRoles = prev[href] || [];
+            if (checked) {
+                return { ...prev, [href]: [...currentRoles, role] };
+            } else {
+                return { ...prev, [href]: currentRoles.filter(r => r !== role) };
+            }
+        });
+    };
+    
+    const handleSaveChanges = () => {
+        setIsSaving(true);
+        // In a real app, you would send `permissions` to a backend service to save.
+        console.log("Saving new permissions:", permissions);
+        setTimeout(() => {
+             toast({
+                title: "Permissions Saved",
+                description: "User role permissions have been updated.",
+            });
+            setIsSaving(false);
+        }, 1000);
+    }
 
     return (
         <Card>
@@ -78,8 +114,9 @@ function PermissionsManager() {
                                     {roles.map(role => (
                                         <TableCell key={role} className="text-center">
                                             <Checkbox
-                                                checked={item.roles.includes(role)}
-                                                disabled // This will be enabled in a future step
+                                                checked={(permissions[item.href] || []).includes(role)}
+                                                onCheckedChange={(checked) => handlePermissionChange(item.href, role, !!checked)}
+                                                disabled={role === 'admin'}
                                             />
                                         </TableCell>
                                     ))}
@@ -89,11 +126,13 @@ function PermissionsManager() {
                     </Table>
                 </div>
                  <p className="text-xs text-muted-foreground mt-4">
-                    Note: The "Admin" role always has access to all pages, including Settings. Permission editing is disabled for now.
+                    Note: The "Admin" role always has access to all pages, including Settings.
                 </p>
             </CardContent>
              <CardFooter>
-                <Button disabled>Save Permission Changes</Button>
+                <Button onClick={handleSaveChanges} disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save Permission Changes"}
+                </Button>
             </CardFooter>
         </Card>
     );
@@ -416,3 +455,5 @@ export default function SettingsPage() {
     </>
   );
 }
+
+    
