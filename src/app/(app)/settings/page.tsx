@@ -51,13 +51,14 @@ export default function SettingsPage() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<Role['name']>('sales');
 
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    const fetchedUsers = await getUsers();
+    setUsers(fetchedUsers.filter(u => u.id !== currentUser?.id));
+    setIsLoading(false);
+  }
+  
   useEffect(() => {
-      const fetchUsers = async () => {
-          setIsLoading(true);
-          const fetchedUsers = await getUsers();
-          setUsers(fetchedUsers.filter(u => u.id !== currentUser?.id));
-          setIsLoading(false);
-      }
       fetchUsers();
   }, [currentUser]);
 
@@ -115,8 +116,8 @@ export default function SettingsPage() {
     };
 
     try {
-        const newUserId = await addUser(newUser);
-        setUsers([...users, { ...newUser, id: newUserId }]);
+        await addUser(newUser);
+        await fetchUsers(); // Refetch all users
         setNewUserName('');
         setNewUserEmail('');
         toast({
