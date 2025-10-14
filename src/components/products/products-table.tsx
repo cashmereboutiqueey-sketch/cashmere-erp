@@ -45,8 +45,7 @@ import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { addProduct, updateProduct, deleteProduct } from '@/services/product-service';
-import { getProductFabricsForProduct } from '@/services/product-fabric-service';
+import { useProductStore } from '@/stores/product-store';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../ui/form';
 import { ScrollArea } from '../ui/scroll-area';
 import { generateProductDescription } from '@/ai/flows/product-description-generator';
@@ -350,7 +349,6 @@ export const getColumns = (
 
 interface ProductsTableProps {
   data: Product[];
-  onDataChange: () => void;
 }
 
 const INITIAL_SIZES: string[] = ["S", "M", "L", "XL"];
@@ -389,14 +387,12 @@ function ProductEditDialog({
     product,
     isOpen,
     onOpenChange,
-    onDataChange,
     allSizes,
     allColors 
 }: { 
     product: Product | null,
     isOpen: boolean,
-    onOpenChange: (isOpen: boolean) => void,
-    onDataChange: () => void;
+    onOpenChange: (isOpen: boolean) => void;
     allSizes: string[],
     allColors: string[] 
 }) {
@@ -405,6 +401,7 @@ function ProductEditDialog({
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const { toast } = useToast();
+  const { addProduct, updateProduct } = useProductStore();
 
   const isEditMode = !!product;
 
@@ -429,28 +426,22 @@ function ProductEditDialog({
 
   useEffect(() => {
     if (isOpen) {
-        if (product) { // Edit mode
-            reset({
-                id: product.id,
-                name: product.name,
-                category: product.category,
-                difficulty: product.difficulty || 'medium',
-                variants: product.variants,
-                fabrics: product.fabrics || []
-            });
-            // Fetch and set fabrics for edit mode
-            const fetchProductFabrics = async () => {
-                const fetchedFabrics = await getProductFabricsForProduct(product.id);
-                setValue('fabrics', fetchedFabrics);
-            };
-            fetchProductFabrics();
-        } else { // Add mode
-            reset({ id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] });
-            setSelectedSizes([]);
-            setSelectedColors([]);
-        }
+      if (product) { // Edit mode
+        reset({
+            id: product.id,
+            name: product.name,
+            category: product.category,
+            difficulty: product.difficulty || 'medium',
+            variants: product.variants,
+            fabrics: product.fabrics || []
+        });
+      } else { // Add mode
+        reset({ id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] });
+        setSelectedSizes([]);
+        setSelectedColors([]);
+      }
     }
-  }, [isOpen, product]);
+  }, [isOpen, product, reset]);
 
 
   const generateVariants = () => {
@@ -492,11 +483,10 @@ function ProductEditDialog({
         await updateProduct(data.id, data);
         toast({ title: t('success'), description: t('productUpdated') });
       } else {
-        await addProduct(data);
+        await addProduct(data as Omit<Product, 'id' | 'created_at'> & { fabrics: Omit<ProductFabric, 'product_id'>[] });
         toast({ title: t('success'), description: t('productAdded') });
       }
       onOpenChange(false);
-      onDataChange();
     } catch (error) {
       const action = isEditMode ? 'update' : 'add';
       toast({ variant: "destructive", title: t('error'), description: t('failedToActionProduct', { action }) });
@@ -687,23 +677,19 @@ function ProductEditDialog({
   );
 }
 
-function DeleteProductDialog({ product, isOpen, onOpenChange, onDataChange }: { product: Product | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, onDataChange: () => void }) {
+function DeleteProductDialog({ product, isOpen, onOpenChange }: { product: Product | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
     const { t } = useTranslation();
     const { toast } = useToast();
-    const [isDeleting, setIsDeleting] = useState(false);
+    const { deleteProduct, isLoading } = useProductStore();
 
     const handleDelete = async () => {
         if (!product) return;
-        setIsDeleting(true);
         try {
             await deleteProduct(product.id);
             toast({ title: t('success'), description: t('productDeleted') });
             onOpenChange(false);
-            onDataChange();
         } catch (error) {
             toast({ variant: "destructive", title: t('error'), description: t('failedToDeleteProduct') });
-        } finally {
-            setIsDeleting(false);
         }
     }
 
@@ -718,8 +704,8 @@ function DeleteProductDialog({ product, isOpen, onOpenChange, onDataChange }: { 
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
-                        {isDeleting ? t('deleting') : t('delete')}
+                    <AlertDialogAction onClick={handleDelete} disabled={isLoading} className={buttonVariants({ variant: "destructive" })}>
+                        {isLoading ? t('deleting') : t('delete')}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -813,7 +799,7 @@ function ProductsTableToolbar({
   );
 }
 
-export function ProductsTable({ data, onDataChange }: ProductsTableProps) {
+export function ProductsTable({ data }: ProductsTableProps) {
   const { t } = useTranslation();
   const [allSizes, setAllSizes] = useState(INITIAL_SIZES);
   const [allColors, setAllColors] = useState(INITIAL_COLORS);
@@ -859,7 +845,6 @@ export function ProductsTable({ data, onDataChange }: ProductsTableProps) {
         product={selectedProduct}
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onDataChange={onDataChange}
         allSizes={allSizes}
         allColors={allColors}
     />
@@ -867,7 +852,6 @@ export function ProductsTable({ data, onDataChange }: ProductsTableProps) {
         product={selectedProduct}
         isOpen={isDeleteOpen}
         onOpenChange={setIsDeleteOpen}
-        onDataChange={onDataChange}
     />
     </>
   );

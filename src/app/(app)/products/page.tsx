@@ -1,36 +1,20 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
 import { ProductsTable } from '@/components/products/products-table';
-import { getProducts } from '@/services/product-service';
-import { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from '@/hooks/use-translation';
+import { useProductStore } from '@/stores/product-store';
 
 export default function ProductsPage() {
   const { t } = useTranslation();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataVersion, setDataVersion] = useState(0);
-
-  const onDataChange = () => {
-    setDataVersion(prev => prev + 1);
-  };
+  const { products, isLoading, fetchProducts } = useProductStore();
 
   useEffect(() => {
-    const fetchProductsData = async () => {
-      setIsLoading(true);
-      const [fetchedProducts] = await Promise.all([
-        getProducts(),
-      ]);
-      
-      setProducts(fetchedProducts);
-      setIsLoading(false);
-    };
-    fetchProductsData();
-  }, [dataVersion]);
+    fetchProducts();
+  }, [fetchProducts]);
 
   return (
     <>
@@ -56,7 +40,7 @@ export default function ProductsPage() {
                 </div>
           </div>
         ) : (
-          <ProductsTable data={products} onDataChange={onDataChange} />
+          <ProductsTable data={products} />
         )}
       </div>
     </>

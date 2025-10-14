@@ -3,46 +3,30 @@
 
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
 import { FabricsTable } from '@/components/fabrics/fabrics-table';
-import { Fabric, Supplier } from '@/lib/types';
-import { getFabrics } from '@/services/fabric-service';
-import { getSuppliers } from '@/services/supplier-service';
-import { useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTranslation } from '@/hooks/use-translation';
+import { useFabricStore } from '@/stores/fabric-store';
+import { useSupplierStore } from '@/stores/supplier-store';
+import { useEffect } from 'react';
 
 export default function FabricsPage() {
   const { t } = useTranslation();
-  const [fabrics, setFabrics] = useState<(Fabric & { supplier?: Supplier })[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dataVersion, setDataVersion] = useState(0);
-
-  const onDataChange = () => {
-    setDataVersion(prev => prev + 1);
-  };
+  const { fabrics, isLoading: fabricsLoading, fetchFabrics } = useFabricStore();
+  const { suppliers, isLoading: suppliersLoading, fetchSuppliers } = useSupplierStore();
+  
+  const isLoading = fabricsLoading || suppliersLoading;
 
   useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      const [fetchedFabrics, fetchedSuppliers] = await Promise.all([
-        getFabrics(),
-        getSuppliers(),
-      ]);
+    fetchFabrics();
+    fetchSuppliers();
+  }, [fetchFabrics, fetchSuppliers]);
 
-      const fabricsWithSuppliers = fetchedFabrics.map((fabric) => {
-        const supplier = fetchedSuppliers.find(
-          (s) => s.id === fabric.supplier_id
-        );
-        return { ...fabric, supplier };
-      });
-      
-      setFabrics(fabricsWithSuppliers);
-      setSuppliers(fetchedSuppliers);
-      setIsLoading(false);
-    };
-    fetchData();
-  }, [dataVersion]);
-
+  const fabricsWithSuppliers = fabrics.map((fabric) => {
+    const supplier = suppliers.find(
+      (s) => s.id === fabric.supplier_id
+    );
+    return { ...fabric, supplier };
+  });
 
   return (
     <>
@@ -65,7 +49,7 @@ export default function FabricsPage() {
             </div>
           </div>
         ) : (
-          <FabricsTable data={fabrics} suppliers={suppliers} onDataChange={onDataChange} />
+          <FabricsTable data={fabricsWithSuppliers} suppliers={suppliers} />
         )}
       </div>
     </>

@@ -19,9 +19,7 @@ import {
 } from '../ui/dropdown-menu';
 import { Button, buttonVariants } from '../ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
-import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
-import { addSupplier, deleteSupplier, updateSupplier } from '@/services/supplier-service';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,13 +33,13 @@ import { Avatar, AvatarFallback } from '../ui/avatar';
 import { cn } from '@/lib/utils';
 import { flexRender, useReactTable, getCoreRowModel, getFilteredRowModel, getPaginationRowModel } from '@tanstack/react-table';
 import { useTranslation } from '@/hooks/use-translation';
+import { useSupplierStore } from '@/stores/supplier-store';
 
 
 interface SuppliersTableProps {
   data: Supplier[];
   onRowClick: (supplier: Supplier) => void;
   selectedSupplierId?: string | null;
-  onDataChange: () => void;
 }
 
 
@@ -49,19 +47,21 @@ const supplierSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   phone: z.string().optional(),
+  email: z.string().email({ message: "Invalid email address." }).optional().or(z.literal('')),
 });
 
 type SupplierFormData = z.infer<typeof supplierSchema>;
 
 
-function AddEditSupplierDialog({ supplier, onFinished, isOpen, onOpenChange }: { supplier: Supplier | null, onFinished: () => void, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+function AddEditSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: Supplier | null, isOpen: boolean, onOpenChange: (open: boolean) => void }) {
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { addSupplier, updateSupplier, isLoading } = useSupplierStore();
   const isEditMode = !!supplier;
   
   const form = useForm<SupplierFormData>({
     resolver: zodResolver(supplierSchema),
-    defaultValues: { name: '', phone: '' }
+    defaultValues: { name: '', phone: '', email: '' }
   });
 
   const { handleSubmit, control, reset } = form;
@@ -71,10 +71,10 @@ function AddEditSupplierDialog({ supplier, onFinished, isOpen, onOpenChange }: {
           if (isEditMode && supplier) {
             reset(supplier);
           } else {
-            reset({ name: '', phone: '' });
+            reset({ name: '', phone: '', email: '' });
           }
       }
-  }, [isOpen, isEditMode, supplier]);
+  }, [isOpen, isEditMode, supplier, reset]);
 
   const onSubmit = async (data: SupplierFormData) => {
     try {
@@ -82,11 +82,10 @@ function AddEditSupplierDialog({ supplier, onFinished, isOpen, onOpenChange }: {
         await updateSupplier(data.id, data);
         toast({ title: t('success'), description: "Supplier updated successfully." });
       } else {
-        await addSupplier(data);
+        await addSupplier(data as Omit<Supplier, 'id'>);
         toast({ title: t('success'), description: t('supplierAddedSuccess') });
       }
       onOpenChange(false);
-      onFinished();
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         toast({
@@ -113,6 +112,13 @@ function AddEditSupplierDialog({ supplier, onFinished, isOpen, onOpenChange }: {
                   <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                 </FormItem>
             )}/>
+             <FormField control={control} name="email" render={({ field }) => (
+                <FormItem className="grid grid-cols-4 items-center gap-4">
+                  <FormLabel className="text-right">{t('email')}</FormLabel>
+                  <FormControl><Input {...field} className="col-span-3" /></FormControl>
+                  <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                </FormItem>
+            )}/>
              <FormField control={control} name="phone" render={({ field }) => (
                 <FormItem className="grid grid-cols-4 items-center gap-4">
                   <FormLabel className="text-right">{t('phone')}</FormLabel>
@@ -121,8 +127,8 @@ function AddEditSupplierDialog({ supplier, onFinished, isOpen, onOpenChange }: {
                 </FormItem>
             )}/>
             <DialogFooter>
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting ? (isEditMode ? "Saving..." : t('adding')) : (isEditMode ? "Save Changes" : t('addSupplier'))}
+                <Button type="submit" disabled={isLoading}>
+                    {isLoading ? (isEditMode ? "Saving..." : t('adding')) : (isEditMode ? "Save Changes" : t('addSupplier'))}
                 </Button>
             </DialogFooter>
           </form>
@@ -204,23 +210,19 @@ export const getColumns = (
   },
 ];
 
-function DeleteSupplierDialog({ supplier, isOpen, onOpenChange, onFinished }: { supplier: Supplier | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void, onFinished: () => void }) {
+function DeleteSupplierDialog({ supplier, isOpen, onOpenChange }: { supplier: Supplier | null, isOpen: boolean, onOpenChange: (isOpen: boolean) => void }) {
     const { toast } = useToast();
     const { t } = useTranslation();
-    const [isDeleting, setIsDeleting] = useState(false);
+    const { deleteSupplier, isLoading } = useSupplierStore();
 
     const handleDelete = async () => {
         if (!supplier) return;
-        setIsDeleting(true);
         try {
             await deleteSupplier(supplier.id);
             toast({ title: t('success'), description: "Supplier deleted successfully." });
             onOpenChange(false);
-            onFinished();
         } catch (error) {
             toast({ variant: "destructive", title: t('error'), description: "Failed to delete supplier." });
-        } finally {
-            setIsDeleting(false);
         }
     }
 
@@ -235,8 +237,8 @@ function DeleteSupplierDialog({ supplier, isOpen, onOpenChange, onFinished }: { 
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                     <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className={buttonVariants({ variant: "destructive" })}>
-                        {isDeleting ? t('deleting') : t('delete')}
+                    <AlertDialogAction onClick={handleDelete} disabled={isLoading} className={buttonVariants({ variant: "destructive" })}>
+                        {isLoading ? t('deleting') : t('delete')}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -244,7 +246,7 @@ function DeleteSupplierDialog({ supplier, isOpen, onOpenChange, onFinished }: { 
     );
 }
 
-export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataChange }: SuppliersTableProps) {
+export function SuppliersTable({ data, onRowClick, selectedSupplierId }: SuppliersTableProps) {
   const { t } = useTranslation();
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -356,7 +358,6 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataCha
         </div>
         <AddEditSupplierDialog 
             supplier={selectedSupplier}
-            onFinished={onDataChange}
             isOpen={isDialogOpen}
             onOpenChange={setIsDialogOpen}
         />
@@ -364,7 +365,6 @@ export function SuppliersTable({ data, onRowClick, selectedSupplierId, onDataCha
             supplier={selectedSupplier}
             isOpen={isDeleteDialogOpen}
             onOpenChange={setIsDeleteDialogOpen}
-            onFinished={onDataChange}
         />
     </div>
   );

@@ -3,7 +3,6 @@
 
 import { PageHeader, PageHeaderHeading } from '@/components/layout/page-header';
 import { SuppliersTable } from '@/components/suppliers/suppliers-table';
-import { getSuppliers } from '@/services/supplier-service';
 import { getFabrics } from '@/services/fabric-service';
 import { getExpenses } from '@/services/finance-service';
 import { Supplier, Fabric, Expense } from '@/lib/types';
@@ -16,49 +15,36 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { AtSign, Phone } from 'lucide-react';
 import { useTranslation } from '@/hooks/use-translation';
+import { useSupplierStore } from '@/stores/supplier-store';
 
 
 export default function SuppliersPage() {
   const { t } = useTranslation();
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const { suppliers, isLoading, fetchSuppliers, selectedSupplier, setSelectedSupplier } = useSupplierStore();
   const [fabrics, setFabrics] = useState<Fabric[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
-  const [dataVersion, setDataVersion] = useState(0);
-
-  const onDataChange = () => {
-    setDataVersion(prev => prev + 1);
-  };
+  const [isDetailsLoading, setIsDetailsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-        setIsLoading(true);
-        const [fetchedSuppliers, fetchedFabrics, fetchedExpenses] = await Promise.all([
-          getSuppliers(),
-          getFabrics(),
-          getExpenses(),
-        ]);
-        setSuppliers(fetchedSuppliers);
-        setFabrics(fetchedFabrics);
-        setExpenses(fetchedExpenses);
+    fetchSuppliers();
+  }, [fetchSuppliers]);
 
-        if (fetchedSuppliers.length > 0) {
-          if(selectedSupplier) {
-            // Reselect the supplier if it still exists
-            const reselected = fetchedSuppliers.find(s => s.id === selectedSupplier.id);
-            setSelectedSupplier(reselected || fetchedSuppliers[0]);
-          } else {
-            setSelectedSupplier(fetchedSuppliers[0]);
-          }
-        } else {
-            setSelectedSupplier(null);
-        }
-        setIsLoading(false);
+  useEffect(() => {
+    const fetchDetails = async () => {
+      setIsDetailsLoading(true);
+      const [fetchedFabrics, fetchedExpenses] = await Promise.all([
+        getFabrics(),
+        getExpenses(),
+      ]);
+      setFabrics(fetchedFabrics);
+      setExpenses(fetchedExpenses);
+      setIsDetailsLoading(false);
     };
 
-    fetchData();
-  }, [dataVersion]);
+    if (suppliers.length > 0) {
+      fetchDetails();
+    }
+  }, [suppliers]);
 
   const supplierFabrics = selectedSupplier
     ? fabrics.filter((fabric) => fabric.supplier_id === selectedSupplier.id)
@@ -106,7 +92,6 @@ export default function SuppliersPage() {
                     data={suppliers}
                     onRowClick={setSelectedSupplier}
                     selectedSupplierId={selectedSupplier?.id}
-                    onDataChange={onDataChange}
                 />
             )}
         </div>
@@ -132,7 +117,7 @@ export default function SuppliersPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <h3 className="text-lg font-medium mb-2">{t('fabricsSupplied')}</h3>
-                         {supplierFabrics.length > 0 ? (
+                         {isDetailsLoading ? <Skeleton className="h-72 w-full" /> : supplierFabrics.length > 0 ? (
                              <ScrollArea className="h-72">
                                 <div className="space-y-4">
                                 {supplierFabrics.map((fabric) => (
@@ -159,17 +144,19 @@ export default function SuppliersPage() {
                     </div>
                      <div>
                         <h3 className="text-lg font-medium mb-2">{t('accountBalance')}</h3>
-                        <Card className="bg-muted">
-                            <CardHeader>
-                                <CardDescription>{t('totalBilledAmount')}</CardDescription>
-                                <CardTitle className="text-3xl">{formatCurrency(totalBilled)}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="text-sm text-muted-foreground">
-                                    {t('totalBilledAmountDesc')}
-                                </p>
-                            </CardContent>
-                        </Card>
+                        {isDetailsLoading ? <Skeleton className="h-48 w-full" /> : (
+                          <Card className="bg-muted">
+                              <CardHeader>
+                                  <CardDescription>{t('totalBilledAmount')}</CardDescription>
+                                  <CardTitle className="text-3xl">{formatCurrency(totalBilled)}</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                  <p className="text-sm text-muted-foreground">
+                                      {t('totalBilledAmountDesc')}
+                                  </p>
+                              </CardContent>
+                          </Card>
+                        )}
                      </div>
                 </div>
               </CardContent>
