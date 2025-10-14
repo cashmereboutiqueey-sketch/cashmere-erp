@@ -22,15 +22,15 @@ const fromFirestore = (doc: any): Supplier => {
 
 export async function getSuppliers(): Promise<Supplier[]> {
   try {
-    // Return empty array to clear demo data
-    return [];
+    const snapshot = await getDocs(suppliersCollection);
+    return snapshot.docs.map(fromFirestore);
   } catch (error) {
     console.error('Error getting suppliers: ', error);
     return [];
   }
 }
 
-export async function addSupplier(supplierData: Omit<Supplier, 'id'>) {
+export async function addSupplier(supplierData: Omit<Supplier, 'id' | 'email'>) {
   try {
     const docRef = await addDoc(suppliersCollection, {
       ...supplierData,
@@ -40,7 +40,7 @@ export async function addSupplier(supplierData: Omit<Supplier, 'id'>) {
     return docRef.id;
   } catch (error) {
     console.error('Error adding supplier: ', error);
-    throw new Error('Could not add supplier');
+    throw new Error('Could not add supplier. Please check your database permissions.');
   }
 }
 
@@ -54,7 +54,7 @@ export async function updateSupplier(id: string, supplierData: Partial<Supplier>
     revalidatePath('/suppliers');
   } catch (error) {
     console.error('Error updating supplier: ', error);
-    throw new Error('Could not update supplier');
+    throw new Error('Could not update supplier. Please check your database permissions.');
   }
 }
 

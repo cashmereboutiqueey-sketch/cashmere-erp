@@ -89,11 +89,12 @@ function AddEditSupplierDialog({ supplier, onFinished, children }: { supplier: S
       setOpen(false);
       onFinished();
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: t('error'),
-        description: isEditMode ? "Failed to update supplier." : t('supplierAddedError'),
-      });
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({
+            variant: 'destructive',
+            title: t('error'),
+            description: isEditMode ? `Failed to update supplier: ${errorMessage}` : `Failed to add supplier: ${errorMessage}`,
+        });
     }
   };
 
@@ -150,10 +151,10 @@ function SuppliersTableToolbar({ table, onDataChange }: { table: any, onDataChan
         />
         <div className="ml-auto">
             <AddEditSupplierDialog supplier={null} onFinished={onDataChange}>
-              <Button size="sm" className="h-8">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  {t('addSupplier')}
-              </Button>
+                <Button size="sm" className="h-8">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    {t('addSupplier')}
+                </Button>
             </AddEditSupplierDialog>
         </div>
     </DataTableToolbar>
@@ -177,11 +178,14 @@ export const getColumns = (
           </Avatar>
           <div>
             <div className="font-medium">{supplier.name}</div>
-            <div className="text-sm text-muted-foreground">{supplier.email}</div>
           </div>
         </div>
       );
     },
+  },
+   {
+    accessorKey: 'phone',
+    header: t('phone') as string,
   },
   {
     id: 'actions',
