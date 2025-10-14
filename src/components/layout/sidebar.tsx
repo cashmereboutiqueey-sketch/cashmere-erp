@@ -122,9 +122,9 @@ export function AppSidebar({ menuItems, side }: { menuItems: MenuItem[], side: '
       <SidebarFooter>
         <div className="hidden flex-col gap-2 p-2 group-data-[collapsible=icon]:flex">
           <SidebarMenuButton asChild tooltip="Logout" onClick={handleLogout}>
-            <Link href="/login">
+            <button>
               <LogOut />
-            </Link>
+            </button>
           </SidebarMenuButton>
         </div>
         <div className="flex flex-col gap-2 p-2 group-data-[collapsible=icon]:hidden">

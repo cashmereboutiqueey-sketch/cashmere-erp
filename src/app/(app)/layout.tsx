@@ -9,6 +9,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/context/auth-context';
 import type { Role } from '@/lib/types';
 import allMenuItems from '@/lib/permissions.json';
+import { useRouter } from 'next/navigation';
 
 const hasAccess = (
   userRole: Role['name'] | undefined,
@@ -26,21 +27,29 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const { language } = useTranslation();
-  const { user } = useAuth();
-  const [isClient, setIsClient] = useState(false);
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    if (!loading && !user) {
+      router.push('/login');
+    }
+  }, [loading, user, router]);
 
   const menuItems = useMemo(() => {
+    if (!user) return [];
     return allMenuItems.filter((item: any) =>
-      hasAccess(user?.role, item.roles as Role['name'][])
+      hasAccess(user.role, item.roles as Role['name'][])
     );
-  }, [user?.role]);
+  }, [user]);
 
-  if (!isClient) {
-    return null; // Or a loading skeleton
+  if (loading || !user) {
+    return (
+        <div className="flex h-screen w-screen items-center justify-center">
+            {/* You can replace this with a beautiful spinner component */}
+            <p>Loading...</p>
+        </div>
+    );
   }
 
   return (

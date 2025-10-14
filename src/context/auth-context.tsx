@@ -1,13 +1,11 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User as FirebaseAuthUser } from 'firebase/auth';
 import { app } from '@/services/firebase';
 import { User } from '@/lib/types';
-import { getUsers, addUser } from '@/services/user-service';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/services/firebase';
+import { getUsers } from '@/services/user-service';
 
 interface AuthContextType {
   user: User | null;
@@ -20,53 +18,72 @@ interface AuthContextType {
 const auth = getAuth(app);
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const fetchUserRole = async (email: string): Promise<User | null> => {
-    // This is inefficient but necessary for the demo to map email to user document ID
-    const allUsers = await getUsers(); 
-    return allUsers.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
-}
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
 
+  useEffect(() => {
+    const fetchAllUsers = async () => {
+      const usersFromDb = await getUsers();
+      setAllUsers(usersFromDb);
+    };
+    fetchAllUsers();
+  }, []);
+
+  const fetchUserRole = useCallback((email: string): User | null => {
+    if (!email || allUsers.length === 0) return null;
+    return allUsers.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+  }, [allUsers]);
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser && fbUser.email) {
-        setLoading(true);
-        let userRoleData = await fetchUserRole(fbUser.email);
-        
-        if (!userRoleData) {
-            console.warn("User not found in ERP, creating new admin user for:", fbUser.email);
-            const newUser: Omit<User, 'id'> = {
-                name: fbUser.displayName || 'Admin User',
-                email: fbUser.email,
-                avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/100/100`,
-                role: 'admin',
-            };
-            const newUserId = await addUser(newUser);
-            userRoleData = { ...newUser, id: newUserId };
-        }
-
-        const appUser: User = {
-            id: userRoleData.id,
-            name: fbUser.displayName || userRoleData.name,
-            email: fbUser.email!,
-            avatarUrl: fbUser.photoURL || userRoleData.avatarUrl,
-            role: userRoleData.role,
-        };
-        setUser(appUser);
-
+          if (allUsers.length > 0) {
+              setLoading(true);
+              const userRoleData = fetchUserRole(fbUser.email);
+              if (userRoleData) {
+                  setUser({
+                      id: userRoleData.id,
+                      name: fbUser.displayName || userRoleData.name,
+                      email: fbUser.email,
+                      avatarUrl: fbUser.photoURL || userRoleData.avatarUrl,
+                      role: userRoleData.role,
+                  });
+              } else {
+                  setUser(null); // Explicitly set user to null if not found
+              }
+              setLoading(false);
+          }
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [allUsers, fetchUserRole]);
+  
+   // Effect to handle user setting when allUsers loads after fbUser is set
+  useEffect(() => {
+    if (firebaseUser && firebaseUser.email && allUsers.length > 0 && !user) {
+       setLoading(true);
+       const userRoleData = fetchUserRole(firebaseUser.email);
+       if (userRoleData) {
+            setUser({
+                id: userRoleData.id,
+                name: firebaseUser.displayName || userRoleData.name,
+                email: firebaseUser.email,
+                avatarUrl: firebaseUser.photoURL || userRoleData.avatarUrl,
+                role: userRoleData.role,
+            });
+       }
+       setLoading(false);
+    }
+  }, [firebaseUser, allUsers, user, fetchUserRole]);
+
 
   const login = async (email: string, pass: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
@@ -75,29 +92,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     const fbUser = userCredential.user;
-    let userRoleData = await fetchUserRole(fbUser.email);
+    const userRoleData = fetchUserRole(fbUser.email);
     
-    if (!userRoleData) {
-        const newUser: Omit<User, 'id'> = {
-            name: fbUser.displayName || 'Admin User',
+    if (userRoleData) {
+        const appUser: User = {
+            id: userRoleData.id,
+            name: fbUser.displayName || userRoleData.name,
             email: fbUser.email!,
-            avatarUrl: fbUser.photoURL || `https://picsum.photos/seed/${fbUser.uid}/100/100`,
-            role: 'admin',
+            avatarUrl: fbUser.photoURL || userRoleData.avatarUrl,
+            role: userRoleData.role,
         };
-        const newUserId = await addUser(newUser);
-        userRoleData = { ...newUser, id: newUserId };
+        setUser(appUser);
+        return appUser;
     }
     
-    const appUser: User = {
-        id: userRoleData.id,
-        name: fbUser.displayName || userRoleData.name,
-        email: fbUser.email!,
-        avatarUrl: fbUser.photoURL || userRoleData.avatarUrl,
-        role: userRoleData.role,
-    };
-    
-    setUser(appUser);
-    return appUser;
+    return null; // User not found in our DB
   };
 
   const logout = () => {

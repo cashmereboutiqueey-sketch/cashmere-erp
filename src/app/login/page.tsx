@@ -25,7 +25,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     try {
       const user = await login(email, password);
@@ -52,20 +53,22 @@ export default function LoginPage() {
         }
         router.push(redirectPath);
       } else {
-         // This path should ideally not be taken if the auth context throws an error
-         throw new Error("Login failed: User is not configured correctly.");
+         throw new Error("Login failed: User is not configured in the ERP system.");
       }
     } catch (error) {
       console.error("Login page error:", error);
-      const errorMessage = (error as Error).message
-        .replace('Firebase: ', '')
-        .replace(/(\(auth\/.*\))/, '')
-        .trim();
+      let errorMessage = 'Invalid credentials or user not found.';
+      if (error instanceof Error) {
+        errorMessage = error.message
+          .replace('Firebase: ', '')
+          .replace(/(\(auth\/.*\))/, '')
+          .trim();
+      }
 
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: errorMessage || 'Invalid credentials or user not found.',
+        description: errorMessage,
       });
     } finally {
       setIsLoading(false);
@@ -85,7 +88,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4">
+          <form onSubmit={handleLogin} className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -109,10 +112,10 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full font-bold" onClick={handleLogin} disabled={isLoading}>
+            <Button type="submit" className="w-full font-bold" disabled={isLoading}>
               {isLoading ? 'Logging in...' : 'Login'}
             </Button>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>
