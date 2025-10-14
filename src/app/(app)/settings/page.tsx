@@ -28,8 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
-import type { Role, User } from '@/lib/types';
+import { PlusCircle, Trash2 } from 'lucide-react';
+import type { Role, User, TranslationKey } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { firebaseConfig } from '@/services/firebase';
@@ -39,8 +39,65 @@ import { useToast } from '@/hooks/use-toast';
 import { getUsers, addUser, updateUserRole, deleteUser } from '@/services/user-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { allMenuItems } from '@/components/layout/sidebar';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useTranslation } from '@/hooks/use-translation';
+
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
+
+function PermissionsManager() {
+    const { t } = useTranslation();
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Roles & Permissions</CardTitle>
+                <CardDescription>
+                    Define which roles can access which pages in the application.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Page</TableHead>
+                                {roles.map(role => (
+                                    <TableHead key={role} className="text-center capitalize">
+                                        {role.replace('_', ' ')}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {allMenuItems.filter(item => item.href !== '/settings').map(item => (
+                                <TableRow key={item.href}>
+                                    <TableCell className="font-medium">{t(item.labelKey as TranslationKey)}</TableCell>
+                                    {roles.map(role => (
+                                        <TableCell key={role} className="text-center">
+                                            <Checkbox
+                                                checked={item.roles.includes(role)}
+                                                disabled // This will be enabled in a future step
+                                            />
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+                 <p className="text-xs text-muted-foreground mt-4">
+                    Note: The "Admin" role always has access to all pages, including Settings. Permission editing is disabled for now.
+                </p>
+            </CardContent>
+             <CardFooter>
+                <Button disabled>Save Permission Changes</Button>
+            </CardFooter>
+        </Card>
+    );
+}
 
 export default function SettingsPage() {
   const { user: currentUser } = useAuth();
@@ -59,7 +116,9 @@ export default function SettingsPage() {
   }
   
   useEffect(() => {
-      fetchUsers();
+      if (currentUser) {
+        fetchUsers();
+      }
   }, [currentUser]);
 
   const isAdmin = currentUser?.role === 'admin';
@@ -166,10 +225,11 @@ export default function SettingsPage() {
       </PageHeader>
       <div className="p-4 lg:p-6">
         <Tabs defaultValue="users">
-          <TabsList className="mb-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="integrations">Integrations</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="permissions">Roles & Permissions</TabsTrigger>
+            <TabsTrigger value="integrations">Integrations</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
           <TabsContent value="general">
@@ -202,60 +262,7 @@ export default function SettingsPage() {
               </CardFooter>
             </Card>
           </TabsContent>
-          <TabsContent value="integrations" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Shopify Integration</CardTitle>
-                <CardDescription>
-                  Connect your Shopify store to sync products and orders.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="shopify-url">Shopify Store URL</Label>
-                  <Input
-                    id="shopify-url"
-                    placeholder="your-store.myshopify.com"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="shopify-api-key">API Key</Label>
-                  <Input id="shopify-api-key" type="password" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="shopify-api-secret">API Secret Key</Label>
-                  <Input id="shopify-api-secret" type="password" />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button>Connect to Shopify</Button>
-              </CardFooter>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Shipping Integrations</CardTitle>
-                <CardDescription>
-                  Connect your shipping carriers to generate labels and track shipments.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="carrier-a-key">Carrier A API Key</Label>
-                  <Input id="carrier-a-key" type="password" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="carrier-b-key">Carrier B API Key</Label>
-                  <Input id="carrier-b-key" type="password" />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button>Save Shipping Keys</Button>
-              </CardFooter>
-            </Card>
-
-          </TabsContent>
-           <TabsContent value="users">
+          <TabsContent value="users">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
@@ -336,11 +343,11 @@ export default function SettingsPage() {
                         <Separator />
                         <CardFooter className="flex-col items-start gap-4 pt-6">
                             <h3 className="font-medium">Add New User</h3>
-                            <div className="flex w-full gap-4">
-                               <Input placeholder="Full Name" value={newUserName} onChange={e => setNewUserName(e.target.value)} />
-                                <Input type="email" placeholder="Email Address" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} />
+                            <div className="grid md:grid-cols-4 w-full gap-4">
+                               <Input placeholder="Full Name" value={newUserName} onChange={e => setNewUserName(e.target.value)} className="md:col-span-1" />
+                                <Input type="email" placeholder="Email Address" value={newUserEmail} onChange={e => setNewUserEmail(e.target.value)} className="md:col-span-1"/>
                                <Select value={newUserRole} onValueChange={(value) => setNewUserRole(value as Role['name'])}>
-                                  <SelectTrigger className="w-full">
+                                  <SelectTrigger className="w-full md:col-span-1">
                                     <SelectValue placeholder="Select a role" />
                                   </SelectTrigger>
                                   <SelectContent>
@@ -349,7 +356,7 @@ export default function SettingsPage() {
                                     ))}
                                   </SelectContent>
                                 </Select>
-                                <Button onClick={handleAddUser}><PlusCircle className="mr-2 h-4 w-4" /> Add User</Button>
+                                <Button onClick={handleAddUser} className="md:col-span-1"><PlusCircle className="mr-2 h-4 w-4" /> Add User</Button>
                             </div>
                             <p className="text-xs text-muted-foreground">
                                 After adding a user here, you must create an account for them with the same email in the Firebase Console.
@@ -359,6 +366,39 @@ export default function SettingsPage() {
                     )}
                 </Card>
            </TabsContent>
+           <TabsContent value="permissions">
+                <PermissionsManager />
+           </TabsContent>
+           <TabsContent value="integrations" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Shopify Integration</CardTitle>
+                <CardDescription>
+                  Connect your Shopify store to sync products and orders.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shopify-url">Shopify Store URL</Label>
+                  <Input
+                    id="shopify-url"
+                    placeholder="your-store.myshopify.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shopify-api-key">API Key</Label>
+                  <Input id="shopify-api-key" type="password" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shopify-api-secret">API Secret Key</Label>
+                  <Input id="shopify-api-secret" type="password" />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button>Connect to Shopify</Button>
+              </CardFooter>
+            </Card>
+          </TabsContent>
             <TabsContent value="notifications">
              <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed shadow-sm py-24">
                 <div className="flex flex-col items-center gap-1 text-center">

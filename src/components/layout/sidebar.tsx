@@ -44,7 +44,7 @@ import { Badge } from '../ui/badge';
 import { capitalize } from 'string-ts';
 import { useTranslation } from '@/hooks/use-translation';
 
-const allMenuItems: {
+export const allMenuItems: {
   href: string;
   labelKey: TranslationKey;
   icon: React.ElementType;
@@ -141,6 +141,8 @@ const hasAccess = (
   itemRoles: Role['name'][]
 ) => {
   if (!userRole) return false;
+  // Admin always has access
+  if (userRole === 'admin') return true;
   return itemRoles.includes(userRole);
 };
 
