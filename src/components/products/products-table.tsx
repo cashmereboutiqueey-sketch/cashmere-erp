@@ -426,7 +426,7 @@ function ProductEditDialog({
 
   useEffect(() => {
     if (isOpen) {
-      if (product) { // Edit mode
+      if (isEditMode && product) {
         reset({
             id: product.id,
             name: product.name,
@@ -435,13 +435,13 @@ function ProductEditDialog({
             variants: product.variants,
             fabrics: product.fabrics || []
         });
-      } else { // Add mode
+      } else {
         reset({ id: '', name: '', category: '', difficulty: 'medium', variants: [], fabrics: [] });
         setSelectedSizes([]);
         setSelectedColors([]);
       }
     }
-  }, [isOpen, product, reset]);
+  }, [isOpen, product, isEditMode, reset]);
 
 
   const generateVariants = () => {
@@ -474,8 +474,7 @@ function ProductEditDialog({
     if (!isEditMode) {
       generateVariants();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSizes, selectedColors, productName, isEditMode]);
+  }, [selectedSizes, selectedColors, productName, isEditMode, replaceVariants]);
 
   const onSubmit = async (data: ProductFormData) => {
     try {
