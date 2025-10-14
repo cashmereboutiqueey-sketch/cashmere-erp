@@ -39,51 +39,61 @@ import { useToast } from '@/hooks/use-toast';
 import { getUsers, addUser, updateUserRole, deleteUser } from '@/services/user-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { allMenuItems } from '@/components/layout/sidebar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useTranslation } from '@/hooks/use-translation';
+import allMenuItems from '@/lib/permissions.json';
+import { updatePermissions } from '@/services/permissions-service';
 
 
 const roles: Role['name'][] = ['admin', 'sales', 'accountant', 'production', 'warehouse_manager'];
-type Permissions = Record<string, Role['name'][]>;
+type Permissions = {
+    href: string;
+    labelKey: string;
+    icon: string;
+    roles: Role['name'][];
+}[];
+
 
 function PermissionsManager() {
     const { t } = useTranslation();
     const { toast } = useToast();
-    const [permissions, setPermissions] = useState<Permissions>({});
+    const [permissions, setPermissions] = useState<Permissions>(allMenuItems);
     const [isSaving, setIsSaving] = useState(false);
-
-    useEffect(() => {
-        const initialPermissions = allMenuItems.reduce((acc, item) => {
-            acc[item.href] = item.roles;
-            return acc;
-        }, {} as Permissions);
-        setPermissions(initialPermissions);
-    }, []);
 
     const handlePermissionChange = (href: string, role: Role['name'], checked: boolean) => {
         setPermissions(prev => {
-            const currentRoles = prev[href] || [];
-            if (checked) {
-                return { ...prev, [href]: [...currentRoles, role] };
-            } else {
-                return { ...prev, [href]: currentRoles.filter(r => r !== role) };
-            }
+            return prev.map(item => {
+                if (item.href === href) {
+                    const currentRoles = item.roles || [];
+                    if (checked) {
+                        return { ...item, roles: [...currentRoles, role] };
+                    } else {
+                        return { ...item, roles: currentRoles.filter(r => r !== role) };
+                    }
+                }
+                return item;
+            });
         });
     };
     
-    const handleSaveChanges = () => {
+    const handleSaveChanges = async () => {
         setIsSaving(true);
-        // In a real app, you would send `permissions` to a backend service to save.
-        console.log("Saving new permissions:", permissions);
-        setTimeout(() => {
-             toast({
+        try {
+            await updatePermissions(permissions);
+            toast({
                 title: "Permissions Saved",
-                description: "User role permissions have been updated.",
+                description: "User role permissions have been updated successfully.",
             });
+        } catch(e) {
+             toast({
+                variant: 'destructive',
+                title: "Error Saving Permissions",
+                description: "Could not write to the permissions file.",
+            });
+        } finally {
             setIsSaving(false);
-        }, 1000);
+        }
     }
 
     return (
@@ -91,7 +101,7 @@ function PermissionsManager() {
             <CardHeader>
                 <CardTitle>Roles & Permissions</CardTitle>
                 <CardDescription>
-                    Define which roles can access which pages in the application.
+                    Define which roles can access which pages in the application. Changes will apply on next page load.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -108,13 +118,13 @@ function PermissionsManager() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {allMenuItems.filter(item => item.href !== '/settings').map(item => (
+                            {permissions.filter(item => item.href !== '/settings').map(item => (
                                 <TableRow key={item.href}>
                                     <TableCell className="font-medium">{t(item.labelKey as TranslationKey)}</TableCell>
                                     {roles.map(role => (
                                         <TableCell key={role} className="text-center">
                                             <Checkbox
-                                                checked={(permissions[item.href] || []).includes(role)}
+                                                checked={(item.roles || []).includes(role)}
                                                 onCheckedChange={(checked) => handlePermissionChange(item.href, role, !!checked)}
                                                 disabled={role === 'admin'}
                                             />
@@ -455,5 +465,3 @@ export default function SettingsPage() {
     </>
   );
 }
-
-    

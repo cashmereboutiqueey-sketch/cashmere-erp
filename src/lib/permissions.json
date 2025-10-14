@@ -1,0 +1,87 @@
+
+[
+  {
+    "href": "/dashboard",
+    "labelKey": "dashboard",
+    "icon": "LayoutDashboard",
+    "roles": ["admin", "accountant"]
+  },
+  {
+    "href": "/pos",
+    "labelKey": "pos",
+    "icon": "MonitorPlay",
+    "roles": ["admin", "sales"]
+  },
+  {
+    "href": "/orders",
+    "labelKey": "orders",
+    "icon": "ShoppingCart",
+    "roles": ["admin", "sales"]
+  },
+  {
+    "href": "/workers",
+    "labelKey": "workers",
+    "icon": "Users2",
+    "roles": ["admin", "production"]
+  },
+  {
+    "href": "/shipping",
+    "labelKey": "shipping",
+    "icon": "Package",
+    "roles": ["admin", "sales", "warehouse_manager"]
+  },
+  {
+    "href": "/products",
+    "labelKey": "products",
+    "icon": "Box",
+    "roles": ["admin", "production", "warehouse_manager"]
+  },
+  {
+    "href": "/customers",
+    "labelKey": "customers",
+    "icon": "Users",
+    "roles": ["admin", "sales"]
+  },
+  {
+    "href": "/suppliers",
+    "labelKey": "suppliers",
+    "icon": "Truck",
+    "roles": ["admin", "production"]
+  },
+  {
+    "href": "/fabrics",
+    "labelKey": "fabrics",
+    "icon": "Scissors",
+    "roles": ["admin", "production"]
+  },
+  {
+    "href": "/production",
+    "labelKey": "production",
+    "icon": "Factory",
+    "roles": ["admin", "production"]
+  },
+  {
+    "href": "/finance",
+    "labelKey": "finance",
+    "icon": "DollarSign",
+    "roles": ["admin", "accountant"]
+  },
+  {
+    "href": "/pricing",
+    "labelKey": "pricing",
+    "icon": "BadgePercent",
+    "roles": ["admin", "accountant"]
+  },
+  {
+    "href": "/reports",
+    "labelKey": "reports",
+    "icon": "BarChart",
+    "roles": ["admin", "accountant"]
+  },
+  {
+    "href": "/settings",
+    "labelKey": "settings",
+    "icon": "Settings",
+    "roles": ["admin"]
+  }
+]

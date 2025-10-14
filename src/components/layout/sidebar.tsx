@@ -17,7 +17,8 @@ import {
   MonitorPlay,
   Package,
   BadgePercent,
-  Users2
+  Users2,
+  Icon,
 } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -29,7 +30,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar';
-
 import { Logo } from '@/components/icons';
 import {
   Card,
@@ -43,98 +43,27 @@ import type { Role, TranslationKey } from '@/lib/types';
 import { Badge } from '../ui/badge';
 import { capitalize } from 'string-ts';
 import { useTranslation } from '@/hooks/use-translation';
+import allMenuItems from '@/lib/permissions.json';
+import React from 'react';
 
-export const allMenuItems: {
-  href: string;
-  labelKey: TranslationKey;
-  icon: React.ElementType;
-  roles: Role['name'][];
-}[] = [
-  {
-    href: '/dashboard',
-    labelKey: 'dashboard',
-    icon: LayoutDashboard,
-    roles: ['admin', 'accountant'],
-  },
-  {
-    href: '/pos',
-    labelKey: 'pos',
-    icon: MonitorPlay,
-    roles: ['admin', 'sales'],
-  },
-  {
-    href: '/orders',
-    labelKey: 'orders',
-    icon: ShoppingCart,
-    roles: ['admin', 'sales'],
-  },
-   {
-    href: '/workers',
-    labelKey: 'workers',
-    icon: Users2,
-    roles: ['admin', 'production'],
-  },
-  {
-    href: '/shipping',
-    labelKey: 'shipping',
-    icon: Package,
-    roles: ['admin', 'sales', 'warehouse_manager'],
-  },
-  {
-    href: '/products',
-    labelKey: 'products',
-    icon: Box,
-    roles: ['admin', 'production', 'warehouse_manager'],
-  },
-  {
-    href: '/customers',
-    labelKey: 'customers',
-    icon: Users,
-    roles: ['admin', 'sales'],
-  },
-  {
-    href: '/suppliers',
-    labelKey: 'suppliers',
-    icon: Truck,
-    roles: ['admin', 'production'],
-  },
-  {
-    href: '/fabrics',
-    labelKey: 'fabrics',
-    icon: Scissors,
-    roles: ['admin', 'production'],
-  },
-  {
-    href: '/production',
-    labelKey: 'production',
-    icon: Factory,
-    roles: ['admin', 'production'],
-  },
-  {
-    href: '/finance',
-    labelKey: 'finance',
-    icon: DollarSign,
-    roles: ['admin', 'accountant'],
-  },
-  {
-    href: '/pricing',
-    labelKey: 'pricing',
-    icon: BadgePercent,
-    roles: ['admin', 'accountant'],
-  },
-  {
-    href: '/reports',
-    labelKey: 'reports',
-    icon: BarChart,
-    roles: ['admin', 'accountant'],
-  },
-  {
-    href: '/settings',
-    labelKey: 'settings',
-    icon: Settings,
-    roles: ['admin'],
-  },
-];
+
+const icons: { [key: string]: Icon } = {
+  LayoutDashboard,
+  MonitorPlay,
+  ShoppingCart,
+  Users2,
+  Package,
+  Box,
+  Users,
+  Truck,
+  Scissors,
+  Factory,
+  DollarSign,
+  BadgePercent,
+  BarChart,
+  Settings,
+};
+
 
 const hasAccess = (
   userRole: Role['name'] | undefined,
@@ -158,7 +87,7 @@ export function AppSidebar({ side }: { side: 'left' | 'right' }) {
   };
 
   const menuItems = allMenuItems.filter((item) =>
-    hasAccess(user?.role, item.roles)
+    hasAccess(user?.role, item.roles as Role['name'][])
   );
 
   return (
@@ -182,20 +111,23 @@ export function AppSidebar({ side }: { side: 'left' | 'right' }) {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href}
-                tooltip={t(item.labelKey)}
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{t(item.labelKey)}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {menuItems.map((item) => {
+            const Icon = icons[item.icon];
+            return (
+                <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={t(item.labelKey as TranslationKey)}
+                >
+                    <Link href={item.href}>
+                        {Icon && <Icon />}
+                        <span>{t(item.labelKey as TranslationKey)}</span>
+                    </Link>
+                </SidebarMenuButton>
+                </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
