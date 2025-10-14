@@ -6,6 +6,8 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User 
 import { app } from '@/services/firebase';
 import { User } from '@/lib/types';
 import { getUsers, addUser } from '@/services/user-service';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/services/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -18,6 +20,12 @@ interface AuthContextType {
 const auth = getAuth(app);
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const fetchUserRole = async (email: string): Promise<User | null> => {
+    // This is inefficient but necessary for the demo to map email to user document ID
+    const allUsers = await getUsers(); 
+    return allUsers.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
@@ -26,12 +34,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
-      if (fbUser) {
-        const allUsers = await getUsers();
-        let userRoleData = allUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
-
-        if (!userRoleData && fbUser.email) {
-            // If no user found, create one for the first authenticated user and make them an admin.
+      if (fbUser && fbUser.email) {
+        setLoading(true);
+        let userRoleData = await fetchUserRole(fbUser.email);
+        
+        if (!userRoleData) {
             console.warn("User not found in ERP, creating new admin user for:", fbUser.email);
             const newUser: Omit<User, 'id'> = {
                 name: fbUser.displayName || 'Admin User',
@@ -43,19 +50,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             userRoleData = { ...newUser, id: newUserId };
         }
 
-        if (userRoleData) {
-            const appUser: User = {
-                id: userRoleData.id,
-                name: fbUser.displayName || userRoleData.name,
-                email: fbUser.email!,
-                avatarUrl: fbUser.photoURL || userRoleData.avatarUrl,
-                role: userRoleData.role,
-            };
-            setUser(appUser);
-        } else {
-            console.error("Firebase user could not be mapped to an application user:", fbUser.email);
-            setUser(null); 
-        }
+        const appUser: User = {
+            id: userRoleData.id,
+            name: fbUser.displayName || userRoleData.name,
+            email: fbUser.email!,
+            avatarUrl: fbUser.photoURL || userRoleData.avatarUrl,
+            role: userRoleData.role,
+        };
+        setUser(appUser);
 
       } else {
         setUser(null);
@@ -68,16 +70,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, pass: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-    if (!userCredential.user) {
+    if (!userCredential.user || !userCredential.user.email) {
       return null;
     }
     
     const fbUser = userCredential.user;
-    const allUsers = await getUsers();
-    let userRoleData = allUsers.find(u => u.email.toLowerCase() === fbUser.email?.toLowerCase());
+    let userRoleData = await fetchUserRole(fbUser.email);
     
     if (!userRoleData) {
-         // Auto-create admin on first login
         const newUser: Omit<User, 'id'> = {
             name: fbUser.displayName || 'Admin User',
             email: fbUser.email!,
@@ -101,6 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    setUser(null);
     return signOut(auth);
   };
 
@@ -108,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

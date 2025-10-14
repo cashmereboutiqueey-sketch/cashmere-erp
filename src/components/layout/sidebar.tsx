@@ -39,15 +39,17 @@ import {
   CardTitle,
 } from '../ui/card';
 import { useAuth } from '@/context/auth-context';
-import type { Role, TranslationKey } from '@/lib/types';
+import type { TranslationKey } from '@/lib/types';
 import { Badge } from '../ui/badge';
-import { capitalize } from 'string-ts';
 import { useTranslation } from '@/hooks/use-translation';
 import React from 'react';
 
-// Use require to ensure the file is re-read on the server after cache invalidation
-const allMenuItems = require('@/lib/permissions.json');
-
+type MenuItem = {
+  href: string;
+  labelKey: string;
+  icon: string;
+  roles: string[];
+};
 
 const icons: { [key: string]: Icon } = {
   LayoutDashboard,
@@ -66,18 +68,7 @@ const icons: { [key: string]: Icon } = {
   Settings,
 };
 
-
-const hasAccess = (
-  userRole: Role['name'] | undefined,
-  itemRoles: Role['name'][]
-) => {
-  if (!userRole) return false;
-  // Admin always has access
-  if (userRole === 'admin') return true;
-  return itemRoles.includes(userRole);
-};
-
-export function AppSidebar({ side }: { side: 'left' | 'right' }) {
+export function AppSidebar({ menuItems, side }: { menuItems: MenuItem[], side: 'left' | 'right' }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -87,10 +78,6 @@ export function AppSidebar({ side }: { side: 'left' | 'right' }) {
     logout();
     router.push('/login');
   };
-
-  const menuItems = allMenuItems.filter((item: any) =>
-    hasAccess(user?.role, item.roles as Role['name'][])
-  );
 
   return (
     <Sidebar
