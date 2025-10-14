@@ -1,72 +1,85 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to get user's role
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
     }
 
-    // Admins can do anything
+    function isUser(userId) {
+      return isAuth() && request.auth.uid == userId;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
     function isAdmin() {
-      return getUserRole(request.auth.uid) == 'admin';
+      return isAuth() && getUserRole() == 'admin';
     }
 
-    // Rules for 'users' collection
-    // Users can read their own data. Admins can read anyone's data.
+    function isRole(role) {
+        return isAuth() && getUserRole() == role;
+    }
+    
+    function isOneOfRoles(roles) {
+        return isAuth() && getUserRole() in roles;
+    }
+
+    // Rules for collections
     match /users/{userId} {
-      allow read: if request.auth.uid == userId || isAdmin();
-      allow write: if isAdmin(); // Only admins can change roles
+      allow read: if isAuth();
+      allow create, update, delete: if isAdmin();
     }
-
-    // Rules for 'customers' collection
-    // Sales and Admins can manage customers
+    
     match /customers/{customerId} {
-      allow read, write: if isAdmin() || getUserRole(request.auth.uid) == 'sales';
+      allow read, write: if isOneOfRoles(['admin', 'sales']);
     }
 
-    // Rules for 'products' collection
-    // Production, Warehouse Managers, and Admins can manage products.
-    // Sales can read products (for POS).
     match /products/{productId} {
-      allow read: if request.auth.uid != null; // Everyone logged in can see products
-      allow write: if isAdmin() || getUserRole(request.auth.uid) in ['production', 'warehouse_manager'];
+        allow read: if isAuth();
+        allow create, update, delete: if isOneOfRoles(['admin', 'production']);
+    }
+
+    match /product_fabrics/{productFabricId} {
+        allow read, write: if isOneOfRoles(['admin', 'production']);
     }
     
-    // Rules for 'fabrics' collection
-    // Production and Admins can manage fabrics.
     match /fabrics/{fabricId} {
-        allow read, write: if isAdmin() || getUserRole(request.auth.uid) == 'production';
-    }
-    
-    // Rules for 'suppliers' collection
-    // Production and Admins can manage suppliers.
-     match /suppliers/{supplierId} {
-        allow read, write: if isAdmin() || getUserRole(request.auth.uid) == 'production';
+       allow read, write: if isOneOfRoles(['admin', 'production']);
     }
 
-    // Rules for 'orders' collection
-    // Sales and Admins can create/update orders.
+    match /suppliers/{supplierId} {
+      allow read: if isOneOfRoles(['admin', 'production']);
+      allow create, update, delete: if isOneOfRoles(['admin', 'production']);
+    }
+
     match /orders/{orderId} {
-      allow read, write: if isAdmin() || getUserRole(request.auth.uid) == 'sales';
+        allow read: if isAuth();
+        allow create, update: if isOneOfRoles(['admin', 'sales']);
+        allow delete: if isAdmin();
+    }
+
+    match /production_orders/{productionOrderId} {
+        allow read, write: if isOneOfRoles(['admin', 'production']);
+    }
+
+    match /expenses/{expenseId} {
+        allow read, write: if isOneOfRoles(['admin', 'accountant']);
     }
     
-    // Rules for 'production_orders' collection
-    // Production and Admins can manage production orders.
-    match /production_orders/{productionOrderId} {
-        allow read, write: if isAdmin() || getUserRole(request.auth.uid) == 'production';
+    match /workers/{workerId} {
+        allow read, write: if isOneOfRoles(['admin', 'production']);
     }
 
-    // Rules for 'expenses' collection
-    // Accountants and Admins can manage expenses.
-    match /expenses/{expenseId} {
-      allow read, write: if isAdmin() || getUserRole(request.auth.uid) == 'accountant';
+    match /work_logs/{workLogId} {
+        allow read, write: if isOneOfRoles(['admin', 'production']);
     }
-
-    // Default deny all other collections
-    match /{document=**} {
-      allow read, write: if false;
+    
+    match /notifications/{notificationId} {
+      allow read, write: if isAuth();
     }
   }
 }
