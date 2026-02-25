@@ -1,51 +1,26 @@
-# Frontend Dockerfile for Next.js (Production Multi-Stage Build)
-
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Copy package files
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+COPY package*.json ./
+# Sattab kol el packages (including devDependencies)
+RUN npm install
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Copy deps from previous stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Build arguments for environment variables
-ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-
-# Build the application
+# Build el application
 RUN npm run build
 
 # Stage 3: Runner
 FROM node:20-alpine AS runner
 WORKDIR /app
-
-ENV NODE_ENV=production
-
-# Add non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy necessary files
+ENV NODE_ENV production
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-
-# Set ownership
-RUN chown -R nextjs:nodejs /app
-
-USER nextjs
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3000
-
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-
-CMD ["node", "server.js"]
+CMD ["npm", "start"]
