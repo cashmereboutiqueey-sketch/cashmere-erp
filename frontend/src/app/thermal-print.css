@@ -1,0 +1,59 @@
+/* Thermal Printer Styles - Xprinter XP-365B (58mm) */
+@media print {
+
+    /* Reset default page margins */
+    @page {
+        size: 58mm auto;
+        margin: 0;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Hide everything except print elements */
+    body * {
+        visibility: hidden;
+    }
+
+    .print\:block,
+    .print\:block * {
+        visibility: visible;
+    }
+
+    /* Ensure thermal labels render correctly */
+    .print\:block {
+        position: absolute;
+        left: 0;
+        top: 0;
+    }
+
+    /* Page breaks for multiple labels */
+    .page-break-after {
+        page-break-after: always;
+    }
+
+    /* Ensure barcode renders in high quality */
+    svg {
+        shape-rendering: crispEdges;
+    }
+
+    /* Prevent text scaling issues */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+
+/* Receipt Print Styles (80mm thermal) */
+@media print {
+    @page {
+        size: 80mm auto;
+        margin: 0;
+    }
+
+    .receipt-print {
+        max-width: 80mm;
+    }
+}

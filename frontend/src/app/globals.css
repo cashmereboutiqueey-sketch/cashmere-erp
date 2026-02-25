@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+    --color-cashmere-maroon: #722F37;
+    --color-cashmere-beige: #F5F5DC;
+    --color-cashmere-cream: #FDFBF7;
+    --color-cashmere-gold: #C5A059;
+    --color-cashmere-black: #2C2C2C;
+    --color-cashmere-gray: #858585;
+
+    /* Font mappings */
+    --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    --font-serif: var(--font-playfair), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+/* Set default background using the new theme color */
+body {
+    background-color: var(--color-cashmere-cream);
+    color: var(--color-cashmere-black);
+}
+
+@layer components {
+    .btn-primary {
+        background-color: var(--color-cashmere-maroon);
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+        font-weight: 500;
+        letter-spacing: 0.025em;
+    }
+
+    .btn-primary:hover {
+        opacity: 0.9;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    .card-panel {
+        @apply bg-white p-5 rounded-xl shadow-sm border border-stone-200;
+        transition: box-shadow 0.3s ease;
+    }
+
+    .card-panel:hover {
+        @apply shadow-md;
+    }
+}
+
+/* ============================================
+   THERMAL PRINTER STYLES - Xprinter XP-365B
+   ============================================ */
+@media print {
+
+    /* Page setup default */
+    @page {
+        margin: 0;
+        size: 80mm auto;
+        /* Critical for continuous thermal printing */
+    }
+
+    /* Hide everything by default using visibility */
+    body * {
+        visibility: hidden;
+    }
+
+    /* Print Visible Class - Apply this to anything you want to print */
+    .print-visible,
+    .print-visible * {
+        visibility: visible;
+    }
+
+    /* Ensure the printable element is positioned correctly */
+    .print-visible {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 80mm;
+        margin: 0;
+    }
+
+
+
+    /* Legacy support for thermal labels if needed */
+    #thermal-labels-print-area {
+        display: block !important;
+        visibility: visible !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+    }
+
+    #thermal-labels-print-area * {
+        visibility: visible !important;
+    }
+
+    /* Reset body */
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+
+    /* Quality settings */
+    svg {
+        shape-rendering: crispEdges !important;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

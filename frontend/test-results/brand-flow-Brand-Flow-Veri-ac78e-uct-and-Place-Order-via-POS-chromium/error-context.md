@@ -1,0 +1,157 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - generic [ref=e6]:
+            - heading "BRAND" [level=1] [ref=e7]
+            - paragraph [ref=e8]: Retail Operations
+          - button "🇸🇦 عربي" [ref=e9]:
+            - generic [ref=e10]: 🇸🇦
+            - generic [ref=e11]: عربي
+        - link "Switch to Factory" [ref=e12] [cursor=pointer]:
+          - /url: /factory
+          - generic [ref=e13]: Switch to Factory
+          - img [ref=e14]
+      - navigation [ref=e16]:
+        - link "نظرة عامة" [ref=e17] [cursor=pointer]:
+          - /url: /brand
+          - img [ref=e18]
+          - text: نظرة عامة
+        - link "المنتجات" [ref=e23] [cursor=pointer]:
+          - /url: /brand/products
+          - img [ref=e24]
+          - text: المنتجات
+        - link "المجموعات" [ref=e28] [cursor=pointer]:
+          - /url: /brand/collections
+          - img [ref=e29]
+          - text: المجموعات
+        - link "المخزون" [ref=e31] [cursor=pointer]:
+          - /url: /brand/inventory
+          - img [ref=e32]
+          - text: المخزون
+        - link "البازارات / الفعاليات" [ref=e36] [cursor=pointer]:
+          - /url: /brand/events
+          - img [ref=e37]
+          - text: البازارات / الفعاليات
+        - link "الطلبات" [ref=e39] [cursor=pointer]:
+          - /url: /brand/orders
+          - img [ref=e40]
+          - text: الطلبات
+        - link "nav.shipping" [ref=e43] [cursor=pointer]:
+          - /url: /brand/shipping
+          - img [ref=e44]
+          - text: nav.shipping
+        - link "العملاء" [ref=e49] [cursor=pointer]:
+          - /url: /brand/customers
+          - img [ref=e50]
+          - text: العملاء
+        - link "نقطة البيع" [ref=e55] [cursor=pointer]:
+          - /url: /brand/pos
+          - img [ref=e56]
+          - text: نقطة البيع
+        - link "المالية" [ref=e59] [cursor=pointer]:
+          - /url: /brand/finance
+          - img [ref=e60]
+          - text: المالية
+        - link "التكاملات" [ref=e62] [cursor=pointer]:
+          - /url: /brand/integrations
+          - img [ref=e63]
+          - text: التكاملات
+      - link "← Back to HQ" [ref=e67] [cursor=pointer]:
+        - /url: /dashboard
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - banner [ref=e71]:
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - heading "نقطة البيع" [level=1] [ref=e74]
+              - paragraph [ref=e75]: تسجيل طلبات جديدة
+            - generic [ref=e76]:
+              - button "common.returns" [ref=e77]:
+                - img [ref=e79]
+                - text: common.returns
+              - generic [ref=e82]:
+                - img [ref=e83]
+                - combobox [ref=e86] [cursor=pointer]:
+                  - option "LA (EVENT)"
+                  - option "Main Warehouse (WAREHOUSE)" [selected]
+                  - option "far3 el cahera (EVENT)"
+          - generic [ref=e87]:
+            - generic [ref=e89]:
+              - img [ref=e90]
+              - textbox "بحث منتج أو مسح باركود..." [ref=e93]: E2E-TS-001
+              - img [ref=e94]
+            - button "All Items" [ref=e99]:
+              - img [ref=e100]
+              - text: All Items
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - generic [ref=e105]: 👤
+                - textbox "بحث عن عميل..." [ref=e106]
+              - button "إضافة عميل" [ref=e107]:
+                - img [ref=e108]
+        - generic [ref=e111]:
+          - button "All Items" [ref=e112]
+          - button "Ramadan" [ref=e113]
+        - button "نفذت الكمية 1 Vars E2E Test T-Shirt 1 Variants 0 متاح 120" [active] [ref=e116]:
+          - generic [ref=e117]:
+            - img [ref=e118]
+            - generic [ref=e122]: نفذت الكمية
+            - generic [ref=e123]: 1 Vars
+          - heading "E2E Test T-Shirt" [level=3] [ref=e124]
+          - generic [ref=e125]:
+            - generic [ref=e126]:
+              - paragraph [ref=e127]: 1 Variants
+              - paragraph [ref=e128]:
+                - img [ref=e129]
+                - text: 0 متاح
+            - paragraph [ref=e132]: "120"
+      - generic [ref=e135]:
+        - generic [ref=e136]:
+          - heading "E2E Test T-Shirt" [level=3] [ref=e137]
+          - button "✕" [ref=e138]
+        - generic [ref=e139]:
+          - generic [ref=e141]:
+            - generic [ref=e142]:
+              - img [ref=e145]
+              - generic [ref=e148]:
+                - heading "E2E-TS-001" [level=4] [ref=e149]
+                - paragraph [ref=e150]: E2E-TS-001
+                - generic [ref=e151]: 0 in Stock
+            - generic [ref=e152]:
+              - paragraph [ref=e154]: "120"
+              - button "Request" [ref=e155]:
+                - img [ref=e156]
+                - text: Request
+          - button "Close" [ref=e159]
+      - generic [ref=e160]:
+        - generic [ref=e161]:
+          - heading "الطلب الحالي" [level=2] [ref=e162]:
+            - img [ref=e163]
+            - text: الطلب الحالي
+          - generic [ref=e166]:
+            - img [ref=e167]
+            - text: "صرف من:"
+            - generic [ref=e170]: Main Warehouse
+        - generic [ref=e172]: السلة فارغة
+        - generic [ref=e173]:
+          - generic [ref=e174]:
+            - generic [ref=e175]: المجموع (Gross)
+            - generic [ref=e176]: 0 LE
+          - generic [ref=e177]:
+            - generic [ref=e178]: Global Discount
+            - generic [ref=e179]:
+              - generic [ref=e180]: "-"
+              - spinbutton [ref=e181]
+          - generic [ref=e182]:
+            - generic [ref=e183]: الإجمالي
+            - generic [ref=e184]: 0 LE
+          - button "دفع" [disabled] [ref=e185]
+  - button "Open Next.js Dev Tools" [ref=e191] [cursor=pointer]:
+    - img [ref=e192]
+  - alert [ref=e195]
+```
