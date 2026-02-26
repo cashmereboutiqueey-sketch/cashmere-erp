@@ -13,3 +13,7 @@ flake8
 isort
 pytest
 pytest-django
+psycopg2-binary
+dj-database-url
+Pillow
+
