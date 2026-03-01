@@ -59,7 +59,7 @@ export default function CustomersPage() {
         if (!token) return;
 
         setLoading(true);
-        let url = 'http://localhost:8000/api/brand/customers/?';
+        let url = '`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/customers/?';
         if (searchQuery) url += `search=${searchQuery}&`;
         if (tierFilter) url += `tier=${tierFilter}&`;
         if (orderStatusFilter) url += `order_status=${orderStatusFilter}&`;
@@ -90,7 +90,7 @@ export default function CustomersPage() {
         if (!token) return;
 
         try {
-            const res = await fetch('http://localhost:8000/api/brand/customers/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/customers/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -53,7 +53,7 @@ export default function ProductCatalogPage() {
 
         setLoading(true);
         // Products
-        fetch('http://localhost:8000/api/brand/products/', {
+        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/', {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -73,7 +73,7 @@ export default function ProductCatalogPage() {
             });
 
         // Categories
-        fetch('http://localhost:8000/api/brand/categories/', {
+        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/categories/', {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -185,8 +185,8 @@ export default function ProductCatalogPage() {
 
         const isNew = !editingProduct.id;
         const url = isNew
-            ? 'http://localhost:8000/api/brand/products/'
-            : `http://localhost:8000/api/brand/products/${editingProduct.id}/`;
+            ? '`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/'
+            : ``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/${editingProduct.id}/`;
 
         const method = isNew ? 'POST' : 'PATCH';
 
@@ -219,7 +219,7 @@ export default function ProductCatalogPage() {
         if (!token) return;
 
         try {
-            const res = await fetch('http://localhost:8000/api/brand/shopify/push_product/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/shopify/push_product/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -36,12 +36,12 @@ export default function DashboardPage() {
         if (!token) return;
 
         // Fetch Main Dashboard Data
-        const fetchDashboard = fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/dashboard/`, {
+        const fetchDashboard = fetch(`${process.env.NEXT_PUBLIC_API_URL || '`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`'}/api/brand/analytics/dashboard/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => res.json());
 
         // Fetch Marketing Data
-        const fetchMarketing = fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/marketing_pulse/`, {
+        const fetchMarketing = fetch(`${process.env.NEXT_PUBLIC_API_URL || '`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`'}/api/brand/analytics/marketing_pulse/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => res.json());
 

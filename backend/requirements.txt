@@ -16,4 +16,5 @@ pytest-django
 psycopg2-binary
 dj-database-url
 Pillow
-
+whitenoise>=6.5.0
+gunicorn>=21.2.0

@@ -63,8 +63,8 @@ export default function SuppliersPage() {
         setLoading(true);
         try {
             const [supRes, matRes] = await Promise.all([
-                fetch('http://localhost:8000/api/factory/suppliers/'),
-                fetch('http://localhost:8000/api/factory/materials/')
+                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/suppliers/'),
+                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/materials/')
             ]);
             const supData = await supRes.json();
             const matData = await matRes.json();
@@ -86,7 +86,7 @@ export default function SuppliersPage() {
     const handleCreateSupplier = async () => {
         if (!createForm.name) return alert("Name is required");
         try {
-            const res = await fetch('http://localhost:8000/api/factory/suppliers/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/suppliers/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(createForm)
@@ -104,7 +104,7 @@ export default function SuppliersPage() {
             return alert("All fields are required");
         }
         try {
-            const res = await fetch('http://localhost:8000/api/factory/purchases/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/purchases/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -128,7 +128,7 @@ export default function SuppliersPage() {
     const handleRegisterPayment = async () => {
         if (!paymentForm.supplier || !paymentForm.amount) return alert("Supplier and Amount are required");
         try {
-            const res = await fetch('http://localhost:8000/api/factory/payments/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/payments/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -157,7 +157,7 @@ export default function SuppliersPage() {
             // Since we don't have a direct filter endpoint yet, strict filtering on client side or we could add ?supplier=ID to backend ViewSet
             // For now, let's fetch all purchases and filter (assuming low volume for demo)
             // Ideally: update backend ViewSet to support filtering.
-            const res = await fetch('http://localhost:8000/api/factory/purchases/');
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/purchases/');
             const allPurchases = await res.json();
             const filtered = allPurchases.filter((p: any) => p.supplier === supplier.id);
             setSupplierHistory(filtered);

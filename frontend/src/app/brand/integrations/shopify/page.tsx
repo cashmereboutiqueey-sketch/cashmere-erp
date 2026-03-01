@@ -26,7 +26,7 @@ export default function ShopifySettingsPage() {
     }, []);
 
     const fetchConfig = () => {
-        fetch('http://127.0.0.1:8000/api/brand/shopify/config/')
+        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/shopify/config/')
             .then(res => res.json())
             .then(data => {
                 if (data.configured) {
@@ -46,7 +46,7 @@ export default function ShopifySettingsPage() {
         setTesting(true);
         setConnectionError(null);
         try {
-            const res = await fetch('http://127.0.0.1:8000/api/brand/shopify/test_connection/', { method: 'POST' });
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/shopify/test_connection/', { method: 'POST' });
             const data = await res.json();
             if (res.ok) {
                 setIsConnected(true);
@@ -65,7 +65,7 @@ export default function ShopifySettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const res = await fetch('http://127.0.0.1:8000/api/brand/shopify/config/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/shopify/config/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(config)

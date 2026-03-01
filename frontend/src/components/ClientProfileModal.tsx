@@ -56,7 +56,7 @@ export default function ClientProfileModal({ customer, isOpen, onClose, onUpdate
         setLoading(true);
         try {
             // Fetch Interactions
-            const intRes = await fetch(`http://localhost:8000/api/brand/interactions/?customer=${customer.id}`);
+            const intRes = await fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/interactions/?customer=${customer.id}`);
             const intData = await intRes.json();
             setInteractions(intData);
 
@@ -67,7 +67,7 @@ export default function ClientProfileModal({ customer, isOpen, onClose, onUpdate
             // I'll try filtering, if not I might get all. 
             // Safer: Update backend to support filtering. But for now let's try.
             // Actually, best to just render what we have.
-            const orderRes = await fetch(`http://localhost:8000/api/brand/orders/`);
+            const orderRes = await fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/orders/`);
             const orderData = await orderRes.json();
             // Client-side filter for now as I didn't add filter backend (yet)
             const myOrders = orderData.filter((o: any) => o.customer === customer.id);
@@ -83,7 +83,7 @@ export default function ClientProfileModal({ customer, isOpen, onClose, onUpdate
     const handleAddNote = async () => {
         if (!note.trim() || !customer) return;
         try {
-            await fetch('http://localhost:8000/api/brand/interactions/', {
+            await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/interactions/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

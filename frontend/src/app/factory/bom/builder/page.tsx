@@ -49,8 +49,8 @@ function BOMBuilderContent() {
     // Fetch Data on Load
     useEffect(() => {
         Promise.all([
-            fetch('http://localhost:8000/api/brand/products/').then(r => r.json()),
-            fetch('http://localhost:8000/api/factory/materials/').then(r => r.json())
+            fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/').then(r => r.json()),
+            fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/materials/').then(r => r.json())
         ]).then(([prodData, matData]) => {
             setProducts(prodData);
             setMaterials(matData);
@@ -96,7 +96,7 @@ function BOMBuilderContent() {
         };
 
         try {
-            const res = await fetch('http://localhost:8000/api/factory/boms/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/boms/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)

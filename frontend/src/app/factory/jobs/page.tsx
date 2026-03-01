@@ -58,7 +58,7 @@ export default function ActiveJobsPage() {
     });
 
     const fetchJobs = () => {
-        fetch('http://localhost:8000/api/factory/jobs/')
+        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/')
             .then(res => res.json())
             .then(data => {
                 setJobs(data);
@@ -68,7 +68,7 @@ export default function ActiveJobsPage() {
     };
 
     const fetchProducts = () => {
-        fetch('http://localhost:8000/api/brand/products/?lite=true')
+        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/?lite=true')
             .then(res => res.json())
             .then(data => setProducts(data))
             .catch(err => console.error("Failed to fetch products", err));
@@ -118,7 +118,7 @@ export default function ActiveJobsPage() {
                 status: 'PENDING'
             };
 
-            const res = await fetch('http://localhost:8000/api/factory/jobs/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -142,7 +142,7 @@ export default function ActiveJobsPage() {
 
     const handleAction = async (id: number, action: 'start' | 'qc' | 'pass_qc' | 'fail_qc' | 'repair_qc' | 'cancel', payload?: any) => {
         try {
-            let url = `http://localhost:8000/api/factory/jobs/${id}/`;
+            let url = ``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/${id}/`;
             let method = 'PATCH';
             let body = {};
 
@@ -192,7 +192,7 @@ export default function ActiveJobsPage() {
         setIsSubmitting(true);
         try {
             console.log(`Attempting to complete job ${selectedJob.id}...`);
-            const res = await fetch(`http://localhost:8000/api/factory/jobs/${selectedJob.id}/complete/`, {
+            const res = await fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/${selectedJob.id}/complete/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -323,7 +323,7 @@ export default function ActiveJobsPage() {
 
                                             try {
                                                 const results = await Promise.all(groupSelectedIds.map(async (id) => {
-                                                    const res = await fetch(`http://localhost:8000/api/factory/jobs/${id}/start/`, {
+                                                    const res = await fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/${id}/start/`, {
                                                         method: 'POST',
                                                         headers: { 'Content-Type': 'application/json' }
                                                     });

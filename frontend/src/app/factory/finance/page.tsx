@@ -36,9 +36,9 @@ export default function FactoryFinancePage() {
     const fetchData = async () => {
         try {
             const [txRes, trRes, metricsRes] = await Promise.all([
-                fetch('http://localhost:8000/api/finance/transactions/?module=FACTORY'),
-                fetch('http://localhost:8000/api/finance/treasury/'),
-                fetch('http://localhost:8000/api/finance/metrics/factory/')
+                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/transactions/?module=FACTORY'),
+                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/treasury/'),
+                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/metrics/factory/')
             ]);
 
             const txData = await txRes.json();
@@ -66,7 +66,7 @@ export default function FactoryFinancePage() {
             // Factory expenses usually come from Main Treasury
             const targetTreasury = treasuries.main?.id;
 
-            const res = await fetch('http://localhost:8000/api/finance/transactions/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/transactions/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

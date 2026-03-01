@@ -53,8 +53,8 @@ export default function InventoryPage() {
 
     const fetchData = () => {
         Promise.all([
-            fetch('http://127.0.0.1:8000/api/factory/materials/').then(r => r.json()),
-            fetch('http://127.0.0.1:8000/api/factory/suppliers/').then(r => r.json())
+            fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/materials/').then(r => r.json()),
+            fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/suppliers/').then(r => r.json())
         ]).then(([matData, suppData]) => {
             setMaterials(matData);
             setSuppliers(suppData);
@@ -84,7 +84,7 @@ export default function InventoryPage() {
         }
 
         try {
-            const res = await fetch('http://127.0.0.1:8000/api/factory/materials/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/materials/', {
                 method: 'POST',
                 // headers: { 'Content-Type': 'multipart/form-data' }, // Fails if set manually with FormData
                 body: data
@@ -124,7 +124,7 @@ export default function InventoryPage() {
         if (!restockItem || !restockQty) return;
 
         try {
-            const res = await fetch('http://127.0.0.1:8000/api/factory/purchases/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/purchases/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

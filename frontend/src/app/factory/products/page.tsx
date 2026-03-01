@@ -53,7 +53,7 @@ export default function FactoryProductCatalog() {
     const [creating, setCreating] = useState(false);
 
     const fetchProducts = React.useCallback(() => {
-        fetch('http://127.0.0.1:8000/api/brand/products/')
+        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/')
             .then(res => res.json())
             .then((data: Product[]) => {
                 setProducts(data);
@@ -118,7 +118,7 @@ export default function FactoryProductCatalog() {
                     data.append('image', imageFile);
                 }
 
-                requests.push(fetch('http://127.0.0.1:8000/api/brand/products/', {
+                requests.push(fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/', {
                     method: 'POST',
                     body: data
                 }));
@@ -176,7 +176,7 @@ export default function FactoryProductCatalog() {
             const updates = editStyle.variants.map(variant => {
                 const data = new FormData();
                 data.append('image', editImage);
-                return fetch(`http://127.0.0.1:8000/api/brand/products/${variant.id}/`, {
+                return fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/${variant.id}/`, {
                     method: 'PATCH',
                     body: data
                 });

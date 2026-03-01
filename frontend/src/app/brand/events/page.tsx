@@ -47,7 +47,7 @@ export default function EventsPage() {
 
     const fetchLocations = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/brand/locations/');
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/locations/');
             const data = await res.json();
             setEvents(data.filter((l: any) => l.type === 'EVENT'));
             setWarehouses(data.filter((l: any) => l.type === 'WAREHOUSE'));
@@ -59,7 +59,7 @@ export default function EventsPage() {
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/brand/products/');
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/');
             const data = await res.json();
             setProducts(data);
         } catch (err) {
@@ -70,7 +70,7 @@ export default function EventsPage() {
     const handleCreateEvent = async () => {
         if (!newEventName) return;
         try {
-            const res = await fetch('http://localhost:8000/api/brand/locations/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/locations/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -109,7 +109,7 @@ export default function EventsPage() {
             };
             console.log("Sending Payload:", payload);
 
-            const res = await fetch('http://localhost:8000/api/brand/inventory/transfer/', {
+            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/inventory/transfer/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
