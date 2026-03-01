@@ -33,4 +33,8 @@ RUN mkdir -p /app/staticfiles /app/media
 # Expose port
 EXPOSE 8000
 
-# Run migrations and start server (handled by docker-compose command)
+# Run migrations, collect static, and start server
+# Using ${PORT:-8000} allows Railway to assign a port dynamically if needed
+CMD python manage.py migrate \
+    && python manage.py collectstatic --noinput \
+    && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 4 --timeout 120
