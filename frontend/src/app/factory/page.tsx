@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import KPICard from "@/components/dashboard/KPICard";
 import AnalyticsChart from "@/components/dashboard/AnalyticsChart";
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FactoryStats {
     kpis: {
@@ -21,9 +22,11 @@ export default function FactoryPage() {
     const [stats, setStats] = useState<FactoryStats | null>(null);
     const [loading, setLoading] = useState(true);
     const { t } = useLanguage();
+    const { token } = useAuth();
 
     useEffect(() => {
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/dashboard_stats/')
+        if (!token) return;
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/dashboard_stats/`, { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.json())
             .then(data => {
                 setStats(data);

@@ -6,6 +6,7 @@ import DataGrid from '@/components/DataGrid';
 import Dialog from '@/components/Dialog';
 import { Plus, DollarSign, History, ShoppingCart } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Supplier {
     id: number;
@@ -42,6 +43,7 @@ export default function SuppliersPage() {
     const [materials, setMaterials] = useState<RawMaterial[]>([]);
     const [loading, setLoading] = useState(true);
     const { t } = useLanguage();
+    const { token } = useAuth();
 
     // Dialog States
     const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -60,16 +62,17 @@ export default function SuppliersPage() {
     const [paymentForm, setPaymentForm] = useState<PaymentValues>({ supplier: '', amount: '', method: 'CASH', notes: '' });
 
     const fetchData = async () => {
+        if (!token) return;
         setLoading(true);
         try {
             const [supRes, matRes] = await Promise.all([
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/suppliers/'),
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/materials/')
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/suppliers/`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/materials/`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
             const supData = await supRes.json();
             const matData = await matRes.json();
-            setSuppliers(supData);
-            setMaterials(matData);
+            setSuppliers(Array.isArray(supData) ? supData : supData.results || supData.data || []);
+            setMaterials(Array.isArray(matData) ? matData : matData.results || matData.data || []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -78,17 +81,17 @@ export default function SuppliersPage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (token) fetchData();
+    }, [token]);
 
     // --- Actions ---
 
     const handleCreateSupplier = async () => {
         if (!createForm.name) return alert("Name is required");
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/suppliers/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/suppliers/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(createForm)
             });
             if (res.ok) {
@@ -104,9 +107,9 @@ export default function SuppliersPage() {
             return alert("All fields are required");
         }
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/purchases/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/purchases/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     supplier: parseInt(purchaseForm.supplier),
                     raw_material: parseInt(purchaseForm.raw_material),
@@ -128,9 +131,9 @@ export default function SuppliersPage() {
     const handleRegisterPayment = async () => {
         if (!paymentForm.supplier || !paymentForm.amount) return alert("Supplier and Amount are required");
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/payments/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/payments/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     supplier: parseInt(paymentForm.supplier),
                     amount: parseFloat(paymentForm.amount),
@@ -157,7 +160,9 @@ export default function SuppliersPage() {
             // Since we don't have a direct filter endpoint yet, strict filtering on client side or we could add ?supplier=ID to backend ViewSet
             // For now, let's fetch all purchases and filter (assuming low volume for demo)
             // Ideally: update backend ViewSet to support filtering.
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/purchases/');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/purchases/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const allPurchases = await res.json();
             const filtered = allPurchases.filter((p: any) => p.supplier === supplier.id);
             setSupplierHistory(filtered);

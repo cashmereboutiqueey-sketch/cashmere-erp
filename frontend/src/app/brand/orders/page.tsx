@@ -25,7 +25,7 @@ export default function OrdersPage() {
 
     const fetchOrders = async () => {
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/orders/');
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/`);
             if (res.ok) {
                 const data = await res.json();
                 setOrders(data);
@@ -47,7 +47,7 @@ export default function OrdersPage() {
         if (!selectedOrder) return;
 
         try {
-            const res = await fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/orders/${selectedOrder.id}/fulfill/`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/${selectedOrder.id}/fulfill/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ shipping_company: shippingCompany })

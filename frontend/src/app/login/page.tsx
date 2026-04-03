@@ -16,7 +16,7 @@ export default function LoginPage() {
         e.preventDefault();
         setError("");
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || '`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`;
         console.log("Attempting login to:", apiUrl);
 
         try {

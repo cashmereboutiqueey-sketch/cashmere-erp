@@ -98,7 +98,7 @@ export default function POSPage() {
         if (!token) return;
 
         // Fetch Products with updated Inventory info
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -130,7 +130,7 @@ export default function POSPage() {
         fetchProductData();
 
         // Fetch Customers
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/customers/', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/customers/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -145,7 +145,7 @@ export default function POSPage() {
             .catch(err => console.error(err));
 
         // Fetch Locations
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/locations/', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/locations/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -166,7 +166,7 @@ export default function POSPage() {
             .catch(err => console.error(err));
 
         // Fetch Categories
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/categories/', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/categories/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -264,7 +264,7 @@ export default function POSPage() {
         if (!newCustomerData.name || !newCustomerData.phone) return alert(t('pos.alerts.nameRequired'));
 
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/customers/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/customers/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newCustomerData)
@@ -290,7 +290,7 @@ export default function POSPage() {
         try {
             // Create a Production Job
             const jobName = `REQ-${Date.now()}`;
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -343,7 +343,7 @@ export default function POSPage() {
                 notes: orderNotes || ""
             };
 
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/orders/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(orderPayload)
@@ -359,7 +359,7 @@ export default function POSPage() {
             // Create Production Jobs if Made-to-Order
             if (isMadeToOrder) {
                 const jobPromises = cart.map(item =>
-                    fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/', {
+                    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -1046,7 +1046,7 @@ function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
     const handleSearch = async () => {
         if (!searchQuery) return;
         try {
-            let url = ``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/orders/?search=${searchQuery}`;
+            let url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/?search=${searchQuery}`;
             const res = await fetch(url);
             const data = await res.json();
 
@@ -1073,7 +1073,7 @@ function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
         if (itemsPayload.length === 0) return alert("Select items to return");
 
         try {
-            const res = await fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/orders/${foundOrder.id}/return_items/`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/${foundOrder.id}/return_items/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ items: itemsPayload, restock })

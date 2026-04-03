@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import DataGrid from '@/components/DataGrid';
 import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ImageIcon } from 'lucide-react';
 
 interface Material {
@@ -29,6 +30,7 @@ export default function InventoryPage() {
     const [suppliers, setSuppliers] = useState<Supplier[]>([]);
     const [loading, setLoading] = useState(true);
     const { t } = useLanguage();
+    const { token } = useAuth();
 
     // Form State
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -52,19 +54,20 @@ export default function InventoryPage() {
     const [restockPaid, setRestockPaid] = useState('');
 
     const fetchData = () => {
+        if (!token) return;
         Promise.all([
-            fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/materials/').then(r => r.json()),
-            fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/suppliers/').then(r => r.json())
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/materials/`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()),
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/suppliers/`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
         ]).then(([matData, suppData]) => {
-            setMaterials(matData);
-            setSuppliers(suppData);
+            setMaterials(Array.isArray(matData) ? matData : matData.results || matData.data || []);
+            setSuppliers(Array.isArray(suppData) ? suppData : suppData.results || suppData.data || []);
             setLoading(false);
         }).catch(err => console.error(err));
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (token) fetchData();
+    }, [token]);
 
     const handleCreate = async () => {
         if (!formData.name) return alert("Name is required");
@@ -84,9 +87,9 @@ export default function InventoryPage() {
         }
 
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/materials/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/materials/`, {
                 method: 'POST',
-                // headers: { 'Content-Type': 'multipart/form-data' }, // Fails if set manually with FormData
+                headers: { 'Authorization': `Bearer ${token}` }, // Note: Do NOT set Content-Type for FormData
                 body: data
             });
 
@@ -124,9 +127,9 @@ export default function InventoryPage() {
         if (!restockItem || !restockQty) return;
 
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/purchases/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/purchases/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     raw_material: restockItem.id,
                     supplier: restockItem.supplier || suppliers[0]?.id, // Fallback if missing, but should exist

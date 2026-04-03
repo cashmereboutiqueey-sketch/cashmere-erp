@@ -41,10 +41,10 @@ export default function BrandFinancePage() {
     const fetchData = async () => {
         try {
             const [txRes, trRes, metricsRes, analyticsRes] = await Promise.all([
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/transactions/?module=BRAND'),
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/treasury/'),
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/metrics/brand/'),
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/analytics/dashboard/') // New Endpoint
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?module=BRAND`),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/`),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/metrics/brand/`),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/dashboard/`) // New Endpoint
             ]);
 
             const txData = await txRes.json();
@@ -78,7 +78,7 @@ export default function BrandFinancePage() {
     const handleTransfer = async () => {
         if (!transferAmount) return;
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/treasury/transfer_to_main/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/transfer_to_main/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ amount: transferAmount })
@@ -101,7 +101,7 @@ export default function BrandFinancePage() {
         try {
             const targetTreasury = treasuries.daily?.id;
 
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/transactions/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

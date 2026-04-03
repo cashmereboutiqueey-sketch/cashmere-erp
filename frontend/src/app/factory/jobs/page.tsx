@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import {
     Play,
     CheckCircle,
@@ -39,6 +40,7 @@ interface Product {
 
 export default function ActiveJobsPage() {
     const { t } = useLanguage();
+    const { token } = useAuth();
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'PENDING' | 'IN_PROGRESS' | 'QC' | 'COMPLETED'>('PENDING');
@@ -58,7 +60,8 @@ export default function ActiveJobsPage() {
     });
 
     const fetchJobs = () => {
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/')
+        if (!token) return;
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/`, { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.json())
             .then(data => {
                 setJobs(data);
@@ -68,16 +71,19 @@ export default function ActiveJobsPage() {
     };
 
     const fetchProducts = () => {
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/?lite=true')
+        if (!token) return;
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/?lite=true`, { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.json())
             .then(data => setProducts(data))
             .catch(err => console.error("Failed to fetch products", err));
     };
 
     useEffect(() => {
-        fetchJobs();
-        fetchProducts();
-    }, []);
+        if (token) {
+            fetchJobs();
+            fetchProducts();
+        }
+    }, [token]);
 
     const toggleJobSelection = (id: number) => {
         const newSet = new Set(selectedJobIds);
@@ -118,9 +124,9 @@ export default function ActiveJobsPage() {
                 status: 'PENDING'
             };
 
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(payload)
             });
 
@@ -142,7 +148,7 @@ export default function ActiveJobsPage() {
 
     const handleAction = async (id: number, action: 'start' | 'qc' | 'pass_qc' | 'fail_qc' | 'repair_qc' | 'cancel', payload?: any) => {
         try {
-            let url = ``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/${id}/`;
+            let url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/${id}/`;
             let method = 'PATCH';
             let body = {};
 
@@ -163,7 +169,7 @@ export default function ActiveJobsPage() {
 
             const res = await fetch(url, {
                 method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: method === 'PATCH' ? JSON.stringify(body) : undefined
             });
 
@@ -192,9 +198,9 @@ export default function ActiveJobsPage() {
         setIsSubmitting(true);
         try {
             console.log(`Attempting to complete job ${selectedJob.id}...`);
-            const res = await fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/${selectedJob.id}/complete/`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/${selectedJob.id}/complete/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
             });
 
             if (res.ok) {
@@ -323,9 +329,9 @@ export default function ActiveJobsPage() {
 
                                             try {
                                                 const results = await Promise.all(groupSelectedIds.map(async (id) => {
-                                                    const res = await fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/${id}/start/`, {
+                                                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/${id}/start/`, {
                                                         method: 'POST',
-                                                        headers: { 'Content-Type': 'application/json' }
+                                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
                                                     });
                                                     if (!res.ok) {
                                                         const err = await res.json();

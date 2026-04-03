@@ -53,7 +53,7 @@ export default function BrandInventoryPage() {
     useEffect(() => {
         if (!token) return;
 
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/inventory/', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/inventory/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -90,7 +90,7 @@ export default function BrandInventoryPage() {
 
         const requests = selectedItems.map(item => {
             const qty = restockQuantities[item.id] || 1;
-            return fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/jobs/', {
+            return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -131,7 +131,7 @@ export default function BrandInventoryPage() {
         }
 
         try {
-            const res = await fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/${editItem.product}/`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/${editItem.product}/`, {
                 method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -145,7 +145,7 @@ export default function BrandInventoryPage() {
                 setIsEditOpen(false);
                 setEditItem(null);
                 setEditImage(null);
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/inventory/', {
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/inventory/`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                     .then(res => res.json())

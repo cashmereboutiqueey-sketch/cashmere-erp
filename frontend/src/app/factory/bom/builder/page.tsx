@@ -3,6 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Product {
     id: number;
@@ -33,6 +34,7 @@ export default function BOMBuilderPage() {
 
 function BOMBuilderContent() {
     const { t } = useLanguage();
+    const { token } = useAuth();
     const searchParams = useSearchParams();
     const productIdParam = searchParams.get('productId') || "";
 
@@ -48,14 +50,15 @@ function BOMBuilderContent() {
 
     // Fetch Data on Load
     useEffect(() => {
+        if (!token) return;
         Promise.all([
-            fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/').then(r => r.json()),
-            fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/materials/').then(r => r.json())
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()),
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/materials/`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
         ]).then(([prodData, matData]) => {
-            setProducts(prodData);
-            setMaterials(matData);
+            setProducts(Array.isArray(prodData) ? prodData : prodData.results || prodData.data || []);
+            setMaterials(Array.isArray(matData) ? matData : matData.results || matData.data || []);
         });
-    }, []);
+    }, [token]);
 
     const addLine = () => {
         setLines([...lines, { raw_material_id: 0, quantity: 1, waste_percentage: 0 }]);
@@ -96,9 +99,9 @@ function BOMBuilderContent() {
         };
 
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/factory/boms/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/boms/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(payload)
             });
 

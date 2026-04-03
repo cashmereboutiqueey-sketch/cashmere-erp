@@ -28,7 +28,7 @@ export default function ExpensesPage() {
     });
 
     const fetchTransactions = () => {
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/transactions/?type=EXPENSE')
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?type=EXPENSE`)
             .then(res => res.json())
             .then(data => {
                 setTransactions(data);
@@ -47,7 +47,7 @@ export default function ExpensesPage() {
 
         setSubmitting(true);
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/transactions/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

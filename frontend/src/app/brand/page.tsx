@@ -36,7 +36,7 @@ export default function BrandPage() {
     useEffect(() => {
         if (!token) return;
 
-        let url = '`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/analytics/dashboard/';
+        let url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/dashboard/`;
         if (dateRange.start && dateRange.end) {
             url += `?start_date=${dateRange.start}&end_date=${dateRange.end}`;
         }

@@ -7,9 +7,9 @@ import {
 } from 'lucide-react';
 import DataGrid from '@/components/DataGrid';
 import KPICard from '@/components/KPICard';
-import Dialog from '@/components/Dialog';
 import MetricsGrid, { MetricItem } from '@/components/MetricsGrid';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Treasury {
     id: number;
@@ -20,6 +20,7 @@ interface Treasury {
 
 export default function FactoryFinancePage() {
     const { t } = useLanguage();
+    const { token } = useAuth();
     const [transactions, setTransactions] = useState([]);
     const [treasuries, setTreasuries] = useState<{ daily: Treasury | null, main: Treasury | null }>({ daily: null, main: null });
     const [metrics, setMetrics] = useState<MetricItem[]>([]);
@@ -34,11 +35,12 @@ export default function FactoryFinancePage() {
     });
 
     const fetchData = async () => {
+        if (!token) return;
         try {
             const [txRes, trRes, metricsRes] = await Promise.all([
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/transactions/?module=FACTORY'),
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/treasury/'),
-                fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/metrics/factory/')
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?module=FACTORY`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/metrics/factory/`, { headers: { 'Authorization': `Bearer ${token}` } })
             ]);
 
             const txData = await txRes.json();
@@ -58,7 +60,7 @@ export default function FactoryFinancePage() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [token]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -66,9 +68,9 @@ export default function FactoryFinancePage() {
             // Factory expenses usually come from Main Treasury
             const targetTreasury = treasuries.main?.id;
 
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/finance/transactions/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     module: 'FACTORY',
                     type: formData.type,

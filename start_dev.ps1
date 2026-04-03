@@ -2,7 +2,7 @@ Write-Host "Starting CASHMERE ERP Services..."
 
 # 1. Start Docker Containers
 Write-Host "1. Starting Docker Containers (Postgres, Redis)..."
-docker-compose up -d
+docker-compose up -d db
 
 # Check if docker-compose failed
 if ($LASTEXITCODE -ne 0) {

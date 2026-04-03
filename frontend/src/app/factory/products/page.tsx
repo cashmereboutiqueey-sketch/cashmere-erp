@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Tag, Layers, ChevronRight, Plus, Package } from 'lucide-react';
 import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Product {
     id: number;
@@ -32,6 +33,7 @@ const PREDEFINED_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'One Size'];
 
 export default function FactoryProductCatalog() {
     const { t } = useLanguage();
+    const { token } = useAuth();
     // Form State
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -53,7 +55,8 @@ export default function FactoryProductCatalog() {
     const [creating, setCreating] = useState(false);
 
     const fetchProducts = React.useCallback(() => {
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/')
+        if (!token) return;
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/`, { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.json())
             .then((data: Product[]) => {
                 setProducts(data);
@@ -82,8 +85,8 @@ export default function FactoryProductCatalog() {
     }, []);
 
     useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts]);
+        if (token) fetchProducts();
+    }, [fetchProducts, token]);
 
     const handleCreateVariants = async () => {
         if (!formData.name || !formData.baseSku) return alert("Name and Base SKU are required");
@@ -118,8 +121,9 @@ export default function FactoryProductCatalog() {
                     data.append('image', imageFile);
                 }
 
-                requests.push(fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/', {
+                requests.push(fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/`, {
                     method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
                     body: data
                 }));
             }
@@ -176,8 +180,9 @@ export default function FactoryProductCatalog() {
             const updates = editStyle.variants.map(variant => {
                 const data = new FormData();
                 data.append('image', editImage);
-                return fetch(``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/products/${variant.id}/`, {
+                return fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/${variant.id}/`, {
                     method: 'PATCH',
+                    headers: { 'Authorization': `Bearer ${token}` },
                     body: data
                 });
             });

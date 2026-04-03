@@ -36,11 +36,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setToken(storedToken);
             try {
                 const decoded: any = jwtDecode(storedToken);
+                // Check if token is expired
+                if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+                    console.warn("Token expired, logging out automatically.");
+                    logout();
+                    return;
+                }
+
                 // The simplejwt token doesn't include groups by default unless customized.
-                // We'll assume the backend customizes the token or we fetch user data separately.
-                // For now, let's decode what we can.
-                // Ideally, we should fetch /api/users/me/ to get full profile including groups.
-                // But let's start simple: if token exists, we are logged in.
 
                 // Let's defer fetching user details to a separate effect or assume token has enough info for now
                 // if we customize the token serializer.

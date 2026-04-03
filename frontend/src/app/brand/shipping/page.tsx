@@ -36,7 +36,7 @@ export default function ShippingPage() {
 
         setLoading(true);
         // Different endpoints/filters based on tab
-        let url = '`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/orders/';
+        let url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/`;
         if (activeTab === 'READY') {
             // "Ready to Ship" means status is READY or PENDING_PRODUCTION (if ready) or just READY
             // Let's assume we filter by status=READY for now, or use detailed_status=READY_TO_SHIP if set
@@ -126,7 +126,7 @@ export default function ShippingPage() {
         if (!confirm(`Apply updates to ${updates.length} orders?`)) return;
 
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/orders/update_shipping_status/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/update_shipping_status/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

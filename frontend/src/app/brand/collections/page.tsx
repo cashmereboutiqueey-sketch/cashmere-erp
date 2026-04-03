@@ -35,7 +35,7 @@ export default function CollectionsPage() {
     const fetchCategories = () => {
         if (!token) return;
         setLoading(true);
-        fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/categories/', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/categories/`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
@@ -59,8 +59,8 @@ export default function CollectionsPage() {
         if (!token) return;
 
         const url = formData.id
-            ? ``${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/categories/${formData.id}/`
-            : '`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/categories/';
+            ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/categories/${formData.id}/`
+            : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/categories/`;
 
         const method = formData.id ? 'PUT' : 'POST';
 
@@ -90,7 +90,7 @@ export default function CollectionsPage() {
         if (!confirm(`Push Collection "${category.name}" to Shopify?`)) return;
 
         try {
-            const res = await fetch('`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/`api/brand/shopify/push_collection/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/shopify/push_collection/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
