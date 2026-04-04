@@ -112,7 +112,7 @@ DATABASES = {
 
 
 # CORS Settings
-cors_origins = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000,http://127.0.0.1:3000')
+cors_origins = config('CORS_ALLOWED_ORIGINS', default='https://cashmere-erp.vercel.app,http://localhost:3000,http://127.0.0.1:3000')
 CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
 
 # DRF Settings
@@ -181,9 +181,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
+CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=True, cast=bool)
 
-csrf_origins = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:3000')
+csrf_origins = config('CSRF_TRUSTED_ORIGINS', default='https://cashmere-erp.vercel.app,http://localhost:3000')
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(',') if origin.strip()]
 
 # Security Settings
