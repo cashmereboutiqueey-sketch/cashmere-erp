@@ -7,47 +7,31 @@ on:
 
 jobs:
   deploy:
-    name: SSH Deploy
-    runs-on: ubuntu-latest
+    name: Deploy
+    runs-on: self-hosted
 
     steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            set -e
+      - name: Pull latest code
+        run: |
+          cd /opt/cashmere
+          git fetch origin main
+          git reset --hard origin/main
 
-            REPO_URL="https://github.com/cashmereboutiqueey-sketch/cashmere-erp.git"
-            DEPLOY_DIR="/opt/cashmere"
+      - name: Rebuild containers
+        run: |
+          cd /opt/cashmere
+          docker compose -f docker-compose.prod.yml build --no-cache frontend backend
 
-            # If not a git repo yet, clone it; otherwise pull
-            if [ ! -d "$DEPLOY_DIR/.git" ]; then
-              echo ">>> No git repo found — cloning..."
-              git clone "$REPO_URL" "$DEPLOY_DIR" || true
-            fi
+      - name: Restart services
+        run: |
+          cd /opt/cashmere
+          docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
-            cd "$DEPLOY_DIR"
+      - name: Run migrations
+        run: |
+          cd /opt/cashmere
+          docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
+          docker compose -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --noinput
 
-            echo ">>> Pulling latest code..."
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo ">>> Rebuilding containers..."
-            docker compose -f docker-compose.prod.yml build --no-cache frontend backend
-
-            echo ">>> Restarting services..."
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-
-            echo ">>> Running migrations..."
-            docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
-
-            echo ">>> Collecting static files..."
-            docker compose -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --noinput
-
-            echo ">>> Done! Checking health..."
-            sleep 5
-            curl -f http://localhost/api/ && echo "Health check passed" || echo "Health check failed"
+      - name: Health check
+        run: curl -f http://localhost/api/ && echo "OK"
