@@ -521,54 +521,51 @@ class AnalyticsViewSet(viewsets.ViewSet):
             revenue=Sum('total_price')
         ).order_by('date')
 
+        margin = float((net_profit / revenue * 100) if revenue > 0 else 0)
+
         return Response({
             'kpis': {
-                'revenue': revenue,
-                'expenses': expenses,
-                'net_profit': net_profit,
-                'margin': (net_profit / revenue * 100) if revenue > 0 else 0,
-                'inventory_value': inventory_value,
-                'inventory_cost': inventory_cost
+                'revenue': float(revenue),
+                'expenses': float(expenses),
+                'net_profit': float(net_profit),
+                'margin': margin,
+                'inventory_value': float(inventory_value),
+                'inventory_cost': float(inventory_cost)
             },
             'charts': {
                 'payment_methods': [
-                    {'name': p['payment_method'], 'value': p['total']} for p in payment_stats
+                    {'name': p['payment_method'], 'value': float(p['total'] or 0)} for p in payment_stats
                 ],
                 'shipping_stats': [
-                   {'name': p['shipping_company'], 'count': p['count'], 'value': p['total_value']} for p in shipping_stats 
+                   {'name': p['shipping_company'], 'count': p['count'], 'value': float(p['total_value'] or 0)} for p in shipping_stats
                 ],
                 'sales_by_source': [
-                    # If location is null, label as 'Unknown' (or Online if applicable)
-                    {'name': p['location__name'] or 'Direct/Online', 'value': p['total']} for p in source_stats
+                    {'name': p['location__name'] or 'Direct/Online', 'value': float(p['total'] or 0)} for p in source_stats
                 ],
                 'revenue_trend': [
-                    {'date': d['date'], 'value': d['revenue']} for d in trend_data
+                    {'date': str(d['date']), 'value': float(d['revenue'] or 0)} for d in trend_data
                 ],
                 'stock_value_by_location': [
-                    {'name': i['location__name'], 'value': i['total_value']} 
+                    {'name': i['location__name'], 'value': float(i['total_value'] or 0)}
                     for i in Inventory.objects.values('location__name').annotate(
                         total_value=Sum(F('quantity') * F('product__standard_cost'))
                     ).order_by('-total_value')
                 ]
             },
-                'top_products': [
-                    {
-                        'name': i['items__product__name'],
-                        'sku': i['items__product__sku'],
-                        'quantity': i['total_qty'],
-                        'revenue': i['total_rev_correct']
-                    }
-                    for i in Order.objects.filter(items__isnull=False, **filters).values(
-                        'items__product__name', 'items__product__sku'
-                    ).annotate(
-                        total_qty=Sum('items__quantity'),
-                        total_rev=Sum('items__unit_price') # Approximation if unit_price isn't aggregated correctly? 
-                        # Ideally: Sum(F('items__quantity') * F('items__unit_price'))
-                        # But Django values() grouping can be tricky. Let's rely on OrderItem aggregation
-                    ).annotate(
-                         total_rev_correct=Sum(F('items__quantity') * F('items__unit_price'))
-                    ).order_by('-total_rev_correct')[:5]
-                ]
+            'top_products': [
+                {
+                    'name': i['items__product__name'],
+                    'sku': i['items__product__sku'],
+                    'quantity': i['total_qty'],
+                    'revenue': float(i['total_rev_correct'] or 0)
+                }
+                for i in Order.objects.filter(items__isnull=False, **filters).values(
+                    'items__product__name', 'items__product__sku'
+                ).annotate(
+                    total_qty=Sum('items__quantity'),
+                    total_rev_correct=Sum(F('items__quantity') * F('items__unit_price'))
+                ).order_by('-total_rev_correct')[:5]
+            ]
         })
 
     @action(detail=False, methods=['get'])
