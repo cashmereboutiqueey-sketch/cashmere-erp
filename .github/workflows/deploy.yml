@@ -1,0 +1,42 @@
+name: Deploy to Hostinger KVM2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: SSH Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: 22
+          script: |
+            set -e
+            cd /opt/cashmere-erp
+
+            echo ">>> Pulling latest code..."
+            git pull origin main
+
+            echo ">>> Rebuilding containers..."
+            docker compose -f docker-compose.prod.yml build --no-cache frontend backend
+
+            echo ">>> Restarting services..."
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            echo ">>> Running migrations..."
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
+
+            echo ">>> Collecting static files..."
+            docker compose -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --noinput
+
+            echo ">>> Done! Checking health..."
+            sleep 5
+            curl -f http://localhost/api/ && echo "Health check passed" || echo "Health check failed"
