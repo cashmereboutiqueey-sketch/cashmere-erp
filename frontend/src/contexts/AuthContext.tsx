@@ -61,12 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
                 setToken(storedToken);
                 setUser({ user_id: decoded.user_id, username: decoded.username || "User", email: "", groups: decoded.groups || [], is_superuser: decoded.is_superuser || false });
+                setLoading(false); // ← must set before returning cleanup
                 // Schedule a refresh 2 min before expiry
                 const msUntilExpiry = decoded.exp * 1000 - Date.now() - 2 * 60 * 1000;
                 if (msUntilExpiry > 0) {
                     const timer = setTimeout(() => tryRefreshToken(), msUntilExpiry);
                     return () => clearTimeout(timer);
                 }
+                return;
             } catch (error) {
                 console.error("Invalid token", error);
                 logout();
