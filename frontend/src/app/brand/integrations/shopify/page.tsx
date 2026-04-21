@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Save, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 
 export default function ShopifySettingsPage() {
     const { t } = useLanguage();
+    const { token } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
@@ -16,23 +18,26 @@ export default function ShopifySettingsPage() {
         is_active: true
     });
 
-    // Status
     const [isConnected, setIsConnected] = useState(false);
     const [lastSync, setLastSync] = useState<string | null>(null);
     const [connectionError, setConnectionError] = useState<string | null>(null);
 
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
     useEffect(() => {
-        fetchConfig();
-    }, []);
+        if (token) fetchConfig();
+    }, [token]);
 
     const fetchConfig = () => {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/shopify/config/`)
+        fetch(`${apiBase}/api/brand/shopify/config/`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
             .then(res => res.json())
             .then(data => {
                 if (data.configured) {
                     setConfig(prev => ({ ...prev, shop_url: data.shop_url, is_active: true }));
                     setLastSync(data.last_sync_at);
-                    checkConnection(); // Auto-check if configured
+                    checkConnection();
                 }
                 setLoading(false);
             })
@@ -46,7 +51,10 @@ export default function ShopifySettingsPage() {
         setTesting(true);
         setConnectionError(null);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/shopify/test_connection/`, { method: 'POST' });
+            const res = await fetch(`${apiBase}/api/brand/shopify/test_connection/`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await res.json();
             if (res.ok) {
                 setIsConnected(true);
@@ -54,7 +62,7 @@ export default function ShopifySettingsPage() {
                 setIsConnected(false);
                 setConnectionError(data.error || 'Connection Failed');
             }
-        } catch (e) {
+        } catch {
             setIsConnected(false);
             setConnectionError("Network Error");
         } finally {
@@ -65,9 +73,12 @@ export default function ShopifySettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/shopify/config/`, {
+            const res = await fetch(`${apiBase}/api/brand/shopify/config/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify(config)
             });
 

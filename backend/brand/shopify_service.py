@@ -1,28 +1,34 @@
 import requests
 from django.conf import settings
-from .models import ShopifyConfig
+from .models import ShopifyConfig, Product, Category
 
 class ShopifyService:
     def __init__(self):
         self.config = ShopifyConfig.objects.first()
         if not self.config:
             raise Exception("Shopify Configuration not found")
-        
-        # Clean URL (remove protocol if present)
+        if not self.config.is_active:
+            raise Exception("Shopify integration is not active.")
+
         shop_url = self.config.shop_url.replace("https://", "").replace("http://", "").strip("/")
-        
+
         self.base_url = f"https://{shop_url}/admin/api/2024-01"
         self.headers = {
             "X-Shopify-Access-Token": self.config.access_token,
             "Content-Type": "application/json"
         }
 
-    def verify_credentials(self):
-        """Test connection to Shopify."""
+    def test_connection(self):
+        """Test connection and return shop info dict."""
         url = f"{self.base_url}/shop.json"
         response = requests.get(url, headers=self.headers)
         if response.status_code != 200:
             raise Exception(f"Connection Failed ({response.status_code}): {response.text}")
+        return response.json()['shop']
+
+    def verify_credentials(self):
+        """Test connection to Shopify (returns True on success)."""
+        self.test_connection()
         return True
 
     def fetch_products(self):
@@ -81,7 +87,76 @@ class ShopifyService:
         url = f"{self.base_url}/marketing_events.json"
         response = requests.get(url, headers=self.headers)
         if response.status_code != 200:
-             # Fail softly as this might be a permission issue or not used
-             print(f"Marketing API warning: {response.text}")
-             return []
+            print(f"Marketing API warning: {response.text}")
+            return []
         return response.json().get('marketing_events', [])
+
+    def create_product(self, product: 'Product'):
+        """Push a local Product to Shopify and save back the shopify_product_id."""
+        url = f"{self.base_url}/products.json"
+        payload = {
+            "product": {
+                "title": product.name,
+                "body_html": getattr(product, 'description', ''),
+                "vendor": "CASHMERE",
+                "product_type": product.category.name if product.category else "General",
+                "variants": [
+                    {
+                        "price": str(product.retail_price),
+                        "sku": product.sku,
+                        "barcode": product.barcode,
+                        "inventory_management": "shopify",
+                        "option1": product.size or "Default Title",
+                        "option2": product.color or "",
+                    }
+                ],
+                "options": [
+                    {"name": "Size"},
+                    {"name": "Color"}
+                ]
+            }
+        }
+        if getattr(product, 'image_url', None):
+            payload["product"]["images"] = [{"src": product.image_url}]
+
+        response = requests.post(url, headers=self.headers, json=payload)
+        if response.status_code == 201:
+            data = response.json()['product']
+            product.shopify_product_id = str(data['id'])
+            product.shopify_variant_id = str(data['variants'][0]['id'])
+            from django.utils import timezone
+            product.last_synced_at = timezone.now()
+            product.save()
+            return data
+        raise Exception(f"Failed to create product: {response.text}")
+
+    def create_collection(self, category: 'Category'):
+        """Create a Shopify custom collection for a local Category."""
+        url = f"{self.base_url}/custom_collections.json"
+        payload = {
+            "custom_collection": {
+                "title": category.name,
+                "body_html": getattr(category, 'description', ''),
+                "published": True
+            }
+        }
+        response = requests.post(url, headers=self.headers, json=payload)
+        if response.status_code == 201:
+            data = response.json()['custom_collection']
+            category.shopify_collection_id = str(data['id'])
+            from django.utils import timezone
+            category.last_synced_at = timezone.now()
+            category.save()
+            return data
+        raise Exception(f"Failed to create collection: {response.text}")
+
+    def add_product_to_collection(self, shopify_product_id, shopify_collection_id):
+        """Link a Shopify product to a collection (ignores 422 duplicate errors)."""
+        url = f"{self.base_url}/collects.json"
+        payload = {
+            "collect": {
+                "product_id": int(shopify_product_id),
+                "collection_id": int(shopify_collection_id)
+            }
+        }
+        requests.post(url, headers=self.headers, json=payload)

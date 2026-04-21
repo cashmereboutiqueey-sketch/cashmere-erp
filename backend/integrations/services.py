@@ -1,6 +1,10 @@
+import logging
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from brand.models import Order, OrderItem, Product, Inventory, Location
+
+logger = logging.getLogger(__name__)
+
 
 class ShopifyService:
     @staticmethod
@@ -9,70 +13,69 @@ class ShopifyService:
         """
         Processes a Shopify 'orders/create' webhook.
         Creates Order, Items, and updates Inventory.
+        Unknown SKUs are skipped (logged). Inventory never goes below zero.
         """
         shopify_id = str(payload.get('id'))
         order_number = str(payload.get('order_number'))
-        email = payload.get('email')
-        total_price = payload.get('total_price')
+        email = payload.get('email', '')
+        total_price = payload.get('total_price', 0)
 
-        # 1. Create or Update Order (Idempotency)
+        # Idempotency: skip if order already exists
         order, created = Order.objects.get_or_create(
             shopify_order_id=shopify_id,
             defaults={
                 'order_number': order_number,
                 'customer_email': email,
                 'total_price': total_price,
-                'status': Order.OrderStatus.PENDING
+                'status': Order.OrderStatus.PENDING,
             }
         )
-        
         if not created:
-            # Idempotency check: If order exists, maybe update status?
-            # For now, just return existing to avoid duplication.
             return order
 
-        # 2. Resolve "Online" Location for deduction
-        # In a real app, this might come from the webhook's location_id map
+        # Resolve Online location — fall back to first available, never crash
         online_location = Location.objects.filter(type=Location.LocationType.ONLINE).first()
         if not online_location:
-            # Fallback to any, or create one?
-            # Let's assume one exists or fail.
-            raise ObjectDoesNotExist("No 'Online' location configured for inventory deduction.")
+            online_location = Location.objects.first()
+        if not online_location:
+            logger.error("No locations configured — cannot deduct inventory for order %s", shopify_id)
 
-        # 3. Process Line Items
         for item in payload.get('line_items', []):
             sku = item.get('sku')
-            quantity = item.get('quantity')
-            price = item.get('price')
+            quantity = int(item.get('quantity') or 0)
+            price = item.get('price', 0)
+
+            if not sku:
+                logger.warning("Order %s: line item missing SKU, skipping.", shopify_id)
+                continue
 
             try:
                 product = Product.objects.get(sku=sku)
             except Product.DoesNotExist:
-                # Log error or skip? 
-                # For strict data integrity, we should probably fail or flag "Unknown Product"
-                # Raising error rolls back transaction.
-                raise ObjectDoesNotExist(f"Product with SKU {sku} not found.")
+                logger.warning("Order %s: unknown SKU '%s', skipping line item.", shopify_id, sku)
+                continue
 
             OrderItem.objects.create(
                 order=order,
                 product=product,
                 quantity=quantity,
-                unit_price=price
+                unit_price=price,
             )
 
-            # 4. Deduct Inventory (Real-time sync)
-            # Find inventory at the source location
-            inventory = Inventory.objects.filter(product=product, location=online_location).first()
-            if inventory:
-                inventory.quantity -= quantity
-                inventory.save()
-            else:
-                # Stock record doesn't exist -> Create negative stock? 
-                # Or assume 0 and go negative.
-                Inventory.objects.create(
+            if online_location:
+                inventory, _ = Inventory.objects.get_or_create(
                     product=product,
                     location=online_location,
-                    quantity=-quantity
+                    defaults={'quantity': 0},
                 )
+                # Never go below zero — deduct only what is available
+                deduct = min(quantity, max(inventory.quantity, 0))
+                if deduct < quantity:
+                    logger.warning(
+                        "Insufficient stock for SKU %s at %s: requested %d, available %d",
+                        sku, online_location.name, quantity, inventory.quantity
+                    )
+                inventory.quantity = max(inventory.quantity - quantity, 0)
+                inventory.save()
 
         return order
