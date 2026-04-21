@@ -33,17 +33,24 @@ export default function DashboardPage() {
     const [marketingData, setMarketingData] = useState<any>(null);
 
     useEffect(() => {
-        if (!token) return;
+        // Wait for auth to finish loading
+        if (authLoading) return;
 
-        // Fetch Main Dashboard Data
+        // Not logged in — middleware handles redirect, but just in case
+        if (!token) {
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+
         const fetchDashboard = fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/dashboard/`, {
             headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => res.json());
+        }).then(res => { if (!res.ok) throw new Error(`API error ${res.status}`); return res.json(); });
 
-        // Fetch Marketing Data
         const fetchMarketing = fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/marketing_pulse/`, {
             headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => res.json());
+        }).then(res => { if (!res.ok) throw new Error(`Marketing API error ${res.status}`); return res.json(); });
 
         Promise.all([fetchDashboard, fetchMarketing])
             .then(([dashData, marketData]) => {
@@ -53,7 +60,7 @@ export default function DashboardPage() {
             })
             .catch(err => {
                 console.error("Dashboard fetch error", err);
-                setError("Failed to load dashboard data");
+                setError(err.message || "Failed to load dashboard data");
                 setLoading(false);
             });
 

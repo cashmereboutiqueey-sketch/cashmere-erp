@@ -94,6 +94,9 @@ export default function POSPage() {
     const [lastOrder, setLastOrder] = useState<any | null>(null);
     const receiptRef = useRef<HTMLDivElement>(null);
 
+    // Mobile cart toggle
+    const [showMobileCart, setShowMobileCart] = useState(false);
+
     const fetchProductData = React.useCallback(() => {
         if (!token) return;
 
@@ -471,8 +474,23 @@ export default function POSPage() {
 
     return (
         <div className="flex h-screen bg-stone-50 overflow-hidden">
+
+            {/* Mobile Cart Button */}
+            <button
+                onClick={() => setShowMobileCart(true)}
+                className="lg:hidden fixed bottom-6 right-6 z-40 bg-cashmere-maroon text-white rounded-full px-5 py-4 shadow-xl flex items-center gap-2 font-bold"
+            >
+                <ShoppingBag size={20} />
+                {cart.length > 0 && (
+                    <span className="bg-white text-cashmere-maroon rounded-full w-5 h-5 flex items-center justify-center text-xs font-black">
+                        {cart.reduce((s, i) => s + i.quantity, 0)}
+                    </span>
+                )}
+                <span className="text-sm">{Math.max(0, cartTotal).toLocaleString()} LE</span>
+            </button>
+
             {/* Left: Product Grid */}
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 p-4 lg:p-6 overflow-y-auto pb-24 lg:pb-6">
                 <header className="mb-6 space-y-4">
                     {/* ... Header contents (Title, Store Selector) - Same as before */}
                     <div className="flex justify-between items-center">
@@ -781,13 +799,27 @@ export default function POSPage() {
                 </div>
             </Dialog>
 
-            {/* Right: Cart Panel (Same as before) */}
-            <div className="w-96 bg-white border-l border-stone-200 flex flex-col shadow-xl z-10">
+            {/* Right: Cart Panel — hidden on mobile, shown as overlay when toggled */}
+            {showMobileCart && (
+                <div className="fixed inset-0 z-50 bg-black/50 lg:hidden" onClick={() => setShowMobileCart(false)} />
+            )}
+            <div className={`
+                lg:w-96 lg:relative lg:flex lg:flex-col
+                fixed inset-y-0 right-0 z-50 w-full max-w-sm
+                bg-white border-l border-stone-200 flex flex-col shadow-xl
+                transform transition-transform duration-200
+                ${showMobileCart ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+            `}>
                 {/* ... Cart contents ... */}
                 <div className="p-6 border-b border-stone-100 bg-stone-50/50">
-                    <h2 className="text-xl font-serif font-bold text-cashmere-black flex items-center gap-2">
-                        <ShoppingBag size={20} /> {t('pos.cartTitle')}
-                    </h2>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-serif font-bold text-cashmere-black flex items-center gap-2">
+                            <ShoppingBag size={20} /> {t('pos.cartTitle')}
+                        </h2>
+                        <button onClick={() => setShowMobileCart(false)} className="lg:hidden p-1 text-stone-400 hover:text-stone-700">
+                            <X size={20} />
+                        </button>
+                    </div>
                     {selectedLocation && locations.find(l => l.id.toString() === selectedLocation) && (
                         <div className="mt-2 text-xs text-stone-500 flex items-center gap-1">
                             <MapPin size={12} />
