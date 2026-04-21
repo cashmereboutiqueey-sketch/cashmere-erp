@@ -20,18 +20,18 @@ jobs:
       - name: Rebuild containers
         run: |
           cd /opt/cashmere
-          docker compose -f docker-compose.prod.yml build --no-cache frontend backend
+          docker compose -f docker-compose.prod.yml --env-file .env.production build frontend backend
 
       - name: Restart services
         run: |
           cd /opt/cashmere
-          docker compose -f docker-compose.prod.yml up -d --remove-orphans
+          docker compose -f docker-compose.prod.yml --env-file .env.production up -d --remove-orphans
 
       - name: Run migrations
         run: |
           cd /opt/cashmere
-          docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
-          docker compose -f docker-compose.prod.yml exec -T backend python manage.py collectstatic --noinput
+          docker compose -f docker-compose.prod.yml --env-file .env.production exec -T backend python manage.py migrate --noinput
+          docker compose -f docker-compose.prod.yml --env-file .env.production exec -T backend python manage.py collectstatic --noinput
 
       - name: Health check
         run: curl -f http://localhost/api/ && echo "OK"
