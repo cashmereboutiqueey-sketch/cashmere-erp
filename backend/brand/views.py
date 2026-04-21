@@ -574,30 +574,25 @@ class AnalyticsViewSet(viewsets.ViewSet):
         Returns marketing performance metrics (ROAS, Ad Spend, Conversion).
         fetches live from Shopify if connected.
         """
-        from .shopify_service import ShopifyService
-        
         metrics = {
             'ad_spend': 0.0,
             'roas': 0.0,
-            'conversion_rate': 1.2, # Placeholder/Industry Avg if no data
+            'conversion_rate': 1.2,
             'active_campaigns': 0,
             'campaigns': []
         }
-        
+
         try:
+            from .shopify_service import ShopifyService
             service = ShopifyService()
             events = service.fetch_marketing_events()
-            
+
             total_spend = 0.0
-            
-            # Simple aggregation (Shopify often returns budget, not actual spend in this endpoint, 
-            # but usually it's the best proxy we have without connecting to FB/Google directly)
             for event in events:
                 if event.get('budget_type') == 'daily':
-                     total_spend += float(event.get('budget', 0)) * 30 # Rough monthly est
+                    total_spend += float(event.get('budget', 0)) * 30
                 else:
-                     total_spend += float(event.get('budget', 0))
-                
+                    total_spend += float(event.get('budget', 0))
                 metrics['campaigns'].append({
                     'name': event.get('started_at', 'Unknown'),
                     'platform': event.get('marketing_channel', 'Unknown'),
@@ -606,17 +601,14 @@ class AnalyticsViewSet(viewsets.ViewSet):
 
             metrics['active_campaigns'] = len(events)
             metrics['ad_spend'] = total_spend
-            
-            # Calculate ROAS based on Total Revenue vs Ad Spend
-            # (Very rough, assumes all revenue is attributed, which is generous)
+
             revenue = Order.objects.filter(status=Order.OrderStatus.PAID).aggregate(t=Sum('total_price'))['t'] or Decimal('0.00')
             if total_spend > 0:
                 metrics['roas'] = float(revenue) / total_spend
-            
+
         except Exception as e:
             print(f"Marketing Sync Error: {e}")
-            # fall back to defaults
-            
+
         return Response(metrics)
 
 class CategoryViewSet(viewsets.ModelViewSet):

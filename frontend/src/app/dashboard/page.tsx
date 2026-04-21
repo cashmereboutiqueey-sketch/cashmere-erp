@@ -50,12 +50,12 @@ export default function DashboardPage() {
 
         const fetchMarketing = fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/marketing_pulse/`, {
             headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => { if (!res.ok) throw new Error(`Marketing API error ${res.status}`); return res.json(); });
+        }).then(res => res.ok ? res.json() : null).catch(() => null);
 
         Promise.all([fetchDashboard, fetchMarketing])
             .then(([dashData, marketData]) => {
                 setData(dashData);
-                setMarketingData(marketData);
+                if (marketData) setMarketingData(marketData);
                 setLoading(false);
             })
             .catch(err => {
