@@ -20,10 +20,21 @@ jobs:
           port: 22
           script: |
             set -e
-            cd /opt/cashmere
+
+            REPO_URL="https://github.com/cashmereboutiqueey-sketch/cashmere-erp.git"
+            DEPLOY_DIR="/opt/cashmere"
+
+            # If not a git repo yet, clone it; otherwise pull
+            if [ ! -d "$DEPLOY_DIR/.git" ]; then
+              echo ">>> No git repo found — cloning..."
+              git clone "$REPO_URL" "$DEPLOY_DIR" || true
+            fi
+
+            cd "$DEPLOY_DIR"
 
             echo ">>> Pulling latest code..."
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             echo ">>> Rebuilding containers..."
             docker compose -f docker-compose.prod.yml build --no-cache frontend backend
