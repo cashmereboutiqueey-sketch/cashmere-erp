@@ -16,13 +16,18 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
 from users.views import MyTokenObtainPairView
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView,
 )
 
+def health(request):
+    return JsonResponse({"status": "ok"})
+
 urlpatterns = [
+    path('api/', health),
     path('admin/', admin.site.urls),
     # Authentication
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),

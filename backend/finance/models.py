@@ -1,3 +1,4 @@
+import datetime
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal
@@ -97,7 +98,7 @@ class FinancialTransaction(models.Model):
     # Meta
     reference_id = models.CharField(max_length=100, help_text="Job ID or Order Number")
     description = models.TextField(blank=True)
-    date = models.DateField(default="2024-01-01", help_text="Date of transaction")
+    date = models.DateField(default=datetime.date.today, help_text="Date of transaction")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:

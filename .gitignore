@@ -28,3 +28,8 @@ frontend/yarn-error.log*
 
 # Database
 postgres_data/
+
+# Production secrets — NEVER commit these
+.env
+.env.production
+nginx/certs/

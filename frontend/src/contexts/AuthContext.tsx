@@ -30,30 +30,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
+    const tryRefreshToken = async (): Promise<boolean> => {
+        const refreshToken = Cookies.get("refresh_token");
+        if (!refreshToken) return false;
+        try {
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/token/refresh/`,
+                { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh: refreshToken }) }
+            );
+            if (!res.ok) return false;
+            const data = await res.json();
+            Cookies.set("access_token", data.access);
+            setToken(data.access);
+            const decoded: any = jwtDecode(data.access);
+            setUser({ user_id: decoded.user_id, username: decoded.username || "User", email: "", groups: decoded.groups || [], is_superuser: decoded.is_superuser || false });
+            return true;
+        } catch { return false; }
+    };
+
     useEffect(() => {
         const storedToken = Cookies.get("access_token");
         if (storedToken) {
-            setToken(storedToken);
             try {
                 const decoded: any = jwtDecode(storedToken);
-                // Check if token is expired
                 if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-                    console.warn("Token expired, logging out automatically.");
-                    logout();
+                    // Expired — try to refresh silently
+                    tryRefreshToken().then(ok => { if (!ok) logout(); });
+                    setLoading(false);
                     return;
                 }
-
-                // The simplejwt token doesn't include groups by default unless customized.
-
-                // Let's defer fetching user details to a separate effect or assume token has enough info for now
-                // if we customize the token serializer.
-                setUser({
-                    user_id: decoded.user_id,
-                    username: decoded.username || "User",
-                    email: "",
-                    groups: decoded.groups || [], // Requires backend customization
-                    is_superuser: decoded.is_superuser || false
-                });
+                setToken(storedToken);
+                setUser({ user_id: decoded.user_id, username: decoded.username || "User", email: "", groups: decoded.groups || [], is_superuser: decoded.is_superuser || false });
+                // Schedule a refresh 2 min before expiry
+                const msUntilExpiry = decoded.exp * 1000 - Date.now() - 2 * 60 * 1000;
+                if (msUntilExpiry > 0) {
+                    const timer = setTimeout(() => tryRefreshToken(), msUntilExpiry);
+                    return () => clearTimeout(timer);
+                }
             } catch (error) {
                 console.error("Invalid token", error);
                 logout();

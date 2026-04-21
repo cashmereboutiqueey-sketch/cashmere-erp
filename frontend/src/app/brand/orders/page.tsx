@@ -1,13 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Truck, CheckCircle, Clock, AlertCircle, Box, X } from 'lucide-react'; // Added X
+import { Search, Filter, Eye, Truck, CheckCircle, Clock, AlertCircle, Box, X } from 'lucide-react';
 import DataGrid from '@/components/DataGrid';
 import { useLanguage } from '@/contexts/LanguageContext';
-import Dialog from '@/components/Dialog'; // Import Dialog
+import Dialog from '@/components/Dialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function OrdersPage() {
     const { t } = useLanguage();
+    const { token } = useAuth();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -24,8 +26,11 @@ export default function OrdersPage() {
     }, []);
 
     const fetchOrders = async () => {
+        if (!token) return;
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/`);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             if (res.ok) {
                 const data = await res.json();
                 setOrders(data);
@@ -49,7 +54,7 @@ export default function OrdersPage() {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/${selectedOrder.id}/fulfill/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ shipping_company: shippingCompany })
             });
 

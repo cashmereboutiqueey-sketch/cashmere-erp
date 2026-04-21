@@ -8,9 +8,11 @@ RUN npm install
 # Stage 2: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
+# Declare build arg and expose it to Next.js at build time
+ARG NEXT_PUBLIC_API_URL=http://localhost:8000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Build el application
 RUN npm run build
 
 # Stage 3: Runner

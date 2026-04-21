@@ -1,3 +1,4 @@
+import uuid
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.views import APIView
@@ -25,6 +26,7 @@ class TreasuryViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Insufficient funds in Daily Treasury'}, status=400)
 
         with transaction.atomic():
+            ref_id = f'TRF-{uuid.uuid4().hex[:8].upper()}'
             # 1. Debit Daily
             daily_treasury.balance -= amount
             daily_treasury.save()
@@ -34,10 +36,10 @@ class TreasuryViewSet(viewsets.ModelViewSet):
                 category='Transfer to Main',
                 treasury=daily_treasury,
                 amount=-amount,
-                reference_id=f'TRF-{transaction.get_connection().queries_log.__len__()}', # Simple unique ID logic
+                reference_id=ref_id,
                 description=f"Transfer to {main_treasury.name}"
             )
-            
+
             # 2. Credit Main
             main_treasury.balance += amount
             main_treasury.save()
@@ -47,7 +49,7 @@ class TreasuryViewSet(viewsets.ModelViewSet):
                 category='Received from Daily',
                 treasury=main_treasury,
                 amount=amount,
-                reference_id=f'TRF-{transaction.get_connection().queries_log.__len__()}',
+                reference_id=ref_id,
                 description=f"Transfer from {daily_treasury.name}"
             )
             
@@ -103,17 +105,24 @@ class PnLView(APIView):
             type=FinancialTransaction.TransactionType.SALE_REVENUE
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
+        total_expenses = FinancialTransaction.objects.filter(
+            type=FinancialTransaction.TransactionType.EXPENSE
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        net_profit = brand_revenue - factory_revenue - total_expenses
+
         return Response({
             "factory": {
                 "revenue": factory_revenue,
-                "cogs": "Calculated from Standard Cost" 
+                "cogs": factory_revenue
             },
             "brand": {
                 "revenue": brand_revenue,
-                "cogs": factory_revenue 
+                "cogs": factory_revenue
             },
             "group": {
-                "net_profit": "TODO"
+                "net_profit": net_profit,
+                "total_expenses": total_expenses
             }
         })
 
@@ -137,10 +146,12 @@ class MetricsViewSet(viewsets.ViewSet):
             category='Marketing'
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-        # 3. Customer Metrics (Placeholder for now until we link Customer model)
-        # assuming some dummy data for calculation if 0
-        new_customers = 50 # TODO: Count from Customer model created_at > 30 days
-        total_orders = 100 # TODO: Count from Order model
+        # 3. Customer Metrics — real counts from Brand models
+        import datetime
+        from brand.models import Customer, Order
+        thirty_days_ago = datetime.date.today() - datetime.timedelta(days=30)
+        new_customers = Customer.objects.filter(created_at__date__gte=thirty_days_ago).count()
+        total_orders = Order.objects.filter(status__in=['PAID', 'FULFILLED']).count()
 
         cac = (marketing_spend / new_customers) if new_customers > 0 else 0
         roas = (total_revenue / marketing_spend) if marketing_spend > 0 else 0
@@ -200,10 +211,15 @@ class MetricsViewSet(viewsets.ViewSet):
             type=FinancialTransaction.TransactionType.EXPENSE
         ).exclude(category__in=['Raw Materials', 'Labor Wages']).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-        # 3. Production Output (Placeholder)
-        # We need to query ProductionJob model really.
-        units_produced = 5000 
-        rejected_units = 50
+        # 3. Production Output — real counts from ProductionJob
+        from factory.models import ProductionJob
+        from django.db.models import Sum as _Sum
+        units_produced = ProductionJob.objects.filter(status='COMPLETED').aggregate(
+            total=_Sum('quantity')
+        )['total'] or 0
+        rejected_units = ProductionJob.objects.filter(qc_status='REJECT').aggregate(
+            total=_Sum('quantity')
+        )['total'] or 0
 
         unit_cost = (total_cogs / units_produced) if units_produced > 0 else 0
         defect_rate = (rejected_units / units_produced * 100) if units_produced > 0 else 0

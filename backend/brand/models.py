@@ -61,14 +61,12 @@ class Product(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.barcode:
-            # Simple unique generation: Timestamp-ish or just ID based (needs ID first)
-            # If no ID, save first then update? Or use random?
-            # Let's use a random 8 digit number for simplicity and check uniqueness, or 
-            # just use SKU if numeric.
-            # Cashmere-specific: "200" + SKU or generated ID.
-            # Using random for now to ensure we populate it.
             import random
-            self.barcode = "".join([str(random.randint(0, 9)) for _ in range(12)]) 
+            while True:
+                candidate = "".join([str(random.randint(0, 9)) for _ in range(12)])
+                if not Product.objects.filter(barcode=candidate).exists():
+                    self.barcode = candidate
+                    break
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -206,8 +204,6 @@ class Order(models.Model):
     
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Global Order Discount")
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
-    discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Global Order Discount")
     status = models.CharField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING, db_index=True)
     
     # Shipping / Logistics
@@ -274,10 +270,8 @@ class ShopifyConfig(models.Model):
     
     def save(self, *args, **kwargs):
         if not self.pk and ShopifyConfig.objects.exists():
-            # If we try to save a new one but one exists, prevent it? 
-            # Or simplified: just return existing? 
-            # Better: This is a restriction logic, fine for now.
-            pass 
+            existing = ShopifyConfig.objects.first()
+            self.pk = existing.pk
         return super(ShopifyConfig, self).save(*args, **kwargs)
 
     def __str__(self):

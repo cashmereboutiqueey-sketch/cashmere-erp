@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { DollarSign, FileText, Send, Clock } from 'lucide-react';
 import DataGrid from '@/components/DataGrid';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Transaction {
     id: number;
@@ -16,6 +17,7 @@ interface Transaction {
 
 export default function ExpensesPage() {
     const { t } = useLanguage();
+    const { token } = useAuth();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
@@ -28,18 +30,21 @@ export default function ExpensesPage() {
     });
 
     const fetchTransactions = () => {
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?type=EXPENSE`)
+        if (!token) return;
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?type=EXPENSE`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        })
             .then(res => res.json())
             .then(data => {
-                setTransactions(data);
+                setTransactions(Array.isArray(data) ? data : []);
                 setLoading(false);
             })
             .catch(err => console.error(err));
     };
 
     useEffect(() => {
-        fetchTransactions();
-    }, []);
+        if (token) fetchTransactions();
+    }, [token]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -49,7 +54,7 @@ export default function ExpensesPage() {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     type: 'EXPENSE',
                     amount: parseFloat(formData.amount), // Expenses are stored as positive values usually, logic depends on P&L calc

@@ -24,7 +24,7 @@ services:
     container_name: cashmere-backend
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-cashmere}:${POSTGRES_PASSWORD:-changeme123}@db:5432/${POSTGRES_DB:-cashmere_erp}
-      - SECRET_KEY=${DJANGO_SECRET_KEY:-change-this-in-production-to-a-random-50-char-string}
+      - SECRET_KEY=${SECRET_KEY:-change-this-in-production-to-a-random-50-char-string}
       - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,https://yourdomain.com}
