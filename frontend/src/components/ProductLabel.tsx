@@ -82,7 +82,9 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
                         justifyContent: 'space-between',
                         padding: '8px 12px',
                         marginTop: '4px',
-                        borderRadius: '2px'
+                        borderRadius: '2px',
+                        WebkitPrintColorAdjust: 'exact',
+                        printColorAdjust: 'exact'
                     }}
                 >
                     <div

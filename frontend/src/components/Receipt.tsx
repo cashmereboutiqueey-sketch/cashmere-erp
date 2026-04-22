@@ -25,7 +25,7 @@ const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ order, items }, ref)
     return (
         <div
             ref={ref}
-            className="hidden print:block print-visible bg-white p-2 w-[80mm] mx-auto text-xs leading-tight text-black"
+            className="hidden print:block print-visible bg-white p-2 w-full mx-0 text-xs leading-tight text-black"
         >
             {/* Logo */}
             <div className="text-center mb-2">
@@ -82,11 +82,11 @@ const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ order, items }, ref)
                                 <td className="py-2">
                                     <div className="font-bold">{item.product_name}</div>
                                     <div className="text-stone-500">{item.product_sku}</div>
-                                    {item.product_barcode && (
+                                    {item.product_barcode?.trim() && (
                                         <div className="mt-1">
                                             <Barcode
-                                                value={item.product_barcode}
-                                                width={1}
+                                                value={item.product_barcode.trim()}
+                                                width={2}
                                                 height={30}
                                                 fontSize={8}
                                                 margin={0}
