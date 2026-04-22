@@ -5,6 +5,7 @@ import { Tent, MapPin, Truck, Box, ArrowRightLeft, Plus } from 'lucide-react';
 import Dialog from '@/components/Dialog';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Location {
     id: number;
@@ -21,6 +22,7 @@ interface Product {
 
 export default function EventsPage() {
     const { t } = useLanguage();
+    const { token } = useAuth();
     const router = useRouter();
     const [events, setEvents] = useState<Location[]>([]);
     const [warehouses, setWarehouses] = useState<Location[]>([]);
@@ -41,13 +43,14 @@ export default function EventsPage() {
     });
 
     useEffect(() => {
-        fetchLocations();
-        fetchProducts();
-    }, []);
+        if (token) { fetchLocations(); fetchProducts(); }
+    }, [token]);
 
     const fetchLocations = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/locations/`);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/locations/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await res.json();
             setEvents(data.filter((l: any) => l.type === 'EVENT'));
             setWarehouses(data.filter((l: any) => l.type === 'WAREHOUSE'));
@@ -59,7 +62,9 @@ export default function EventsPage() {
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/`);
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await res.json();
             setProducts(data);
         } catch (err) {
@@ -72,7 +77,7 @@ export default function EventsPage() {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/locations/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     name: newEventName,
                     type: 'EVENT'
@@ -111,7 +116,7 @@ export default function EventsPage() {
 
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/inventory/transfer/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(payload)
             });
 
