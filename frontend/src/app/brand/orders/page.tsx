@@ -22,8 +22,8 @@ export default function OrdersPage() {
     const [shippingCompany, setShippingCompany] = useState('BOSTA');
 
     useEffect(() => {
-        fetchOrders();
-    }, []);
+        if (token) fetchOrders();
+    }, [token]);
 
     const fetchOrders = async () => {
         if (!token) return;

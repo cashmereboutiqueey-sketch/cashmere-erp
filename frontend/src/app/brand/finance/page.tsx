@@ -51,27 +51,28 @@ export default function BrandFinancePage() {
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/dashboard/`, { headers: authHeader }),
             ]);
 
-            const txData = await txRes.json();
-            const trData = await trRes.json();
-            const metricsData = await metricsRes.json();
+            const txData = txRes.ok ? await txRes.json() : [];
+            const trData = trRes.ok ? await trRes.json() : [];
+            const metricsData = metricsRes.ok ? await metricsRes.json() : [];
             const analyticsData = analyticsRes.ok ? await analyticsRes.json() : null;
 
-            setTransactions(txData);
+            setTransactions(Array.isArray(txData) ? txData : []);
+            const treasuryList = Array.isArray(trData) ? trData : [];
             setTreasuries({
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                daily: trData.find((t: any) => t.type === 'DAILY'),
+                daily: treasuryList.find((t: any) => t.type === 'DAILY') ?? null,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                main: trData.find((t: any) => t.type === 'MAIN')
+                main: treasuryList.find((t: any) => t.type === 'MAIN') ?? null,
             });
-            setMetrics(metricsData);
+            setMetrics(Array.isArray(metricsData) ? metricsData : []);
 
-            if (analyticsData && analyticsData.charts && analyticsData.charts.shipping_stats) {
+            if (analyticsData?.charts?.shipping_stats) {
                 setShippingStats(analyticsData.charts.shipping_stats);
             }
-
-            setLoading(false);
         } catch (err) {
             console.error(err);
+        } finally {
+            setLoading(false);
         }
     };
 
