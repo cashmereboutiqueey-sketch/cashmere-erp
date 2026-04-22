@@ -20,9 +20,13 @@ class TreasuryViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Invalid amount'}, status=400)
             
         daily_treasury = Treasury.objects.filter(type=Treasury.TreasuryType.DAILY).first()
-        main_treasury = Treasury.objects.get(type=Treasury.TreasuryType.MAIN)
-        
-        if not daily_treasury or daily_treasury.balance < amount:
+        main_treasury = Treasury.objects.filter(type=Treasury.TreasuryType.MAIN).first()
+
+        if not daily_treasury:
+            return Response({'error': 'Daily Treasury not configured'}, status=400)
+        if not main_treasury:
+            return Response({'error': 'Main Treasury not configured'}, status=400)
+        if daily_treasury.balance < amount:
             return Response({'error': 'Insufficient funds in Daily Treasury'}, status=400)
 
         with transaction.atomic():
@@ -66,27 +70,12 @@ class FinancialTransactionViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         item = serializer.save()
-        # Auto-update Treasury
         if item.treasury:
-            # If Expense/Transfer Out -> Negative Amount
-            # If Income -> Positive Amount
-            # logic: The amount in transaction should be signed correctly by frontend or here?
-            # Let's assume input amount is Absolute, and Type determines sign?
-            # Or Input amount is signed? 
-            # Brand Expense Page sends POSITIVE amount usually.
-            
-            # Let's enforce logic:
-            # EXPENSE -> Subtract
-            # SALE -> Add
-            # TRANSFER -> ?
-            
-            # For now, simplistic: Just add the amount (assuming signed correctly by logic below or frontend)
-            # But wait, frontend sends positive for expense.
-            if item.type == 'EXPENSE':
+            TT = FinancialTransaction.TransactionType
+            if item.type in (TT.EXPENSE, TT.INTERNAL_TRANSFER):
                 item.treasury.balance -= item.amount
-            elif item.type == 'SALE':
+            elif item.type in (TT.SALE_REVENUE, TT.TRANSFER_TO_BRAND):
                 item.treasury.balance += item.amount
-            
             item.treasury.save()
 
 class PnLView(APIView):
@@ -95,34 +84,39 @@ class PnLView(APIView):
     Endpoint: /api/finance/pnl/
     """
     def get(self, request):
-        # Factory Revenue (Transfers)
-        factory_revenue = FinancialTransaction.objects.filter(
-            type=FinancialTransaction.TransactionType.TRANSFER_TO_BRAND
+        TT = FinancialTransaction.TransactionType
+
+        # Inter-company: amount factory charged brand for finished goods (= brand COGS)
+        cogs = FinancialTransaction.objects.filter(
+            type=TT.TRANSFER_TO_BRAND
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-        # Brand Revenue (Sales)
+        # Brand revenue from direct sales
         brand_revenue = FinancialTransaction.objects.filter(
-            type=FinancialTransaction.TransactionType.SALE_REVENUE
+            type=TT.SALE_REVENUE
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
+        # Operating expenses (rent, salaries, marketing, etc.)
         total_expenses = FinancialTransaction.objects.filter(
-            type=FinancialTransaction.TransactionType.EXPENSE
+            type=TT.EXPENSE
         ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
 
-        net_profit = brand_revenue - factory_revenue - total_expenses
+        gross_profit = brand_revenue - cogs
+        net_profit = gross_profit - total_expenses
 
         return Response({
             "factory": {
-                "revenue": factory_revenue,
-                "cogs": factory_revenue
+                "revenue": float(cogs),
+                "cogs": float(cogs),
             },
             "brand": {
-                "revenue": brand_revenue,
-                "cogs": factory_revenue
+                "revenue": float(brand_revenue),
+                "cogs": float(cogs),
+                "gross_profit": float(gross_profit),
             },
             "group": {
-                "net_profit": net_profit,
-                "total_expenses": total_expenses
+                "net_profit": float(net_profit),
+                "total_expenses": float(total_expenses),
             }
         })
 

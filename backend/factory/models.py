@@ -288,7 +288,8 @@ class ProductionJob(models.Model):
             
             # 4. Update Source Order Status (if applicable)
             if self.source_order:
-                self.source_order.status = 'PAID'
+                from brand.models import Order as BrandOrder
+                self.source_order.status = BrandOrder.OrderStatus.PAID
                 self.source_order.save()
 
             # 5. TRANSFER TO BRAND INVENTORY

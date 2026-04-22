@@ -10,6 +10,7 @@ import KPICard from '@/components/KPICard';
 import Dialog from '@/components/Dialog';
 import MetricsGrid, { MetricItem } from '@/components/MetricsGrid';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Treasury {
     id: number;
@@ -20,6 +21,7 @@ interface Treasury {
 
 export default function BrandFinancePage() {
     const { t } = useLanguage();
+    const { token } = useAuth();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [transactions, setTransactions] = useState<any[]>([]);
     const [treasuries, setTreasuries] = useState<{ daily: Treasury | null, main: Treasury | null }>({ daily: null, main: null });
@@ -39,12 +41,14 @@ export default function BrandFinancePage() {
     });
 
     const fetchData = async () => {
+        if (!token) return;
+        const authHeader = { 'Authorization': `Bearer ${token}` };
         try {
             const [txRes, trRes, metricsRes, analyticsRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?module=BRAND`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/metrics/brand/`),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/dashboard/`) // New Endpoint
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?module=BRAND`, { headers: authHeader }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/`, { headers: authHeader }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/metrics/brand/`, { headers: authHeader }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/dashboard/`, { headers: authHeader }),
             ]);
 
             const txData = await txRes.json();
@@ -72,15 +76,15 @@ export default function BrandFinancePage() {
     };
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        if (token) fetchData();
+    }, [token]);
 
     const handleTransfer = async () => {
         if (!transferAmount) return;
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/transfer_to_main/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ amount: transferAmount })
             });
             if (res.ok) {
@@ -103,7 +107,7 @@ export default function BrandFinancePage() {
 
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     module: 'BRAND',
                     type: formData.type,

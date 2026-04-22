@@ -107,7 +107,10 @@ class BOMSerializer(serializers.ModelSerializer):
 class ProductionJobSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)
-    source_order_number = serializers.CharField(source='source_order.order_number', read_only=True)
+    source_order_number = serializers.SerializerMethodField()
+
+    def get_source_order_number(self, obj):
+        return obj.source_order.order_number if obj.source_order_id else None
 
     class Meta:
         model = ProductionJob

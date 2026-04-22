@@ -155,8 +155,8 @@ export default function CustomersPage() {
             label: t('brandCustomers.ltv'),
             render: (row: Customer) => (
                 <div>
-                    <div className="font-serif font-bold text-stone-800">{parseFloat(row.total_spent).toLocaleString()} {t('common.currency') || 'EGP'}</div>
-                    {parseFloat(row.ltv_score) > 0 && <div className="text-[10px] text-stone-400">LTV: {parseFloat(row.ltv_score).toLocaleString()}</div>}
+                    <div className="font-serif font-bold text-stone-800">{(parseFloat(row.total_spent) || 0).toLocaleString()} {t('common.currency') || 'EGP'}</div>
+                    {(parseFloat(row.ltv_score) || 0) > 0 && <div className="text-[10px] text-stone-400">LTV: {(parseFloat(row.ltv_score) || 0).toLocaleString()}</div>}
                 </div>
             )
         },
