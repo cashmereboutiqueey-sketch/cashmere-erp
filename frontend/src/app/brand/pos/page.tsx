@@ -269,7 +269,7 @@ export default function POSPage() {
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/customers/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(newCustomerData)
             });
 
@@ -295,7 +295,7 @@ export default function POSPage() {
             const jobName = `REQ-${Date.now()}`;
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({
                     name: jobName,
                     product: productionRequestData.product.id,
@@ -1079,7 +1079,7 @@ function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
         if (!searchQuery) return;
         try {
             let url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/?search=${searchQuery}`;
-            const res = await fetch(url);
+            const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
 
             if (data && data.length > 0) {
@@ -1107,7 +1107,7 @@ function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/${foundOrder.id}/return_items/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ items: itemsPayload, restock })
             });
 
