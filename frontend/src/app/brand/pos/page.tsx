@@ -1070,6 +1070,7 @@ export default function POSPage() {
 
 // Sub-component for Returns
 function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => void, t: any }) {
+    const { token } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [foundOrder, setFoundOrder] = useState<any>(null);
     const [returnItems, setReturnItems] = useState<{ [key: number]: number }>({}); // itemId -> qty
