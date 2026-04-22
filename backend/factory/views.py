@@ -76,9 +76,9 @@ class WorkerViewSet(viewsets.ModelViewSet):
                 'id': worker.id,
                 'name': worker.name,
                 'role': worker.role,
-                'hourly_rate': worker.hourly_rate,
-                'total_hours': total_hours,
-                'total_pay': total_pay
+                'hourly_rate': float(worker.hourly_rate),
+                'total_hours': float(total_hours),
+                'total_pay': float(total_pay),
             })
             
         return Response({

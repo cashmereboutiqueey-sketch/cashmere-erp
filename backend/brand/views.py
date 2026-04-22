@@ -546,7 +546,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
                     {'date': str(d['date']), 'value': float(d['revenue'] or 0)} for d in trend_data
                 ],
                 'stock_value_by_location': [
-                    {'name': i['location__name'], 'value': float(i['total_value'] or 0)}
+                    {'name': i['location__name'] or 'Unallocated', 'value': float(i['total_value'] or 0)}
                     for i in Inventory.objects.values('location__name').annotate(
                         total_value=Sum(F('quantity') * F('product__standard_cost'))
                     ).order_by('-total_value')
