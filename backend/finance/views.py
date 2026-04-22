@@ -3,15 +3,18 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django.db.models import Sum, F
 from django.db import transaction
 from decimal import Decimal
 from .models import FinancialTransaction, Treasury
 from .serializers import FinancialTransactionSerializer, TreasurySerializer
+from core.permissions import HasFinanceAccess
 
 class TreasuryViewSet(viewsets.ModelViewSet):
     queryset = Treasury.objects.all()
     serializer_class = TreasurySerializer
+    permission_classes = [IsAuthenticated, HasFinanceAccess]
 
     @action(detail=False, methods=['post'])
     def transfer_to_main(self, request):
@@ -67,6 +70,7 @@ class FinancialTransactionViewSet(viewsets.ModelViewSet):
     queryset = FinancialTransaction.objects.all().order_by('-created_at')
     serializer_class = FinancialTransactionSerializer
     filterset_fields = ['type', 'module', 'treasury']
+    permission_classes = [IsAuthenticated, HasFinanceAccess]
 
     def perform_create(self, serializer):
         item = serializer.save()

@@ -4,8 +4,9 @@ import React, { useEffect, useState } from 'react';
 import KPICard from '@/components/KPICard';
 import { useAuth } from '@/contexts/AuthContext';
 import { VelocityChart, DonutChart, SimpleBarChart } from '@/components/Charts';
-import { TrendingUp, TrendingDown, DollarSign, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Shield } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import Link from 'next/link';
 
 interface DashboardData {
     kpis: {
@@ -27,7 +28,7 @@ export default function DashboardPage() {
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const { t, language } = useLanguage();
-    const { token, loading: authLoading } = useAuth();
+    const { token, user, loading: authLoading } = useAuth();
     const [error, setError] = useState('');
 
     const [marketingData, setMarketingData] = useState<any>(null);
@@ -87,9 +88,16 @@ export default function DashboardPage() {
 
     return (
         <div className="p-8 space-y-8" dir={language === 'ar' ? 'rtl' : 'ltr'}>
-            <header>
-                <h1 className="text-4xl font-serif text-cashmere-maroon">{t('dashboard.title')}</h1>
-                <p className="text-stone-500 mt-2">{t('dashboard.subtitle')}</p>
+            <header className="flex items-start justify-between">
+                <div>
+                    <h1 className="text-4xl font-serif text-cashmere-maroon">{t('dashboard.title')}</h1>
+                    <p className="text-stone-500 mt-2">{t('dashboard.subtitle')}</p>
+                </div>
+                {(user?.is_superuser || user?.groups.includes('Admin')) && (
+                    <Link href="/dashboard/users" className="flex items-center gap-2 bg-stone-800 text-white px-4 py-2 rounded-lg hover:bg-stone-900 transition-colors text-sm font-medium">
+                        <Shield size={15} /> Manage Users
+                    </Link>
+                )}
             </header>
 
             {/* KPI Cards */}
