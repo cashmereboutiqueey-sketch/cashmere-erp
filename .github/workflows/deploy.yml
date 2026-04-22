@@ -14,6 +14,7 @@ jobs:
       - name: Pull latest code
         run: |
           cd /opt/cashmere
+          git remote set-url origin https://cashmereboutiqueey-sketch:${{ secrets.GH_PAT }}@github.com/cashmereboutiqueey-sketch/cashmere-erp.git
           git fetch origin main
           git reset --hard origin/main
 
