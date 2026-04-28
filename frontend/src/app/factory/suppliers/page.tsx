@@ -163,7 +163,8 @@ export default function SuppliersPage() {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/purchases/`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            const allPurchases = await res.json();
+            const allPurchasesData = await res.json();
+            const allPurchases = Array.isArray(allPurchasesData) ? allPurchasesData : (allPurchasesData.results || []);
             const filtered = allPurchases.filter((p: any) => p.supplier === supplier.id);
             setSupplierHistory(filtered);
         } catch (err) { console.error(err); }

@@ -47,9 +47,8 @@ export default function KioskPage() {
                 return res.json();
             })
             .then(data => {
-                if (Array.isArray(data)) {
-                    setWorkers(data.filter((w: any) => w.active));
-                }
+                const list = Array.isArray(data) ? data : (data.results || []);
+                setWorkers(list.filter((w: any) => w.active));
             })
             .catch(err => console.error("Worker fetch error:", err));
 
@@ -62,9 +61,8 @@ export default function KioskPage() {
                 return res.json();
             })
             .then(data => {
-                if (Array.isArray(data)) {
-                    setJobs(data.filter((j: any) => j.status !== 'COMPLETED' && j.status !== 'CANCELLED'));
-                }
+                const list = Array.isArray(data) ? data : (data.results || []);
+                setJobs(list.filter((j: any) => j.status !== 'COMPLETED' && j.status !== 'CANCELLED'));
             })
             .catch(err => console.error("Job fetch error:", err));
     }, [token, authLoading]);

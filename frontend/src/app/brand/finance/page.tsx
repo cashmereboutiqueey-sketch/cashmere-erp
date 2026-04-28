@@ -56,15 +56,17 @@ export default function BrandFinancePage() {
             const metricsData = metricsRes.ok ? await metricsRes.json() : [];
             const analyticsData = analyticsRes.ok ? await analyticsRes.json() : null;
 
-            setTransactions(Array.isArray(txData) ? txData : []);
-            const treasuryList = Array.isArray(trData) ? trData : [];
+            const txList = Array.isArray(txData) ? txData : (txData.results || []);
+            setTransactions(txList);
+            const treasuryList = Array.isArray(trData) ? trData : (trData.results || []);
             setTreasuries({
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 daily: treasuryList.find((t: any) => t.type === 'DAILY') ?? null,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 main: treasuryList.find((t: any) => t.type === 'MAIN') ?? null,
             });
-            setMetrics(Array.isArray(metricsData) ? metricsData : []);
+            const metricsList = Array.isArray(metricsData) ? metricsData : (metricsData.results || []);
+            setMetrics(metricsList);
 
             if (analyticsData?.charts?.shipping_stats) {
                 setShippingStats(analyticsData.charts.shipping_stats);

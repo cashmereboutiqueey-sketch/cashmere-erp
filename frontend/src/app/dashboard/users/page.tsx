@@ -55,8 +55,10 @@ export default function UsersPage() {
                 fetch(`${apiBase}/api/users/roles/`, { headers }),
             ]);
             if (!usersRes.ok) { setError('Access denied.'); setLoading(false); return; }
-            setUsers(await usersRes.json());
-            setRoles(await rolesRes.json());
+            const usersData = await usersRes.json();
+            const rolesData = await rolesRes.json();
+            setUsers(Array.isArray(usersData) ? usersData : (usersData.results || []));
+            setRoles(Array.isArray(rolesData) ? rolesData : (rolesData.results || []));
         } catch {
             setError('Failed to load users.');
         } finally {
