@@ -196,9 +196,15 @@ class OrderViewSet(viewsets.ModelViewSet):
         Marks order as FULFILLED and sends data to Shipping Company.
         """
         order = self.get_object()
-        
+
         if order.status == Order.OrderStatus.FULFILLED:
             return Response({'error': 'Order is already fulfilled'}, status=400)
+
+        if order.status not in [Order.OrderStatus.PAID, Order.OrderStatus.READY]:
+            return Response(
+                {'error': f'Cannot fulfill order with status {order.status}. Order must be PAID or READY.'},
+                status=400
+            )
 
         # 0. Capture Shipping Selection (if any)
         shipping_company = request.data.get('shipping_company')
@@ -218,13 +224,14 @@ class OrderViewSet(viewsets.ModelViewSet):
             order.status = Order.OrderStatus.FULFILLED
             order.save()
             
-            # 3. Log Interaction (Optional but good for history)
-            CustomerInteraction.objects.create(
-                customer=order.customer,
-                type=CustomerInteraction.InteractionType.OTHER,
-                notes=f"Order #{order.order_number} fulfilled via {order.get_shipping_company_display()}. Tracking: {result.get('tracking_number')}",
-                staff_member=str(request.user)
-            )
+            # 3. Log Interaction (only for known customers, not guests)
+            if order.customer:
+                CustomerInteraction.objects.create(
+                    customer=order.customer,
+                    type=CustomerInteraction.InteractionType.OTHER,
+                    notes=f"Order #{order.order_number} fulfilled via {order.get_shipping_company_display()}. Tracking: {result.get('tracking_number')}",
+                    staff_member=str(request.user)
+                )
             
             return Response(result)
 
@@ -273,13 +280,17 @@ class OrderViewSet(viewsets.ModelViewSet):
             order_item.returned_quantity += return_qty
             order_item.save()
             
-            # 2. Calculate Refund (Pro-rated discount)
-            # Item Price (Net) = (Unit Price * Qty) - Discount
-            # Unit Net Price = Net / Qty
-            item_total_gross = order_item.unit_price * order_item.quantity
-            item_net_total = item_total_gross - order_item.item_discount
-            unit_net_price = item_net_total / order_item.quantity
-            
+            # 2. Calculate Refund — pro-rate both line-item and global order discounts
+            item_gross = order_item.unit_price * order_item.quantity
+            item_net = item_gross - order_item.item_discount
+            # Share of global order discount attributable to this line
+            order_gross = order.total_price + order.discount  # gross before global discount
+            if order_gross > 0:
+                global_discount_share = (item_gross / order_gross) * order.discount
+            else:
+                global_discount_share = Decimal('0.00')
+            item_net -= global_discount_share
+            unit_net_price = item_net / order_item.quantity if order_item.quantity else Decimal('0.00')
             refund_amount = unit_net_price * return_qty
             total_refund_amount += refund_amount
             
@@ -332,18 +343,20 @@ class OrderViewSet(viewsets.ModelViewSet):
                 try:
                     order = Order.objects.get(id=update['id'])
                     
-                    # Update Status
+                    # Update Status — never regress from terminal states
                     shipping_status = update.get('status')
-                    if shipping_status:
+                    terminal_statuses = [Order.OrderStatus.RETURNED, Order.OrderStatus.CANCELLED]
+                    if shipping_status and order.status not in terminal_statuses:
                         order.detailed_status = shipping_status
-                        # Auto-map to main status
                         if shipping_status == 'DELIVERED':
-                            order.status = Order.OrderStatus.PAID
+                            # DELIVERED = customer received → mark fulfilled and fully paid (COD)
+                            order.status = Order.OrderStatus.FULFILLED
                             order.is_fully_paid = True
                         elif shipping_status in ['RETURNED', 'REFUSED']:
                             order.status = Order.OrderStatus.RETURNED
                         elif shipping_status == 'SHIPPED':
-                            order.status = Order.OrderStatus.FULFILLED
+                            if order.status not in [Order.OrderStatus.FULFILLED]:
+                                order.status = Order.OrderStatus.FULFILLED
                     
                     # Update Financials (Net Amount Received)
                     net_amount = update.get('net_amount')

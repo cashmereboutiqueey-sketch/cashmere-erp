@@ -342,7 +342,8 @@ export default function POSPage() {
                 })),
                 payment_method: paymentMethod,
                 amount_paid: paid,
-                order_discount: orderDiscount,
+                discount: orderDiscount,
+                status: paid >= cartTotal ? 'PAID' : 'PENDING',
                 notes: orderNotes || ""
             };
 
@@ -369,6 +370,7 @@ export default function POSPage() {
                             name: `MTO-${createdOrder.order_number}-${item.sku}`,
                             product: item.id,
                             quantity: item.quantity,
+                            source_order: createdOrder.id,
                             status: 'PENDING',
                             notes: `Made-to-Order for ${createdOrder.order_number}${selectedCustomer ? ` | Customer: ${selectedCustomer.name}` : ''}`
                         })

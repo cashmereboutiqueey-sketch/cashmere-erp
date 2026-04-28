@@ -172,25 +172,20 @@ class MaterialPurchaseViewSet(viewsets.ModelViewSet):
     queryset = MaterialPurchase.objects.select_related('supplier', 'raw_material').all().order_by('-date')
     serializer_class = MaterialPurchaseSerializer
 
+    @transaction.atomic
     def perform_create(self, serializer):
         purchase = serializer.save()
-        
-        # Helper: Create Financial Transaction if paid
-        try:
-            if purchase.amount_paid > 0:
-                from finance.models import FinancialTransaction
-                FinancialTransaction.objects.create(
-                    module=FinancialTransaction.ModuleType.FACTORY,
-                    type=FinancialTransaction.TransactionType.EXPENSE,
-                    amount=purchase.amount_paid,
-                    description=f"Purchase from {purchase.supplier.name} ({purchase.raw_material.name})",
-                    category="Raw Material",
-                    reference_id=f"PURCH-{purchase.supplier.id}-{purchase.id}"
-                )
-        except Exception as e:
-            print(f"Error creating finance transaction: {e}")
-            # Don't rollback the purchase? Or should we?
-            # ideally transaction.atomic() wraps the whole view request in Django.
+
+        if purchase.amount_paid > 0:
+            from finance.models import FinancialTransaction
+            FinancialTransaction.objects.create(
+                module=FinancialTransaction.ModuleType.FACTORY,
+                type=FinancialTransaction.TransactionType.EXPENSE,
+                amount=purchase.amount_paid,
+                description=f"Purchase from {purchase.supplier.name} ({purchase.raw_material.name})",
+                category="Raw Material",
+                reference_id=f"PURCH-{purchase.supplier.id}-{purchase.id}"
+            )
 
 class SupplierPaymentViewSet(viewsets.ModelViewSet):
     queryset = SupplierPayment.objects.select_related('supplier').all().order_by('-date')

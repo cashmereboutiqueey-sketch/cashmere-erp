@@ -263,6 +263,9 @@ class ProductionJob(models.Model):
         Transitions job from QC to COMPLETED.
         THE HANDSHAKE: Transfers finished goods to Brand Inventory.
         """
+        if self.status != self.JobStatus.QC:
+            raise ValidationError("Only jobs in QC status can be completed.")
+
         try:
             # 3. Create Financial Transaction (Inter-Company)
             from finance.models import FinancialTransaction, ProductCosting
@@ -309,15 +312,11 @@ class ProductionJob(models.Model):
                 location = Location.objects.filter(id=target_location_id).first()
             
             if not location:
-                # Default to Main Warehouse checks
+                # Default to first Warehouse location
                 location = Location.objects.filter(type=Location.LocationType.WAREHOUSE).first()
-            
+
             if not location:
-                # If no warehouse, take ANY location
-                location = Location.objects.first()
-                
-            if not location:
-                raise ValidationError("No Location defined in Brand to receive stock.")
+                raise ValidationError("No Warehouse location found. Please create a Warehouse location in Brand settings before completing production.")
 
             # Update/Create Inventory Record
             inventory, created = Inventory.objects.get_or_create(

@@ -37,8 +37,11 @@ class OrderService:
                     )
 
         # 3. Financial Income Logic (Factory COGS Release)
+        # Skip factory income for MTO orders — revenue is recorded when the production job completes
         if order.status == Order.OrderStatus.PAID:
-            OrderService._trigger_factory_income(order)
+            is_mto = order.production_jobs.exists()
+            if not is_mto:
+                OrderService._trigger_factory_income(order)
             OrderService._record_brand_revenue(order)
 
         # 4. Customer Metrics
