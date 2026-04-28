@@ -42,26 +42,21 @@ class MaterialPurchase(models.Model):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
 
-        if not is_new:
-            raise ValidationError(
-                "MaterialPurchase records cannot be modified after creation. "
-                "Record a new purchase or a supplier payment to adjust balances."
-            )
+        if is_new:
+            self.total_cost = self.quantity * self.cost_per_unit
 
-        self.total_cost = self.quantity * self.cost_per_unit
+            # Lock the raw material row to prevent concurrent stock over-credit
+            locked = RawMaterial.objects.select_for_update().get(pk=self.raw_material_id)
+            locked.current_stock += self.quantity
+            locked.cost_per_unit = self.cost_per_unit
+            locked.save()
+            # Keep the in-memory reference consistent
+            self.raw_material = locked
 
-        # 1. Update Stock (lock row to prevent concurrent over-credit)
-        from django.db.models import F
-        type(self.raw_material).objects.filter(pk=self.raw_material_id).select_for_update().get()
-        self.raw_material.refresh_from_db()
-        self.raw_material.current_stock += self.quantity
-        self.raw_material.cost_per_unit = self.cost_per_unit
-        self.raw_material.save()
-
-        # 2. Update Supplier Balance (Debt = Total Cost - Amount Paid)
-        remaining_debt = self.total_cost - self.amount_paid
-        self.supplier.balance += remaining_debt
-        self.supplier.save()
+            # Update supplier balance (debt = total cost - amount paid upfront)
+            remaining_debt = self.total_cost - self.amount_paid
+            self.supplier.balance += remaining_debt
+            self.supplier.save()
 
         super().save(*args, **kwargs)
 

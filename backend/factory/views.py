@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from .models import Supplier, RawMaterial, BOM, ProductionJob, MaterialPurchase, SupplierPayment, Worker, WorkerAttendance, ProductionLog
 from django.db import transaction
 from django.db.models import Count, Sum, Q, F
@@ -145,6 +146,16 @@ class MaterialPurchaseViewSet(viewsets.ModelViewSet):
     queryset = MaterialPurchase.objects.select_related('supplier', 'raw_material').all().order_by('-date')
     serializer_class = MaterialPurchaseSerializer
     permission_classes = [IsAuthenticated, HasFactoryAccess]
+
+    def perform_update(self, serializer):
+        raise PermissionDenied(
+            "Purchase records are immutable. Record a new purchase or a supplier payment instead."
+        )
+
+    def perform_destroy(self, instance):
+        raise PermissionDenied(
+            "Purchase records cannot be deleted. They are part of the financial ledger."
+        )
 
     @transaction.atomic
     def perform_create(self, serializer):

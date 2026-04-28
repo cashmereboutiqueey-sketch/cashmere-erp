@@ -62,17 +62,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database — default to SQLite in dev, require DATABASE_URL in production
+# Database — use DATABASE_URL if set, otherwise fall back to SQLite
 _db_url = config('DATABASE_URL', default=None)
 if not _db_url:
-    if DEBUG:
-        _db_url = f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}"
-    else:
-        from django.core.exceptions import ImproperlyConfigured
-        raise ImproperlyConfigured(
-            "DATABASE_URL environment variable is required in production. "
-            "Set it to a PostgreSQL connection string."
-        )
+    _db_url = f"sqlite:///{os.path.join(BASE_DIR, 'db.sqlite3')}"
+    import logging as _logging
+    _logging.getLogger(__name__).warning(
+        "DATABASE_URL not set — using SQLite. Set DATABASE_URL for PostgreSQL in production."
+    )
 
 DATABASES = {
     'default': dj_database_url.config(
