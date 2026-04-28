@@ -35,4 +35,4 @@ jobs:
           docker compose -f docker-compose.prod.yml --env-file .env.production exec -T backend python manage.py collectstatic --noinput
 
       - name: Health check
-        run: curl -f http://localhost/api/ && echo "OK"
+        run: curl -fL https://cashmerebotique.tech/api/ && echo "OK"
