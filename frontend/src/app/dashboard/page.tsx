@@ -93,7 +93,7 @@ export default function DashboardPage() {
                     <h1 className="text-4xl font-serif text-cashmere-maroon">{t('dashboard.title')}</h1>
                     <p className="text-stone-500 mt-2">{t('dashboard.subtitle')}</p>
                 </div>
-                {(user?.is_superuser || user?.groups.includes('Admin')) && (
+                {(user?.is_superuser || user?.groups?.includes('Admin')) && (
                     <Link href="/dashboard/users" className="flex items-center gap-2 bg-stone-800 text-white px-4 py-2 rounded-lg hover:bg-stone-900 transition-colors text-sm font-medium">
                         <Shield size={15} /> Manage Users
                     </Link>

@@ -81,7 +81,14 @@ export default function BrandFinancePage() {
     }, [token]);
 
     const handleTransfer = async () => {
-        if (!transferAmount) return;
+        const amount = parseFloat(transferAmount);
+        if (!transferAmount || isNaN(amount) || amount <= 0) {
+            return alert(t('finance.alerts.invalidAmount') || 'Enter a valid amount');
+        }
+        const available = treasuries.daily ? parseFloat(treasuries.daily.balance) : 0;
+        if (amount > available) {
+            return alert(t('finance.alerts.insufficientFunds') || `Insufficient funds. Available: ${available.toLocaleString()} EGP`);
+        }
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/transfer_to_main/`, {
                 method: 'POST',
@@ -155,12 +162,14 @@ export default function BrandFinancePage() {
             key: 'amount',
             label: t('finance.amount'),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            render: (row: any) => (
-                <span className={`font-mono font-bold ${['EXPENSE', 'TRANSFER'].includes(row.type) && row.amount > 0 ? 'text-red-700' : 'text-emerald-700'
-                    }`}>
-                    {parseFloat(row.amount).toLocaleString()} EGP
-                </span>
-            )
+            render: (row: any) => {
+                const isDebit = ['EXPENSE', 'TRANSFER'].includes(row.type);
+                return (
+                    <span className={`font-mono font-bold ${isDebit ? 'text-red-700' : 'text-emerald-700'}`}>
+                        {isDebit ? '-' : '+'}{parseFloat(row.amount).toLocaleString()} EGP
+                    </span>
+                );
+            }
         }
     ];
 

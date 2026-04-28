@@ -229,20 +229,28 @@ class ProductionJob(models.Model):
         if not bom_items.exists():
             raise ValidationError(f"BOM for {self.product.sku} is empty.")
 
-        # 1. Validate Stock Availability
+        # Lock raw material rows to prevent concurrent over-deduction (TOCTOU fix)
+        raw_material_ids = list(bom_items.values_list('raw_material_id', flat=True))
+        locked_materials = {
+            m.id: m for m in RawMaterial.objects.select_for_update().filter(id__in=raw_material_ids)
+        }
+
+        # 1. Validate Stock Availability against locked rows
         for item in bom_items:
+            material = locked_materials[item.raw_material_id]
             required_qty = item.quantity * Decimal(self.quantity)
-            if item.raw_material.current_stock < required_qty:
+            if material.current_stock < required_qty:
                 raise ValidationError(
-                    f"Insufficient stock for {item.raw_material.name}. "
-                    f"Required: {required_qty}, Available: {item.raw_material.current_stock}"
+                    f"Insufficient stock for {material.name}. "
+                    f"Required: {required_qty}, Available: {material.current_stock}"
                 )
 
-        # 2. Deduct Stock
+        # 2. Deduct Stock from locked rows
         for item in bom_items:
+            material = locked_materials[item.raw_material_id]
             required_qty = item.quantity * Decimal(self.quantity)
-            item.raw_material.current_stock -= required_qty
-            item.raw_material.save()
+            material.current_stock -= required_qty
+            material.save()
 
         # 3. Update Job
         self.status = self.JobStatus.IN_PROGRESS
@@ -289,7 +297,7 @@ class ProductionJob(models.Model):
             # 4. Update Source Order Status (if applicable)
             if self.source_order:
                 from brand.models import Order as BrandOrder
-                self.source_order.status = BrandOrder.OrderStatus.PAID
+                self.source_order.status = BrandOrder.OrderStatus.READY
                 self.source_order.save()
 
             # 5. TRANSFER TO BRAND INVENTORY

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Product, Location, Inventory, Order, OrderItem, Customer, ShopifyConfig, CustomerInteraction, Category, ShippingManifest
-from django.db import models
+from django.db import models, transaction
 
 class FinancialMaskMixin:
     """
@@ -137,13 +137,14 @@ class OrderSerializer(FinancialMaskMixin, serializers.ModelSerializer):
             'order_number': {'read_only': True}
         }
 
+    @transaction.atomic
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
         order = Order.objects.create(**validated_data)
-        
+
         for item_data in items_data:
             OrderItem.objects.create(order=order, **item_data)
-            
+
         return order
 
     def update(self, instance, validated_data):

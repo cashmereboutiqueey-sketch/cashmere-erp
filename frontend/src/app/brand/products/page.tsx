@@ -134,6 +134,16 @@ export default function ProductCatalogPage() {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file (JPG, PNG, WEBP, etc.)');
+                e.target.value = '';
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Image too large. Maximum size is 5MB.');
+                e.target.value = '';
+                return;
+            }
             setImageFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -155,9 +165,9 @@ export default function ProductCatalogPage() {
 
     useEffect(() => {
         if (editingProduct) {
-            const retail = calculateRetail();
-            if (retail !== editingProduct.retail_price?.toString()) {
-                setEditingProduct(prev => prev ? { ...prev, retail_price: Number(retail) } : null);
+            const retail = Number(calculateRetail());
+            if (retail !== Number(editingProduct.retail_price ?? 0)) {
+                setEditingProduct(prev => prev ? { ...prev, retail_price: retail } : null);
             }
         }
     }, [editingProduct?.standard_cost, editingProduct?.brand_overhead, editingProduct?.brand_profit_margin]);
@@ -786,16 +796,14 @@ export default function ProductCatalogPage() {
             }
 
             {/* Hidden Label Component for Printing */}
-            <div className="hidden print:block fixed inset-0 bg-white z-[9999]">
+            <div id="thermal-labels-print-area" className="hidden print:block">
                 {labelProduct && (
-                    <div className="flex items-center justify-center h-full">
-                        <ProductLabel
-                            product_name={labelProduct.name}
-                            product_sku={labelProduct.sku}
-                            product_barcode={labelProduct.barcode}
-                            product_price={labelProduct.retail_price || 0}
-                        />
-                    </div>
+                    <ProductLabel
+                        product_name={labelProduct.name}
+                        product_sku={labelProduct.sku}
+                        product_barcode={labelProduct.barcode}
+                        product_price={labelProduct.retail_price || 0}
+                    />
                 )}
             </div>
 

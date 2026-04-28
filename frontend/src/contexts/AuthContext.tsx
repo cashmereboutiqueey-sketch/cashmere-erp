@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const tryRefreshToken = async (): Promise<boolean> => {
         const refreshToken = Cookies.get("refresh_token");
@@ -65,8 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // Schedule a refresh 2 min before expiry
                 const msUntilExpiry = decoded.exp * 1000 - Date.now() - 2 * 60 * 1000;
                 if (msUntilExpiry > 0) {
-                    const timer = setTimeout(() => tryRefreshToken(), msUntilExpiry);
-                    return () => clearTimeout(timer);
+                    refreshTimerRef.current = setTimeout(() => tryRefreshToken(), msUntilExpiry);
+                    return () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current); };
                 }
                 return;
             } catch (error) {
@@ -95,6 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const logout = () => {
+        if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
         Cookies.remove("access_token");
         Cookies.remove("refresh_token");
         setUser(null);

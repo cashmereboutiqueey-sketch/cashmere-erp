@@ -33,7 +33,7 @@ export default function OrdersPage() {
             });
             if (res.ok) {
                 const data = await res.json();
-                setOrders(data);
+                setOrders(Array.isArray(data) ? data : data.results || []);
             }
         } catch (error) {
             console.error(error);

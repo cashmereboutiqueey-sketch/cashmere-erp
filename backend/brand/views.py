@@ -616,26 +616,26 @@ class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
 
     def get_queryset(self):
-        from django.db.models import Sum, Q, F, FloatField
+        from django.db.models import Sum, Q, F, DecimalField
         from django.db.models.functions import Coalesce
-        
+        from decimal import Decimal
+
         return super().get_queryset().annotate(
             items_sold=Coalesce(
-                 Sum('products__orderitem__quantity', filter=Q(products__orderitem__order__status='PAID')),
-                 0
+                Sum('products__orderitem__quantity', filter=Q(products__orderitem__order__status='PAID')),
+                0
             ),
             revenue=Coalesce(
-                Sum(F('products__orderitem__quantity') * F('products__orderitem__unit_price'), 
+                Sum(F('products__orderitem__quantity') * F('products__orderitem__unit_price'),
                     filter=Q(products__orderitem__order__status='PAID'),
-                    output_field=FloatField()), # Float or Decimal
-                0.0
+                    output_field=DecimalField(max_digits=14, decimal_places=2)),
+                Decimal('0.00')
             ),
-            # Estimation of COGS: Qty * Standard Cost
             cogs=Coalesce(
-                Sum(F('products__orderitem__quantity') * F('products__standard_cost'), 
+                Sum(F('products__orderitem__quantity') * F('products__standard_cost'),
                     filter=Q(products__orderitem__order__status='PAID'),
-                    output_field=FloatField()),
-                0.0
+                    output_field=DecimalField(max_digits=14, decimal_places=2)),
+                Decimal('0.00')
             )
         ).annotate(
             profit=F('revenue') - F('cogs')

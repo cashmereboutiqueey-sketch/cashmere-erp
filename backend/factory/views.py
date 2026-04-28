@@ -129,19 +129,23 @@ class WorkerViewSet(viewsets.ModelViewSet):
             from finance.models import FinancialTransaction
             
             with transaction.atomic():
-                # Check if already paid? (Optional, but good for safety)
-                # For now, we allow multiple payments but maybe we should uniqueness based on ref_id
-                
+                ref_id = f"PAYROLL-{start_date}-{end_date}"
+                if FinancialTransaction.objects.filter(reference_id=ref_id).exists():
+                    return Response(
+                        {'error': f'Payroll for {start_date} to {end_date} has already been processed.'},
+                        status=400
+                    )
+
                 ft = FinancialTransaction.objects.create(
                     module=FinancialTransaction.ModuleType.FACTORY,
                     type=FinancialTransaction.TransactionType.EXPENSE,
                     amount=total_payroll_amount,
                     description=f"Payroll for {start_date} to {end_date}",
                     category="Salaries",
-                    reference_id=f"PAYROLL-{start_date}-{end_date}",
+                    reference_id=ref_id,
                     date=timezone.now().date()
                 )
-                
+
                 return Response({
                     'status': 'success',
                     'message': f'Payroll of {total_payroll_amount} EGP recorded successfully.',

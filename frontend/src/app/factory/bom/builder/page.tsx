@@ -66,6 +66,8 @@ function BOMBuilderContent() {
 
     const updateLine = (index: number, field: keyof BOMLineItem, value: number) => {
         const newLines = [...lines];
+        if (field === 'waste_percentage') value = Math.max(0, isNaN(value) ? 0 : value);
+        if (field === 'quantity') value = Math.max(0.0001, isNaN(value) ? 0.0001 : value);
         newLines[index] = { ...newLines[index], [field]: value };
         setLines(newLines);
     };

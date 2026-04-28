@@ -18,6 +18,7 @@ export default function FactoryHRPage() {
     const [workers, setWorkers] = useState<Worker[]>([]);
     const [activeTab, setActiveTab] = useState<'attendance' | 'production'>('attendance');
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     // View Mode
     const [viewMode, setViewMode] = useState<'directory' | 'payroll'>('directory');
@@ -71,6 +72,7 @@ export default function FactoryHRPage() {
             setStats(statsData);
         } catch (error) {
             console.error("Error fetching HR data", error);
+            setFetchError('Failed to load HR data. Please refresh the page.');
         } finally {
             setLoading(false);
         }
@@ -183,6 +185,7 @@ export default function FactoryHRPage() {
     ];
 
     if (loading) return <div className="p-8">{t('common.loading')}</div>;
+    if (fetchError) return <div className="p-8 text-center text-red-600 font-medium">{fetchError}</div>;
 
     return (
         <div className="p-8 space-y-8">

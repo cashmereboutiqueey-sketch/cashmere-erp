@@ -50,11 +50,10 @@ body {
    ============================================ */
 @media print {
 
-    /* Page setup default */
+    /* Page setup — 58mm for product labels (Xprinter XP-365B); POS receipt overrides to 80mm via JS */
     @page {
         margin: 0;
-        size: 80mm auto;
-        /* Critical for continuous thermal printing */
+        size: 58mm auto;
     }
 
     /* Hide everything by default using visibility */

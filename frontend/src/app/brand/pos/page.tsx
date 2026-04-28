@@ -259,7 +259,7 @@ export default function POSPage() {
 
     const updateItemDiscount = (productId: number, discount: number) => {
         setCart(prev => prev.map(item =>
-            item.id === productId ? { ...item, discount: Math.max(0, discount) } : item
+            item.id === productId ? { ...item, discount: Math.min(100, Math.max(0, discount)) } : item
         ));
     };
 
@@ -338,7 +338,7 @@ export default function POSPage() {
                 items: cart.map(item => ({
                     product: item.id,
                     quantity: item.quantity,
-                    unit_price: item.price - (item.discount || 0)
+                    unit_price: item.price * (1 - (item.discount || 0) / 100)
                 })),
                 payment_method: paymentMethod,
                 amount_paid: paid,
@@ -348,7 +348,7 @@ export default function POSPage() {
 
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(orderPayload)
             });
 
@@ -364,7 +364,7 @@ export default function POSPage() {
                 const jobPromises = cart.map(item =>
                     fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                         body: JSON.stringify({
                             name: `MTO-${createdOrder.order_number}-${item.sku}`,
                             product: item.id,
@@ -374,7 +374,9 @@ export default function POSPage() {
                         })
                     })
                 );
-                await Promise.all(jobPromises);
+                const jobResults = await Promise.allSettled(jobPromises);
+                const failedJobs = jobResults.filter((r: PromiseSettledResult<Response>) => r.status === 'rejected').length;
+                if (failedJobs > 0) console.warn(`${failedJobs} production job(s) failed to create for order ${createdOrder.order_number}`);
             }
 
             // Prepare order data for receipt
@@ -392,7 +394,7 @@ export default function POSPage() {
                 product_sku: item.sku,
                 product_barcode: item.barcode,
                 quantity: item.quantity,
-                unit_price: item.price - (item.discount || 0)
+                unit_price: item.price * (1 - (item.discount || 0) / 100)
             }));
 
             setLastOrder({ ...receiptOrder, items: receiptItems });
@@ -400,8 +402,16 @@ export default function POSPage() {
             // Success notification
             alert(`${t('pos.alerts.orderSuccess')} ${createdOrder.order_number}!${isMadeToOrder ? '\nProduction jobs created.' : ''}`);
 
-            // Print receipt
+            // Print receipt at 80mm (override the 58mm label default)
             setTimeout(() => {
+                const receiptStyle = document.createElement('style');
+                receiptStyle.id = 'receipt-page-size';
+                receiptStyle.textContent = '@page { size: 80mm auto; margin: 0; }';
+                document.head.appendChild(receiptStyle);
+                window.addEventListener('afterprint', () => {
+                    document.getElementById('receipt-page-size')?.remove();
+                    setLastOrder(null);
+                }, { once: true });
                 window.print();
             }, 500);
 
@@ -422,7 +432,8 @@ export default function POSPage() {
         }
     };
 
-    const cartTotal = cart.reduce((sum, item) => sum + ((item.price - (item.discount || 0)) * item.quantity), 0) - orderDiscount;
+    // discount is stored as a percentage (0-100); apply it as a fraction of price
+    const cartTotal = cart.reduce((sum, item) => sum + (item.price * (1 - (item.discount || 0) / 100) * item.quantity), 0) - orderDiscount;
     const grossTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     const filteredCustomers = customers.filter(c =>

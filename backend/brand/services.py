@@ -64,7 +64,13 @@ class OrderService:
                 defaults={'quantity': 0}
             )
             
-            # Deduct quantity
+            # Deduct quantity — allow negative to track overselling (backorders)
+            if inv.quantity < item.quantity:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Oversell: product {item.product.sku} at location {order.location}, "
+                    f"available={inv.quantity}, ordered={item.quantity}"
+                )
             inv.quantity -= item.quantity
             inv.save()
             
@@ -142,12 +148,14 @@ class OrderService:
         # Simple Linear LTV (can be complex later)
         customer.ltv_score = new_total
         
-        # Tier Upgrade Logic
+        # Tier Logic — always recalculate so tier can downgrade after refunds
         if new_total > 50000:
             customer.tier = Customer.Tier.VVIP
         elif new_total > 20000:
             customer.tier = Customer.Tier.VIP
         elif new_total > 5000:
             customer.tier = Customer.Tier.ELITE
+        else:
+            customer.tier = Customer.Tier.STANDARD
             
         customer.save()
