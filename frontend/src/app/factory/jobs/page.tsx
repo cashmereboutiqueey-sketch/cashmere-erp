@@ -74,7 +74,7 @@ export default function ActiveJobsPage() {
         if (!token) return;
         fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/?lite=true`, { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.json())
-            .then(data => setProducts(data))
+            .then(data => setProducts(Array.isArray(data) ? data : (data.results || [])))
             .catch(err => console.error("Failed to fetch products", err));
     };
 
