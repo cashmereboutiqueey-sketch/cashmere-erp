@@ -58,14 +58,9 @@ export default function BrandInventoryPage() {
         })
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setOriginalData(data);
-                    setFilteredData(data);
-                } else {
-                    console.error("Inventory API returned non-array:", data);
-                    setOriginalData([]);
-                    setFilteredData([]);
-                }
+                const list = Array.isArray(data) ? data : (data.results || []);
+                setOriginalData(list);
+                setFilteredData(list);
                 setLoading(false);
             })
             .catch(err => {
