@@ -47,12 +47,16 @@ export default function FactoryFinancePage() {
             const trData = await trRes.json();
             const metricsData = await metricsRes.json();
 
-            setTransactions(txData);
+            const txList = Array.isArray(txData) ? txData : (txData.results || []);
+            const trList = Array.isArray(trData) ? trData : (trData.results || []);
+            const metricsList = Array.isArray(metricsData) ? metricsData : (metricsData.results || metricsData);
+
+            setTransactions(txList);
             setTreasuries({
-                daily: trData.find((t: any) => t.type === 'DAILY'), // Factory might use Main Safe mostly? Or Petty Cash?
-                main: trData.find((t: any) => t.type === 'MAIN')
+                daily: trList.find((t: any) => t.type === 'DAILY'),
+                main: trList.find((t: any) => t.type === 'MAIN')
             });
-            setMetrics(metricsData);
+            setMetrics(metricsList);
         } catch (err) {
             console.error(err);
         }
