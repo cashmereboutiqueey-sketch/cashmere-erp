@@ -97,9 +97,10 @@ export default function ProductCatalogPage() {
     const [labelProduct, setLabelProduct] = useState<Product | null>(null);
     const handlePrintLabel = (product: Product) => {
         setLabelProduct(product);
+        // 500ms lets React commit the new labelProduct and the browser paint the SVG
         setTimeout(() => {
             window.print();
-        }, 300);
+        }, 500);
     };
 
     // Edit / Create Logic
@@ -795,8 +796,12 @@ export default function ProductCatalogPage() {
             )
             }
 
-            {/* Hidden Label Component for Printing */}
-            <div id="thermal-labels-print-area" className="hidden print:block">
+            {/* Label print area: off-screen so SVG barcode is always rendered with layout */}
+            <div
+                id="thermal-labels-print-area"
+                aria-hidden="true"
+                style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1, pointerEvents: 'none' }}
+            >
                 {labelProduct && (
                     <ProductLabel
                         product_name={labelProduct.name}

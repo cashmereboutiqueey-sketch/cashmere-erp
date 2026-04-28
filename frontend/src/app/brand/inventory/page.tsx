@@ -482,8 +482,12 @@ export default function BrandInventoryPage() {
                 </div>
             )}
 
-            {/* Hidden Print Component - Thermal Labels */}
-            <div id="thermal-labels-print-area" className="hidden print:block">
+            {/* Label print area: off-screen so SVG barcode is always rendered with layout */}
+            <div
+                id="thermal-labels-print-area"
+                aria-hidden="true"
+                style={{ position: 'fixed', left: '-9999px', top: 0, zIndex: -1, pointerEvents: 'none' }}
+            >
                 {labelProducts.map((item, idx) => (
                     <ProductLabel
                         key={idx}
