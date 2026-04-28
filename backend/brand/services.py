@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db import transaction as db_transaction
 from django.db.models import Sum
 from .models import Order, Inventory, Customer
-from finance.models import FinancialTransaction, Treasury
+from finance.models import FinancialTransaction
 from factory.models import ProductionJob
 
 class OrderService:
@@ -93,7 +93,7 @@ class OrderService:
         - Records SALE_REVENUE on factory ledger
         Idempotent: checks reference_id before creating.
         """
-        from finance.models import ProductCosting
+        from finance.models import ProductCosting, Treasury
 
         ref_id = f"ICPAY-{order.order_number}"
         if FinancialTransaction.objects.filter(
