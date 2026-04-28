@@ -64,8 +64,14 @@ class Treasury(models.Model):
         MAIN = 'MAIN', _('Main Treasury (Safe)')
         BANK = 'BANK', _('Bank Account')
 
+    class ModuleType(models.TextChoices):
+        BRAND = 'BRAND', _('Brand')
+        FACTORY = 'FACTORY', _('Factory')
+        SHARED = 'SHARED', _('Shared')
+
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=20, choices=TreasuryType.choices, default=TreasuryType.MAIN)
+    module = models.CharField(max_length=10, choices=ModuleType.choices, default=ModuleType.SHARED)
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     location = models.ForeignKey('brand.Location', on_delete=models.SET_NULL, null=True, blank=True, related_name='treasuries')
     
@@ -82,6 +88,7 @@ class FinancialTransaction(models.Model):
         SALE_REVENUE = 'SALE', _('Sales Revenue')
         EXPENSE = 'EXPENSE', _('Expense')
         INTERNAL_TRANSFER = 'INTERNAL', _('Internal Treasury Transfer')
+        INTERCOMPANY_PAYMENT = 'INTERCOMPANY', _('Inter-Company Settlement')
         
     class ModuleType(models.TextChoices):
         BRAND = 'BRAND', _('Brand')

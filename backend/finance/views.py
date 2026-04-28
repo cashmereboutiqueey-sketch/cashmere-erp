@@ -78,7 +78,7 @@ class FinancialTransactionViewSet(viewsets.ModelViewSet):
         item = serializer.save()
         if item.treasury:
             TT = FinancialTransaction.TransactionType
-            if item.type in (TT.EXPENSE, TT.INTERNAL_TRANSFER):
+            if item.type in (TT.EXPENSE, TT.INTERNAL_TRANSFER, TT.INTERCOMPANY_PAYMENT):
                 item.treasury.balance -= item.amount
             elif item.type in (TT.SALE_REVENUE, TT.TRANSFER_TO_BRAND):
                 item.treasury.balance += item.amount
@@ -223,6 +223,30 @@ class MetricsViewSet(viewsets.ViewSet):
         ]
 
         return Response(metrics)
+
+    @action(detail=False, methods=['get'])
+    def intercompany_summary(self, request):
+        TT = FinancialTransaction.TransactionType
+
+        # Total value factory produced and transferred to brand (brand's accumulated COGS/payable)
+        total_produced = FinancialTransaction.objects.filter(
+            type=TT.TRANSFER_TO_BRAND,
+            module=FinancialTransaction.ModuleType.BRAND
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        # Total brand has auto-paid factory when selling
+        total_settled = FinancialTransaction.objects.filter(
+            type=TT.INTERCOMPANY_PAYMENT,
+            module=FinancialTransaction.ModuleType.BRAND
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        net_owed = total_produced - total_settled
+
+        return Response({
+            'total_produced_value': float(total_produced),
+            'total_settled': float(total_settled),
+            'brand_owes_factory': float(net_owed),
+        })
 
     @action(detail=False, methods=['get'])
     def factory(self, request):

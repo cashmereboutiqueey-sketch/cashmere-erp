@@ -24,6 +24,7 @@ export default function FactoryFinancePage() {
     const [transactions, setTransactions] = useState([]);
     const [treasuries, setTreasuries] = useState<{ daily: Treasury | null, main: Treasury | null }>({ daily: null, main: null });
     const [metrics, setMetrics] = useState<MetricItem[]>([]);
+    const [intercompany, setIntercompany] = useState<{ total_produced_value: number, total_settled: number, brand_owes_factory: number } | null>(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -37,26 +38,33 @@ export default function FactoryFinancePage() {
     const fetchData = async () => {
         if (!token) return;
         try {
-            const [txRes, trRes, metricsRes] = await Promise.all([
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?module=FACTORY`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/metrics/factory/`, { headers: { 'Authorization': `Bearer ${token}` } })
+            const authHeader = { 'Authorization': `Bearer ${token}` };
+            const [txRes, trRes, metricsRes, icRes] = await Promise.all([
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?module=FACTORY`, { headers: authHeader }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/`, { headers: authHeader }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/metrics/factory/`, { headers: authHeader }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/metrics/intercompany_summary/`, { headers: authHeader }),
             ]);
 
             const txData = await txRes.json();
             const trData = await trRes.json();
             const metricsData = await metricsRes.json();
+            const icData = icRes.ok ? await icRes.json() : null;
 
             const txList = Array.isArray(txData) ? txData : (txData.results || []);
-            const trList = Array.isArray(trData) ? trData : (trData.results || []);
+            const allTreasuries = Array.isArray(trData) ? trData : (trData.results || []);
             const metricsList = Array.isArray(metricsData) ? metricsData : (metricsData.results || metricsData);
 
             setTransactions(txList);
+            // Show factory/shared treasuries; fallback to all if no module distinction yet
+            const factoryTreasuries = allTreasuries.filter((t: any) => t.module === 'FACTORY' || t.module === 'SHARED');
+            const displayList = factoryTreasuries.length > 0 ? factoryTreasuries : allTreasuries;
             setTreasuries({
-                daily: trList.find((t: any) => t.type === 'DAILY'),
-                main: trList.find((t: any) => t.type === 'MAIN')
+                daily: displayList.find((t: any) => t.type === 'DAILY') ?? null,
+                main: displayList.find((t: any) => t.type === 'MAIN') ?? null,
             });
             setMetrics(metricsList);
+            if (icData) setIntercompany(icData);
         } catch (err) {
             console.error(err);
         }
@@ -129,7 +137,7 @@ export default function FactoryFinancePage() {
         <div className="p-8 space-y-8">
             <h1 className="text-3xl font-serif text-cashmere-black">{t('factoryFinance.title')}</h1>
 
-            {/* Treasury Cards (View Only for Factory usually) */}
+            {/* Treasury Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white p-6 rounded-xl border border-stone-200 shadow-sm flex items-center justify-between">
                     <div>
@@ -142,6 +150,24 @@ export default function FactoryFinancePage() {
                         <Building2 size={32} />
                     </div>
                 </div>
+
+                {/* Inter-Company Receivable from Brand */}
+                {intercompany && (
+                    <div className={`p-6 rounded-xl border-2 flex items-center justify-between ${intercompany.brand_owes_factory > 0 ? 'border-amber-200 bg-amber-50' : 'border-emerald-200 bg-emerald-50'}`}>
+                        <div>
+                            <p className="text-stone-500 text-sm font-semibold uppercase tracking-wider">Due from Brand</p>
+                            <h2 className={`text-4xl font-serif mt-2 ${intercompany.brand_owes_factory > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                                {intercompany.brand_owes_factory.toLocaleString()} <span className="text-lg font-sans text-stone-400">EGP</span>
+                            </h2>
+                            <p className="text-xs text-stone-400 mt-1">
+                                {intercompany.total_settled.toLocaleString()} EGP received · {intercompany.total_produced_value.toLocaleString()} EGP produced
+                            </p>
+                        </div>
+                        <div className={`p-4 rounded-full ${intercompany.brand_owes_factory > 0 ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                            <TrendingUp size={32} />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Business Intelligence */}

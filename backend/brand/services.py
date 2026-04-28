@@ -1,8 +1,10 @@
+import datetime
 from decimal import Decimal
 from django.utils import timezone
+from django.db import transaction as db_transaction
 from django.db.models import Sum
 from .models import Order, Inventory, Customer
-from finance.models import FinancialTransaction
+from finance.models import FinancialTransaction, Treasury
 from factory.models import ProductionJob
 
 class OrderService:
@@ -36,13 +38,13 @@ class OrderService:
                         notes=f"Auto-generated from Order #{order.order_number}\nCustomer: {order.customer.name if order.customer else 'Guest'}"
                     )
 
-        # 3. Financial Income Logic (Factory COGS Release)
-        # Skip factory income for MTO orders — revenue is recorded when the production job completes
+        # 3. Financial Income Logic
         if order.status == Order.OrderStatus.PAID:
-            is_mto = order.production_jobs.exists()
-            if not is_mto:
-                OrderService._trigger_factory_income(order)
             OrderService._record_brand_revenue(order)
+            # Settle factory payable for all non-MTO items.
+            # MTO items already have a TRANSFER_TO_BRAND from job completion;
+            # we still settle those here so factory treasury gets the cash.
+            OrderService._settle_factory_payable(order)
 
         # 4. Customer Metrics
         if order.status in [Order.OrderStatus.PAID, Order.OrderStatus.FULFILLED]:
@@ -82,31 +84,75 @@ class OrderService:
         order.save()
 
     @staticmethod
-    def _trigger_factory_income(order: Order):
+    def _settle_factory_payable(order: Order):
         """
-        Calculates COGS for the order and records it as Income for the Factory.
+        When brand sells an order, automatically pays factory its transfer_price share.
+        - Debits brand MAIN treasury (if exists)
+        - Credits factory MAIN treasury (if exists)
+        - Records INTERCOMPANY_PAYMENT on brand ledger
+        - Records SALE_REVENUE on factory ledger
+        Idempotent: checks reference_id before creating.
         """
-        total_cogs = Decimal('0.00')
-        for item in order.items.all():
-            if item.product.standard_cost:
-                cost = item.product.standard_cost * item.quantity
-                total_cogs += cost
-        
-        if total_cogs > 0:
-            ref_id = f"COGS-{order.order_number}"
-            if not FinancialTransaction.objects.filter(
-                reference_id=ref_id, 
-                module=FinancialTransaction.ModuleType.FACTORY
-            ).exists():
-                FinancialTransaction.objects.create(
-                    type=FinancialTransaction.TransactionType.SALE_REVENUE, 
-                    module=FinancialTransaction.ModuleType.FACTORY,
-                    category='COGS Release',
-                    amount=total_cogs,
-                    reference_id=ref_id,
-                    description=f"Auto-Income from Order #{order.order_number}",
-                    treasury=None 
-                )
+        from finance.models import ProductCosting
+
+        ref_id = f"ICPAY-{order.order_number}"
+        if FinancialTransaction.objects.filter(
+            reference_id=ref_id,
+            module=FinancialTransaction.ModuleType.BRAND
+        ).exists():
+            return
+
+        factory_total = Decimal('0.00')
+        for item in order.items.select_related('product').all():
+            try:
+                costing = ProductCosting.objects.get(product=item.product)
+                factory_total += costing.transfer_price * Decimal(item.quantity)
+            except ProductCosting.DoesNotExist:
+                if item.product.standard_cost:
+                    factory_total += Decimal(str(item.product.standard_cost)) * Decimal(item.quantity)
+
+        if factory_total <= 0:
+            return
+
+        with db_transaction.atomic():
+            brand_treasury = Treasury.objects.select_for_update().filter(
+                module=Treasury.ModuleType.BRAND, type=Treasury.TreasuryType.MAIN
+            ).first()
+            factory_treasury = Treasury.objects.select_for_update().filter(
+                module=Treasury.ModuleType.FACTORY, type=Treasury.TreasuryType.MAIN
+            ).first()
+
+            today = datetime.date.today()
+
+            # Brand side: outflow (debit)
+            FinancialTransaction.objects.create(
+                type=FinancialTransaction.TransactionType.INTERCOMPANY_PAYMENT,
+                module=FinancialTransaction.ModuleType.BRAND,
+                category='Factory Settlement',
+                amount=factory_total,
+                reference_id=ref_id,
+                description=f"Auto-payment to Factory · Order #{order.order_number}",
+                treasury=brand_treasury,
+                date=today,
+            )
+            if brand_treasury:
+                brand_treasury.balance -= factory_total
+                brand_treasury.save()
+
+            # Factory side: inflow (credit)
+            FinancialTransaction.objects.create(
+                type=FinancialTransaction.TransactionType.SALE_REVENUE,
+                module=FinancialTransaction.ModuleType.FACTORY,
+                category='Brand Settlement',
+                amount=factory_total,
+                reference_id=ref_id,
+                description=f"Payment from Brand · Order #{order.order_number}",
+                treasury=factory_treasury,
+                date=today,
+            )
+            if factory_treasury:
+                factory_treasury.balance += factory_total
+                factory_treasury.save()
 
     @staticmethod
     def _record_brand_revenue(order: Order):

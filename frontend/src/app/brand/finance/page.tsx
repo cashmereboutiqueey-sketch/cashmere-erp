@@ -26,7 +26,8 @@ export default function BrandFinancePage() {
     const [transactions, setTransactions] = useState<any[]>([]);
     const [treasuries, setTreasuries] = useState<{ daily: Treasury | null, main: Treasury | null }>({ daily: null, main: null });
     const [metrics, setMetrics] = useState<MetricItem[]>([]);
-    const [shippingStats, setShippingStats] = useState<any[]>([]); // New State
+    const [shippingStats, setShippingStats] = useState<any[]>([]);
+    const [intercompany, setIntercompany] = useState<{ total_produced_value: number, total_settled: number, brand_owes_factory: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const [isTransferOpen, setIsTransferOpen] = useState(false);
     const [transferAmount, setTransferAmount] = useState('');
@@ -44,29 +45,33 @@ export default function BrandFinancePage() {
         if (!token) return;
         const authHeader = { 'Authorization': `Bearer ${token}` };
         try {
-            const [txRes, trRes, metricsRes, analyticsRes] = await Promise.all([
+            const [txRes, trRes, metricsRes, analyticsRes, icRes] = await Promise.all([
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/transactions/?module=BRAND`, { headers: authHeader }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/`, { headers: authHeader }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/metrics/brand/`, { headers: authHeader }),
                 fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/analytics/dashboard/`, { headers: authHeader }),
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/metrics/intercompany_summary/`, { headers: authHeader }),
             ]);
 
             const txData = txRes.ok ? await txRes.json() : [];
             const trData = trRes.ok ? await trRes.json() : [];
             const metricsData = metricsRes.ok ? await metricsRes.json() : [];
             const analyticsData = analyticsRes.ok ? await analyticsRes.json() : null;
+            const icData = icRes.ok ? await icRes.json() : null;
 
             const txList = Array.isArray(txData) ? txData : (txData.results || []);
             setTransactions(txList);
-            const treasuryList = Array.isArray(trData) ? trData : (trData.results || []);
+            // Show only brand/shared treasuries; fallback to any treasury if no module filter exists yet
+            const allTreasuries = Array.isArray(trData) ? trData : (trData.results || []);
+            const brandTreasuries = allTreasuries.filter((t: any) => !t.module || t.module === 'BRAND' || t.module === 'SHARED');
+            const displayList = brandTreasuries.length > 0 ? brandTreasuries : allTreasuries;
             setTreasuries({
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                daily: treasuryList.find((t: any) => t.type === 'DAILY') ?? null,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                main: treasuryList.find((t: any) => t.type === 'MAIN') ?? null,
+                daily: displayList.find((t: any) => t.type === 'DAILY') ?? null,
+                main: displayList.find((t: any) => t.type === 'MAIN') ?? null,
             });
             const metricsList = Array.isArray(metricsData) ? metricsData : (metricsData.results || []);
             setMetrics(metricsList);
+            if (icData) setIntercompany(icData);
 
             if (analyticsData?.charts?.shipping_stats) {
                 setShippingStats(analyticsData.charts.shipping_stats);
@@ -230,6 +235,37 @@ export default function BrandFinancePage() {
                     </div>
                 </div>
             </div>
+
+            {/* Inter-Company Position */}
+            {intercompany && (
+                <div className={`p-5 rounded-xl border-2 ${intercompany.brand_owes_factory > 0 ? 'border-orange-200 bg-orange-50' : 'border-emerald-200 bg-emerald-50'} flex flex-col md:flex-row md:items-center justify-between gap-4`}>
+                    <div className="flex items-center gap-3">
+                        <div className={`p-3 rounded-full ${intercompany.brand_owes_factory > 0 ? 'bg-orange-100 text-orange-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                            <Truck size={24} />
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold uppercase tracking-wider text-stone-500">Factory Settlement</p>
+                            <p className="text-xs text-stone-400 mt-0.5">Auto-settled on each sale · Transfer price from BOM costing</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-8">
+                        <div className="text-center">
+                            <p className="text-xs text-stone-400 uppercase tracking-wider">Total Produced</p>
+                            <p className="text-2xl font-serif font-bold text-stone-700">{intercompany.total_produced_value.toLocaleString()} <span className="text-sm font-sans text-stone-400">EGP</span></p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-xs text-stone-400 uppercase tracking-wider">Settled</p>
+                            <p className="text-2xl font-serif font-bold text-emerald-700">{intercompany.total_settled.toLocaleString()} <span className="text-sm font-sans text-stone-400">EGP</span></p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-xs text-stone-400 uppercase tracking-wider">Outstanding</p>
+                            <p className={`text-2xl font-serif font-bold ${intercompany.brand_owes_factory > 0 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                {intercompany.brand_owes_factory.toLocaleString()} <span className="text-sm font-sans text-stone-400">EGP</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Business Intelligence & Shipping Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
