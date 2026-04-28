@@ -33,12 +33,13 @@ class ProductCosting(models.Model):
     def raw_material_cost(self) -> Decimal:
         """
         Calculates SUM(BOM Item Qty * Material Cost).
+        Uses select_related to avoid N+1 on raw_material.
         """
         if not hasattr(self.product, 'bom'):
             return Decimal('0.00')
-        
+
         total = Decimal('0.00')
-        for item in self.product.bom.items.all():
+        for item in self.product.bom.items.select_related('raw_material').all():
             total += item.quantity * item.raw_material.cost_per_unit
         return total
 

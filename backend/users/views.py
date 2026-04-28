@@ -1,10 +1,17 @@
+import logging
 from django.contrib.auth.models import User, Group
-from rest_framework import status
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from core.permissions import IsAdminUser
+
+logger = logging.getLogger(__name__)
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -12,6 +19,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
         token['username'] = user.username
+        token['email'] = user.email
         token['groups'] = list(user.groups.values_list('name', flat=True))
         token['is_superuser'] = user.is_superuser
         return token
@@ -19,6 +27,25 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
+
+
+class LogoutView(APIView):
+    """
+    Blacklists the refresh token so it cannot be reused after logout.
+    Requires: { "refresh": "<refresh_token>" }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        refresh_token = request.data.get('refresh')
+        if not refresh_token:
+            return Response({'error': 'Refresh token is required.'}, status=400)
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except TokenError as e:
+            logger.warning(f"Logout with invalid token: {e}")
+        return Response({'detail': 'Successfully logged out.'}, status=200)
 
 
 # ── User Management (Admin only) ─────────────────────────────────────────────
@@ -67,6 +94,12 @@ class UserListCreateView(APIView):
         if role and role not in AVAILABLE_ROLES:
             return Response({'error': f'Invalid role. Choose from: {", ".join(AVAILABLE_ROLES)}'}, status=400)
 
+        # Enforce Django password validators
+        try:
+            validate_password(password)
+        except DjangoValidationError as e:
+            return Response({'error': list(e.messages)}, status=400)
+
         user = User.objects.create_user(username=username, password=password, email=email)
 
         if role:
@@ -90,15 +123,16 @@ class UserDetailView(APIView):
         if not user:
             return Response({'error': 'User not found.'}, status=404)
 
-        # Prevent removing your own admin
-        if user == request.user and 'role' in request.data:
-            pass  # allow — admin can change their own role (be careful)
-
         if 'email' in request.data:
             user.email = request.data['email']
 
         if 'password' in request.data and request.data['password']:
-            user.set_password(request.data['password'])
+            new_password = request.data['password']
+            try:
+                validate_password(new_password, user=user)
+            except DjangoValidationError as e:
+                return Response({'error': list(e.messages)}, status=400)
+            user.set_password(new_password)
 
         if 'is_active' in request.data:
             user.is_active = request.data['is_active']
@@ -108,7 +142,7 @@ class UserDetailView(APIView):
             user.groups.clear()
             if role:
                 if role not in AVAILABLE_ROLES:
-                    return Response({'error': f'Invalid role.'}, status=400)
+                    return Response({'error': 'Invalid role.'}, status=400)
                 group, _ = Group.objects.get_or_create(name=role)
                 user.groups.add(group)
 

@@ -41,20 +41,28 @@ class MaterialPurchase(models.Model):
     @transaction.atomic
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-        
-        if is_new:
-            self.total_cost = self.quantity * self.cost_per_unit
-            
-            # 1. Update Stock
-            self.raw_material.current_stock += self.quantity
-            self.raw_material.cost_per_unit = self.cost_per_unit # Update latest cost
-            self.raw_material.save()
-            
-            # 2. Update Supplier Balance (Debt = Total Cost - Amount Paid)
-            remaining_debt = self.total_cost - self.amount_paid
-            self.supplier.balance += remaining_debt
-            self.supplier.save()
-            
+
+        if not is_new:
+            raise ValidationError(
+                "MaterialPurchase records cannot be modified after creation. "
+                "Record a new purchase or a supplier payment to adjust balances."
+            )
+
+        self.total_cost = self.quantity * self.cost_per_unit
+
+        # 1. Update Stock (lock row to prevent concurrent over-credit)
+        from django.db.models import F
+        type(self.raw_material).objects.filter(pk=self.raw_material_id).select_for_update().get()
+        self.raw_material.refresh_from_db()
+        self.raw_material.current_stock += self.quantity
+        self.raw_material.cost_per_unit = self.cost_per_unit
+        self.raw_material.save()
+
+        # 2. Update Supplier Balance (Debt = Total Cost - Amount Paid)
+        remaining_debt = self.total_cost - self.amount_paid
+        self.supplier.balance += remaining_debt
+        self.supplier.save()
+
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:

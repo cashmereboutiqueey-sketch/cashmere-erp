@@ -18,18 +18,17 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 const translations: Record<Language, Translations> = { ar, en };
 
+function getInitialLanguage(): Language {
+    if (typeof window === 'undefined') return 'ar';
+    const saved = localStorage.getItem('language') as Language;
+    return saved === 'ar' || saved === 'en' ? saved : 'ar';
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-    const [language, setLanguage] = useState<Language>('ar');
+    // Lazy initializer reads localStorage synchronously on first client render,
+    // avoiding a useEffect-driven state update that causes SSR hydration mismatch.
+    const [language, setLanguage] = useState<Language>(getInitialLanguage);
 
-    // Load saved language from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem('language') as Language;
-        if (saved === 'ar' || saved === 'en') {
-            setLanguage(saved);
-        }
-    }, []);
-
-    // Update document direction when language changes
     useEffect(() => {
         document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
         document.documentElement.lang = language;
@@ -43,13 +42,19 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
     const t = (key: string): string => {
         const keys = key.split('.');
-        let value: any = translations[language];
-
+        const safeLang = (language as Language) in translations ? (language as Language) : 'ar';
+        let value: any = (translations as Record<string, any>)[safeLang];
         for (const k of keys) {
             value = value?.[k];
         }
+        if (value) return value;
 
-        return value || key;
+        // Fall back to English if the current language is missing the key
+        let enValue: any = (translations as Record<string, any>)['en'];
+        for (const k of keys) {
+            enValue = enValue?.[k];
+        }
+        return enValue || key;
     };
 
     const dir = language === 'ar' ? 'rtl' : 'ltr';

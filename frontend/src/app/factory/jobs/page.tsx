@@ -64,7 +64,7 @@ export default function ActiveJobsPage() {
         fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/`, { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.json())
             .then(data => {
-                setJobs(data);
+                setJobs(Array.isArray(data) ? data : (data.results || []));
                 setLoading(false);
             })
             .catch(err => console.error(err));
@@ -327,37 +327,41 @@ export default function ActiveJobsPage() {
                                             if (groupSelectedIds.length === 0) return;
                                             if (!confirm(`Start cutting ${selectedQty} units (from selected ${groupSelectedIds.length} jobs) of ${styleName}?`)) return;
 
-                                            try {
-                                                const results = await Promise.all(groupSelectedIds.map(async (id) => {
-                                                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/${id}/start/`, {
-                                                        method: 'POST',
-                                                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
-                                                    });
-                                                    if (!res.ok) {
-                                                        const err = await res.json();
-                                                        // Use backend provided clear message if available
-                                                        const msg = err.error || JSON.stringify(err);
-                                                        throw new Error(`Job ID ${id}: ${msg}`);
+                                            type JobResult = { id: number; ok: boolean; error?: string };
+                                            const results: JobResult[] = await Promise.all(
+                                                groupSelectedIds.map(async (id: number): Promise<JobResult> => {
+                                                    try {
+                                                        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/${id}/start/`, {
+                                                            method: 'POST',
+                                                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                                                        });
+                                                        if (!res.ok) {
+                                                            const err = await res.json();
+                                                            return { id, ok: false, error: `Job ${id}: ${(err.error || JSON.stringify(err)).replace(/\[|\]|"/g, '')}` };
+                                                        }
+                                                        return { id, ok: true };
+                                                    } catch (e: any) {
+                                                        return { id, ok: false, error: `Job ${id}: ${e.message || 'Network error'}` };
                                                     }
-                                                    return res.json();
-                                                }));
+                                                })
+                                            );
 
-                                                alert("Selected Batch Started Successfully! Moving to In Progress.");
+                                            const succeeded = results.filter(r => r.ok);
+                                            const failed = results.filter(r => !r.ok);
 
-                                                // Clear selection for processed jobs
+                                            if (succeeded.length > 0) {
                                                 const newSet = new Set(selectedJobIds);
-                                                groupSelectedIds.forEach(id => newSet.delete(id));
+                                                succeeded.forEach(r => newSet.delete(r.id));
                                                 setSelectedJobIds(newSet);
-
-                                                setActiveTab('IN_PROGRESS');
                                                 fetchJobs();
-                                            } catch (e: any) {
-                                                // Alert the cleaned up message directly
-                                                const errorMessage = e.message || e;
-                                                // Clean up any residual brackets/quotes
-                                                const cleanMsg = errorMessage.replace(/\[|\]|"/g, '').replace('error:', '');
-                                                alert(`One or more jobs failed to start:\n${cleanMsg}`);
-                                                console.error(e);
+                                            }
+
+                                            if (failed.length === 0) {
+                                                alert(`All ${succeeded.length} job(s) started successfully!`);
+                                                setActiveTab('IN_PROGRESS');
+                                            } else {
+                                                const failMsgs = failed.map(r => r.error || `Job ${r.id} failed`).join('\n');
+                                                alert(`${succeeded.length} started, ${failed.length} failed:\n${failMsgs}`);
                                             }
                                         }}
                                         disabled={groupSelectedIds.length === 0}

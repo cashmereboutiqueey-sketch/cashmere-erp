@@ -1,9 +1,8 @@
+import logging
 from rest_framework import viewsets, filters
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Product, Location, Inventory, Order, Customer, CustomerInteraction, OrderItem, Category, ShippingManifest
-
-# ... (imports)
-
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Sum, Count, F
@@ -12,9 +11,13 @@ from decimal import Decimal
 from django.utils import timezone
 import datetime
 from .serializers import ProductSerializer, LocationSerializer, InventorySerializer, OrderSerializer, CustomerSerializer, CustomerInteractionSerializer, CategorySerializer, ShippingManifestSerializer
+from core.permissions import HasBrandAccess, HasFinanceAccess
+
+logger = logging.getLogger(__name__)
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().order_by('name').prefetch_related('inventory', 'productionjob_set', 'orderitem_set')
+    permission_classes = [IsAuthenticated, HasBrandAccess]
     
     def get_serializer_class(self):
         if self.request.query_params.get('lite'):
@@ -102,6 +105,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all().order_by('name')
     serializer_class = LocationSerializer
+    permission_classes = [IsAuthenticated, HasBrandAccess]
     
     def get_queryset(self):
         from django.db.models import Sum, Q
@@ -120,6 +124,7 @@ class LocationViewSet(viewsets.ModelViewSet):
 class InventoryViewSet(viewsets.ModelViewSet):
     queryset = Inventory.objects.select_related('product', 'location').all()
     serializer_class = InventorySerializer
+    permission_classes = [IsAuthenticated, HasBrandAccess]
 
     @action(detail=False, methods=['post'])
     @transaction.atomic
@@ -173,10 +178,10 @@ class InventoryViewSet(viewsets.ModelViewSet):
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.select_related('customer', 'location').prefetch_related('items', 'items__product').all().order_by('-created_at')
     serializer_class = OrderSerializer
+    permission_classes = [IsAuthenticated, HasBrandAccess]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['order_number', 'customer__name', 'customer__phone', 'status', 'shopify_order_id']
     filterset_fields = ['status', 'payment_method', 'location']
-
 
     @transaction.atomic
     def perform_create(self, serializer):
@@ -186,9 +191,12 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_update(self, serializer):
+        old_status = serializer.instance.status
         order = serializer.save()
-        from .services import OrderService
-        OrderService.process_new_order(order)
+        # Only run financial/inventory side-effects when status actually changes
+        if old_status != order.status:
+            from .services import OrderService
+            OrderService.process_new_order(order)
 
     @action(detail=True, methods=['post'])
     def fulfill(self, request, pk=None):
@@ -373,6 +381,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.prefetch_related('interactions').all().order_by('name')
     serializer_class = CustomerSerializer
+    permission_classes = [IsAuthenticated, HasBrandAccess]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend]
     search_fields = ['name', 'phone', 'email']
     filterset_fields = ['tier']
@@ -435,12 +444,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class CustomerInteractionViewSet(viewsets.ModelViewSet):
     queryset = CustomerInteraction.objects.all().order_by('-date')
     serializer_class = CustomerInteractionSerializer
+    permission_classes = [IsAuthenticated, HasBrandAccess]
 
 class AnalyticsViewSet(viewsets.ViewSet):
     """
     Dedicated endpoint for High-Level Dashboard Analytics.
     Aggregates data from Orders, Inventory, and Finance.
     """
+    permission_classes = [IsAuthenticated, HasBrandAccess]
 
     @action(detail=False, methods=['get'])
     def dashboard(self, request):
@@ -459,7 +470,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
                 # Include the end date fully by adding 1 day or using __date range
                 filters['created_at__date__range'] = [start_date, end_date]
             except ValueError:
-                pass # Ignore invalid dates
+                return Response({'error': 'Invalid date format. Use YYYY-MM-DD.'}, status=400)
         
         # 1. Financial Overview
         # Revenue
@@ -627,6 +638,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
+    permission_classes = [IsAuthenticated, HasBrandAccess]
 
     def get_queryset(self):
         from django.db.models import Sum, Q, F, DecimalField
@@ -659,11 +671,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class ShippingManifestViewSet(viewsets.ModelViewSet):
     queryset = ShippingManifest.objects.all().order_by('-date')
     serializer_class = ShippingManifestSerializer
+    permission_classes = [IsAuthenticated, HasBrandAccess]
 
 class ShopifyViewSet(viewsets.ViewSet):
     """
     Manage Shopify Connection and Sync.
     """
+    permission_classes = [IsAuthenticated, HasBrandAccess]
     @action(detail=False, methods=['get', 'post'])
     def config(self, request):
         from .models import ShopifyConfig
@@ -813,8 +827,9 @@ class ShopifyViewSet(viewsets.ViewSet):
             
             # Update Sync Time
             config = ShopifyConfig.objects.first()
-            config.last_sync_at = timezone.now()
-            config.save()
+            if config:
+                config.last_sync_at = timezone.now()
+                config.save()
             
             return Response({
                 'status': 'success',
@@ -849,32 +864,48 @@ class ShopifyViewSet(viewsets.ViewSet):
                 customer_data = so.get('customer', {})
                 line_items = so.get('line_items', [])
                 
-                # 1. Resolve Customer
+                # 1. Resolve Customer — never store fake phone numbers
                 customer = None
                 if customer_data:
-                    phone = customer_data.get('phone') or customer_data.get('default_address', {}).get('phone') or f"no-phone-{sid}"
-                    name = f"{customer_data.get('first_name')} {customer_data.get('last_name')}"
-                    
-                    customer, _ = Customer.objects.get_or_create(
-                        phone=phone,
-                        defaults={'name': name, 'email': email}
-                    )
-                
-                # 2. Create Order
-                # Check financial status
+                    raw_phone = (
+                        customer_data.get('phone') or
+                        customer_data.get('default_address', {}).get('phone') or ''
+                    ).strip()
+                    name = f"{customer_data.get('first_name', '')} {customer_data.get('last_name', '')}".strip() or 'Shopify Customer'
+                    if raw_phone:
+                        customer, _ = Customer.objects.get_or_create(
+                            phone=raw_phone,
+                            defaults={'name': name, 'email': email or ''}
+                        )
+                    elif email:
+                        customer = Customer.objects.filter(email=email).first()
+                        if not customer:
+                            # Use Shopify ID as a trackable placeholder — never left blank
+                            customer = Customer.objects.create(
+                                phone=f"SHO-{sid}",
+                                name=name,
+                                email=email
+                            )
+
+                # 2. Resolve Location — Shopify orders always go to Online location
+                online_location, _ = Location.objects.get_or_create(
+                    type=Location.LocationType.ONLINE,
+                    defaults={'name': 'Shopify Online', 'address': 'shopify.com'}
+                )
+
+                # 3. Create Order
                 fin_status = so.get('financial_status')
-                erp_status = Order.OrderStatus.PENDING
-                if fin_status == 'paid':
-                    erp_status = Order.OrderStatus.PAID
-                
+                erp_status = Order.OrderStatus.PAID if fin_status == 'paid' else Order.OrderStatus.PENDING
+
                 order = Order.objects.create(
                     shopify_order_id=sid,
                     order_number=order_num,
                     customer=customer,
                     customer_email=email,
+                    location=online_location,
                     total_price=so.get('total_price'),
                     status=erp_status,
-                    payment_method=Order.PaymentMethod.VISA # Assumption for online
+                    payment_method=Order.PaymentMethod.VISA
                 )
                 
                 # 3. Create Items

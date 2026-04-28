@@ -98,7 +98,7 @@ class Inventory(models.Model):
     """
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='inventory')
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='stock')
-    quantity = models.IntegerField(default=0)
+    quantity = models.DecimalField(max_digits=10, decimal_places=3, default=Decimal('0.000'))
     
     class Meta:
         unique_together = ('product', 'location')
@@ -241,8 +241,16 @@ class Order(models.Model):
         if not self.order_number:
             import random
             import string
-            suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-            self.order_number = f"ORD-{suffix}"
+            import uuid
+            for _ in range(10):
+                suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                candidate = f"ORD-{suffix}"
+                if not Order.objects.filter(order_number=candidate).exists():
+                    self.order_number = candidate
+                    break
+            else:
+                # Fallback: UUID ensures uniqueness after 10 collisions
+                self.order_number = f"ORD-{uuid.uuid4().hex[:8].upper()}"
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:

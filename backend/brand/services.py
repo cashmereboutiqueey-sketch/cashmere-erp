@@ -131,27 +131,36 @@ class OrderService:
     @staticmethod
     def _update_customer_metrics(order: Order):
         """
-        Recalculates Total Spent and LTV for the customer.
+        Recalculates Total Spent, LTV, current_debt, and tier for the customer.
         """
         customer = order.customer
         if not customer:
             return
 
-        # Aggregate all PAID orders
+        active_statuses = [Order.OrderStatus.PAID, Order.OrderStatus.FULFILLED, Order.OrderStatus.PENDING]
         stats = Order.objects.filter(
-            customer=customer, 
-            status__in=[Order.OrderStatus.PAID, Order.OrderStatus.FULFILLED]
+            customer=customer,
+            status__in=active_statuses
         ).aggregate(
-            total=Sum('total_price')
+            total_price=Sum('total_price'),
+            total_paid=Sum('amount_paid')
         )
-        
-        new_total = stats['total'] or Decimal('0.00')
+
+        total_price = stats['total_price'] or Decimal('0.00')
+        total_paid = stats['total_paid'] or Decimal('0.00')
+
+        # Only count PAID/FULFILLED for spent (not PENDING)
+        paid_stats = Order.objects.filter(
+            customer=customer,
+            status__in=[Order.OrderStatus.PAID, Order.OrderStatus.FULFILLED]
+        ).aggregate(total=Sum('total_price'))
+        new_total = paid_stats['total'] or Decimal('0.00')
+
         customer.total_spent = new_total
-        
-        # Simple Linear LTV (can be complex later)
         customer.ltv_score = new_total
-        
-        # Tier Logic — always recalculate so tier can downgrade after refunds
+        # Debt = sum of all active order totals minus what's been paid
+        customer.current_debt = max(Decimal('0.00'), total_price - total_paid)
+
         if new_total > 50000:
             customer.tier = Customer.Tier.VVIP
         elif new_total > 20000:
@@ -160,5 +169,5 @@ class OrderService:
             customer.tier = Customer.Tier.ELITE
         else:
             customer.tier = Customer.Tier.STANDARD
-            
+
         customer.save()

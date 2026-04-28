@@ -21,6 +21,9 @@ export default function OrdersPage() {
     const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
     const [shippingCompany, setShippingCompany] = useState('BOSTA');
 
+    const [isViewOpen, setIsViewOpen] = useState(false);
+    const [viewOrder, setViewOrder] = useState<any | null>(null);
+
     useEffect(() => {
         if (token) fetchOrders();
     }, [token]);
@@ -75,15 +78,15 @@ export default function OrdersPage() {
     };
 
     const StatusBadge = ({ status }: { status: string }) => {
-        const styles = {
+        const styles: Record<string, string> = {
             PENDING: "bg-amber-100 text-amber-800 border-amber-200",
             PENDING_PRODUCTION: "bg-purple-100 text-purple-800 border-purple-200",
             READY: "bg-indigo-100 text-indigo-800 border-indigo-200",
             PAID: "bg-blue-100 text-blue-800 border-blue-200",
             FULFILLED: "bg-green-100 text-green-800 border-green-200",
+            RETURNED: "bg-orange-100 text-orange-800 border-orange-200",
             CANCELLED: "bg-red-100 text-red-800 border-red-200",
         };
-        // @ts-ignore
         const style = styles[status] || "bg-gray-100 text-gray-800 border-gray-200";
 
         return (
@@ -152,7 +155,7 @@ export default function OrdersPage() {
             label: t('common.actions'),
             render: (row: any) => (
                 <div className="flex gap-2">
-                    {row.status === 'READY' && (
+                    {(row.status === 'READY' || row.status === 'PAID') && (
                         <button
                             onClick={() => openFulfillDialog(row)}
                             className="bg-cashmere-black text-white text-xs px-2 py-1 rounded flex items-center gap-1 hover:bg-stone-800"
@@ -161,7 +164,11 @@ export default function OrdersPage() {
                             <Truck size={12} /> Ship
                         </button>
                     )}
-                    <button className="text-stone-400 hover:text-cashmere-black transition-colors">
+                    <button
+                        onClick={() => { setViewOrder(row); setIsViewOpen(true); }}
+                        className="text-stone-400 hover:text-cashmere-black transition-colors"
+                        title="View order details"
+                    >
                         <Eye size={18} />
                     </button>
                 </div>
@@ -220,6 +227,34 @@ export default function OrdersPage() {
                 columns={columns}
                 data={filteredOrders}
             />
+
+            {/* Order Detail View Dialog */}
+            <Dialog
+                isOpen={isViewOpen}
+                onClose={() => setIsViewOpen(false)}
+                title={`Order #${viewOrder?.order_number}`}
+            >
+                {viewOrder && (
+                    <div className="space-y-4 text-sm">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><span className="font-bold text-stone-500">Customer</span><p>{viewOrder.customer_name || 'Guest'}</p></div>
+                            <div><span className="font-bold text-stone-500">Phone</span><p>{viewOrder.customer_phone || '—'}</p></div>
+                            <div><span className="font-bold text-stone-500">Status</span><p>{viewOrder.status}</p></div>
+                            <div><span className="font-bold text-stone-500">Payment</span><p>{viewOrder.payment_method}</p></div>
+                            <div><span className="font-bold text-stone-500">Total</span><p className="font-bold text-cashmere-maroon">{parseFloat(viewOrder.total_price || 0).toLocaleString()} EGP</p></div>
+                            <div><span className="font-bold text-stone-500">Amount Paid</span><p>{parseFloat(viewOrder.amount_paid || 0).toLocaleString()} EGP</p></div>
+                            <div><span className="font-bold text-stone-500">Date</span><p>{new Date(viewOrder.created_at).toLocaleDateString()}</p></div>
+                            <div><span className="font-bold text-stone-500">Shipping</span><p>{viewOrder.shipping_company || '—'}</p></div>
+                        </div>
+                        {viewOrder.notes && (
+                            <div><span className="font-bold text-stone-500">Notes</span><p className="mt-1 text-stone-600">{viewOrder.notes}</p></div>
+                        )}
+                        <div className="flex justify-end pt-2">
+                            <button onClick={() => setIsViewOpen(false)} className="px-4 py-2 rounded-lg bg-stone-100 text-stone-700 font-medium hover:bg-stone-200">Close</button>
+                        </div>
+                    </div>
+                )}
+            </Dialog>
 
             {/* Fulfillment Dialog */}
             <Dialog
