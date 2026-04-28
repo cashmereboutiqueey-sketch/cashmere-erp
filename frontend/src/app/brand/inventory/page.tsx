@@ -235,9 +235,9 @@ export default function BrandInventoryPage() {
 
             win.document.write(`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>
-  @page { size: 58mm auto; margin: 0; }
+  @page { size: 58mm 90mm portrait; margin: 0; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-  body { margin: 0; padding: 0; background: white; font-family: Arial, sans-serif; }
+  html, body { width: 58mm; margin: 0; padding: 0; background: white; font-family: Arial, sans-serif; }
 </style></head>
 <body>${content}
 <script>window.onload=function(){setTimeout(function(){window.print();window.close();},150);};<\/script>
