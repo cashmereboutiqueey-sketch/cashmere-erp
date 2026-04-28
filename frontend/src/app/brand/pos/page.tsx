@@ -214,6 +214,12 @@ export default function POSPage() {
         return item ? item.quantity : 0;
     };
 
+    // Total stock across ALL locations — used for "show in-stock only" filter
+    const getTotalStock = (product: Product) => {
+        if (!product.inventory) return 0;
+        return product.inventory.reduce((sum: number, i: InventoryItem) => sum + (i.quantity || 0), 0);
+    };
+
     const addToCart = (product: Product) => {
         // Optional: Check stock before adding? The user might want to oversell/backorder.
         // For now, allow it but maybe warn visually. 
@@ -433,7 +439,7 @@ export default function POSPage() {
             p.sku.toLowerCase().includes(productSearch.toLowerCase()) ||
             (p.barcode && p.barcode.includes(productSearch)); // Added barcode search
 
-        if (showInStockOnly && getStockForLocation(p) <= 0) {
+        if (showInStockOnly && getTotalStock(p) <= 0) {
             return false;
         }
 
@@ -722,16 +728,16 @@ export default function POSPage() {
                 title={selectedModel?.name || 'Select Variant'}
             >
                 <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                    {selectedModel?.variants.map(variant => {
-                        const stock = getStockForLocation(variant);
-                        const isOOS = stock <= 0;
+                    {[...(selectedModel?.variants || [])].sort((a, b) => getTotalStock(b) - getTotalStock(a)).map(variant => {
+                        const stockHere = getStockForLocation(variant);
+                        const stockTotal = getTotalStock(variant);
+                        const isOOS = stockTotal <= 0;
+                        const hasStockElsewhere = stockTotal > 0 && stockHere <= 0;
 
-                        // Parse Variant Name (e.g. "T-Shirt (Red)" -> "Red")
-                        // If name == model name, maybe show SKU or Sideloaded size/color
-                        const variantLabel = variant.name.replace(selectedModel.name, '').replace(/[()]/g, '').trim() || variant.sku;
+                        const variantLabel = variant.sku;
 
                         return (
-                            <div key={variant.id} className="flex items-center justify-between p-3 border border-stone-100 rounded-lg hover:bg-stone-50 transition-colors">
+                            <div key={variant.id} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${isOOS ? 'border-stone-100 bg-stone-50 opacity-60' : hasStockElsewhere ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 bg-stone-200 rounded-md overflow-hidden flex-shrink-0">
                                         {variant.image || variant.image_url ? (
@@ -742,9 +748,8 @@ export default function POSPage() {
                                     </div>
                                     <div>
                                         <h4 className="font-bold text-stone-800">{variantLabel}</h4>
-                                        <p className="text-xs text-stone-500 font-mono">{variant.sku}</p>
-                                        <div className={`text-xs font-bold flex items-center gap-1 mt-1 ${isOOS ? 'text-red-500' : 'text-green-600'}`}>
-                                            {stock} in Stock
+                                        <div className={`text-xs font-bold mt-1 ${isOOS ? 'text-red-500' : hasStockElsewhere ? 'text-amber-600' : 'text-green-600'}`}>
+                                            {isOOS ? 'Out of Stock' : hasStockElsewhere ? `${stockTotal} pcs (other warehouse)` : `${stockHere} pcs here`}
                                         </div>
                                     </div>
                                 </div>
@@ -756,11 +761,7 @@ export default function POSPage() {
 
                                     {isOOS ? (
                                         <button
-                                            onClick={() => {
-                                                setProductionRequestData({ product: variant, quantity: '10' });
-                                                setIsRequestProductionOpen(true);
-                                                // setSelectedModel(null); // Keep open? Or close? Keep open better.
-                                            }}
+                                            onClick={() => { setProductionRequestData({ product: variant, quantity: '10' }); setIsRequestProductionOpen(true); }}
                                             className="bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-700 shadow-sm flex items-center gap-1 text-xs font-bold"
                                             title="Request Production"
                                         >
@@ -768,10 +769,7 @@ export default function POSPage() {
                                         </button>
                                     ) : (
                                         <button
-                                            onClick={() => {
-                                                addToCart(variant);
-                                                // setSelectedModel(null); // Optional: Close on add? standard POS keeps open for multi-add
-                                            }}
+                                            onClick={() => addToCart(variant)}
                                             className="bg-cashmere-gold text-white p-2 rounded-lg hover:bg-yellow-600 shadow-sm transition-colors"
                                             title="Add to Cart"
                                         >
