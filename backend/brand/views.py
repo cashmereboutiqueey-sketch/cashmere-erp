@@ -26,10 +26,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         return ProductSerializer
     
     def get_queryset(self):
-        from factory.models import ProductionJob
+        if self.request.query_params.get('lite'):
+            return Product.objects.all().order_by('name')
+
         from django.db.models import Sum, Q
         from django.db.models.functions import Coalesce
-        
+
         return super().get_queryset().annotate(
             total_produced=Coalesce(
                 Sum('productionjob__quantity', filter=Q(productionjob__status='COMPLETED')),

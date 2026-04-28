@@ -56,9 +56,10 @@ export default function FactoryProductCatalog() {
 
     const fetchProducts = React.useCallback(() => {
         if (!token) return;
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/`, { headers: { 'Authorization': `Bearer ${token}` } })
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/?lite=true&page_size=200`, { headers: { 'Authorization': `Bearer ${token}` } })
             .then(res => res.json())
-            .then((data: Product[]) => {
+            .then((raw: any) => {
+                const data: Product[] = Array.isArray(raw) ? raw : (raw.results || []);
                 setProducts(data);
 
                 // Group by Style Name (or Name if Style is missing)
@@ -235,7 +236,7 @@ export default function FactoryProductCatalog() {
                             title="Click to Change Image"
                         >
                             {style.variants[0]?.image || style.variants[0]?.image_url ? (
-                                <img src={style.variants[0].image_url || style.variants[0].image} alt={style.name} className="w-full h-full object-cover" />
+                                <img src={style.variants[0].image_url || style.variants[0].image} alt={style.name} className="w-full h-full object-cover" loading="lazy" />
                             ) : (
                                 <Package size={40} className="text-stone-300" />
                             )}
