@@ -95,12 +95,31 @@ export default function ProductCatalogPage() {
 
     // Label Printing
     const [labelProduct, setLabelProduct] = useState<Product | null>(null);
+
     const handlePrintLabel = (product: Product) => {
         setLabelProduct(product);
-        // 500ms lets React commit the new labelProduct and the browser paint the SVG
+        // Wait for React to render the barcode SVG into the off-screen div, then
+        // capture its HTML and print from a clean popup window so that
+        // @page { size: 58mm } applies correctly without fighting the main page CSS.
         setTimeout(() => {
-            window.print();
-        }, 500);
+            const printArea = document.getElementById('thermal-labels-print-area');
+            const content = printArea?.innerHTML?.trim();
+            if (!content) { window.print(); return; }
+
+            const win = window.open('', '_blank', 'width=260,height=420,toolbar=no,scrollbars=no,menubar=no,status=no');
+            if (!win) { window.print(); return; }
+
+            win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+  @page { size: 58mm auto; margin: 0; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+  body { margin: 0; padding: 0; background: white; font-family: Arial, sans-serif; }
+</style></head>
+<body>${content}
+<script>window.onload=function(){setTimeout(function(){window.print();window.close();},150);};<\/script>
+</body></html>`);
+            win.document.close();
+        }, 600);
     };
 
     // Edit / Create Logic

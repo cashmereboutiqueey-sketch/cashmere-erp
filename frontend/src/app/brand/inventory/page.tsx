@@ -230,7 +230,25 @@ export default function BrandInventoryPage() {
             product_barcode: item.product_barcode,
             product_price: item.product_price
         })));
-        setTimeout(() => window.print(), 500);
+        setTimeout(() => {
+            const printArea = document.getElementById('thermal-labels-print-area');
+            const content = printArea?.innerHTML?.trim();
+            if (!content) { window.print(); return; }
+
+            const win = window.open('', '_blank', 'width=260,height=600,toolbar=no,scrollbars=no,menubar=no,status=no');
+            if (!win) { window.print(); return; }
+
+            win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+  @page { size: 58mm auto; margin: 0; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+  body { margin: 0; padding: 0; background: white; font-family: Arial, sans-serif; }
+</style></head>
+<body>${content}
+<script>window.onload=function(){setTimeout(function(){window.print();window.close();},150);};<\/script>
+</body></html>`);
+            win.document.close();
+        }, 600);
     };
 
     const stats = {
