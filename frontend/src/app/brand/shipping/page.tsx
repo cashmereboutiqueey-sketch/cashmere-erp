@@ -53,12 +53,7 @@ export default function ShippingPage() {
         })
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setOrders(data);
-                } else {
-                    console.error("API returned non-array:", data);
-                    setOrders([]);
-                }
+                setOrders(Array.isArray(data) ? data : (data.results || []));
                 setLoading(false);
             })
             .catch(err => {

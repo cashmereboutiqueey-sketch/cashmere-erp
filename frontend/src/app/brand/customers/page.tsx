@@ -69,12 +69,7 @@ export default function CustomersPage() {
         })
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setCustomers(data);
-                } else {
-                    console.error("API returned non-array:", data);
-                    setCustomers([]);
-                }
+                setCustomers(Array.isArray(data) ? data : (data.results || []));
                 setLoading(false);
             })
             .catch(err => {

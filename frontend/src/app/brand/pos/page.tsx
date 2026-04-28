@@ -106,19 +106,13 @@ export default function POSPage() {
         })
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    // Mock price 
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const productsWithPrice = data.map((p: any) => ({
-                        ...p,
-                        price: p.retail_price ? parseFloat(p.retail_price) : 1500,
-                        inventory: p.inventory || []
-                    }));
-                    setProducts(productsWithPrice);
-                } else {
-                    console.error("Products API returned non-array:", data);
-                    setProducts([]);
-                }
+                const list = Array.isArray(data) ? data : (data.results || []);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                setProducts(list.map((p: any) => ({
+                    ...p,
+                    price: p.retail_price ? parseFloat(p.retail_price) : 1500,
+                    inventory: p.inventory || []
+                })));
                 setLoading(false);
             })
             .catch(err => {
@@ -138,12 +132,7 @@ export default function POSPage() {
         })
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setCustomers(data);
-                } else {
-                    console.error("Customers API returned non-array:", data);
-                    setCustomers([]);
-                }
+                setCustomers(Array.isArray(data) ? data : (data.results || []));
             })
             .catch(err => console.error(err));
 
@@ -153,17 +142,13 @@ export default function POSPage() {
         })
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setLocations(data);
-                    const mainWarehouse = data.find((l: Location) => l.name === "Main Warehouse");
-                    if (mainWarehouse) {
-                        setSelectedLocation(mainWarehouse.id.toString());
-                    } else if (data.length > 0) {
-                        setSelectedLocation(data[0].id.toString());
-                    }
-                } else {
-                    console.error("Locations API returned non-array:", data);
-                    setLocations([]);
+                const locs = Array.isArray(data) ? data : (data.results || []);
+                setLocations(locs);
+                const mainWarehouse = locs.find((l: Location) => l.name === "Main Warehouse");
+                if (mainWarehouse) {
+                    setSelectedLocation(mainWarehouse.id.toString());
+                } else if (locs.length > 0) {
+                    setSelectedLocation(locs[0].id.toString());
                 }
             })
             .catch(err => console.error(err));

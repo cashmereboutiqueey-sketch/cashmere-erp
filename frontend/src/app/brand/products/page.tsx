@@ -58,12 +58,7 @@ export default function ProductCatalogPage() {
         })
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setProducts(data);
-                } else {
-                    console.error("Products API returned non-array:", data);
-                    setProducts([]);
-                }
+                setProducts(Array.isArray(data) ? data : (data.results || []));
                 setLoading(false);
             })
             .catch(err => {
