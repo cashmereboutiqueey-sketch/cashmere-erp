@@ -47,8 +47,9 @@ export interface PayrollRecord {
 export const hrService = {
     // Workers
     getWorkers: async () => {
-        const response = await api.get<Worker[]>('/factory/workers/');
-        return response.data;
+        const response = await api.get<Worker[] | { results: Worker[] }>('/factory/workers/');
+        const data = response.data;
+        return Array.isArray(data) ? data : (data.results || []);
     },
     createWorker: async (data: Partial<Worker>) => {
         const response = await api.post<Worker>('/factory/workers/', data);

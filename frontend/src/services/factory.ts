@@ -11,8 +11,9 @@ export interface ProductionJob {
 
 export const jobsService = {
     getJobs: async () => {
-        const response = await api.get<ProductionJob[]>('/factory/jobs/');
-        return response.data;
+        const response = await api.get<ProductionJob[] | { results: ProductionJob[] }>('/factory/jobs/');
+        const data = response.data;
+        return Array.isArray(data) ? data : (data.results || []);
     },
     // Add other methods as needed
 };
