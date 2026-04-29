@@ -109,5 +109,12 @@ class FinancialTransaction(models.Model):
     date = models.DateField(default=datetime.date.today, help_text="Date of transaction")
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['type', 'module', 'date']),
+            models.Index(fields=['module', 'category']),
+        ]
+        unique_together = [('reference_id', 'module', 'category')]
+
     def __str__(self) -> str:
         return f"{self.get_type_display()}: {self.amount} ({self.date})"

@@ -110,7 +110,7 @@ export default function POSPage() {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 setProducts(list.map((p: any) => ({
                     ...p,
-                    price: p.retail_price ? parseFloat(p.retail_price) : 1500,
+                    price: parseFloat(p.retail_price) || 0,
                     inventory: p.inventory || []
                 })));
                 setLoading(false);
@@ -159,12 +159,7 @@ export default function POSPage() {
         })
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setCategories(data);
-                } else {
-                    console.error("Categories API returned non-array:", data);
-                    setCategories([]);
-                }
+                setCategories(Array.isArray(data) ? data : (data.results || []));
             })
             .catch(err => console.error(err));
     }, [fetchProductData, token]);
@@ -1079,8 +1074,9 @@ function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
             const res = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
 
-            if (data && data.length > 0) {
-                setFoundOrder(data[0]);
+            const list = Array.isArray(data) ? data : (data.results || []);
+            if (list.length > 0) {
+                setFoundOrder(list[0]);
                 setReturnItems({});
             } else {
                 alert("Order not found");

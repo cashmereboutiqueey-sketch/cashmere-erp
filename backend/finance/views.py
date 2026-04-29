@@ -40,7 +40,7 @@ class TreasuryViewSet(viewsets.ModelViewSet):
             if daily_treasury.balance < amount:
                 return Response({'error': 'Insufficient funds in Daily Treasury'}, status=400)
 
-            ref_id = f'TRF-{uuid.uuid4().hex[:8].upper()}'
+            base_ref = f'TRF-{uuid.uuid4().hex[:8].upper()}'
             daily_treasury.balance -= amount
             daily_treasury.save()
             FinancialTransaction.objects.create(
@@ -49,7 +49,7 @@ class TreasuryViewSet(viewsets.ModelViewSet):
                 category='Transfer to Main',
                 treasury=daily_treasury,
                 amount=-amount,
-                reference_id=ref_id,
+                reference_id=f'{base_ref}-OUT',
                 description=f"Transfer to {main_treasury.name}"
             )
 
@@ -61,7 +61,7 @@ class TreasuryViewSet(viewsets.ModelViewSet):
                 category='Received from Daily',
                 treasury=main_treasury,
                 amount=amount,
-                reference_id=ref_id,
+                reference_id=f'{base_ref}-IN',
                 description=f"Transfer from {daily_treasury.name}"
             )
 

@@ -14,7 +14,12 @@ def _verify_shopify_hmac(request) -> bool:
     """Return True if the request HMAC matches our webhook secret."""
     secret = getattr(settings, 'SHOPIFY_WEBHOOK_SECRET', '')
     if not secret:
-        return True  # Not configured — allow (log a warning in prod)
+        import logging
+        logging.getLogger(__name__).error(
+            "SHOPIFY_WEBHOOK_SECRET is not configured — rejecting webhook. "
+            "Set SHOPIFY_WEBHOOK_SECRET in your environment."
+        )
+        return False
     hmac_header = request.headers.get('X-Shopify-Hmac-Sha256', '')
     if not hmac_header:
         return False

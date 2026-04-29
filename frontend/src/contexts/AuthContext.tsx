@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
+import { registerRefreshCallback } from "@/services/api";
 
 interface User {
     user_id: number;
@@ -91,6 +92,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return false;
         }
     }, []);
+
+    // Wire api.ts 401-retry to this context's refresh function
+    useEffect(() => {
+        registerRefreshCallback(async () => {
+            const ok = await tryRefreshToken();
+            return ok ? (Cookies.get('access_token') ?? null) : null;
+        });
+    }, [tryRefreshToken]);
 
     const logout = useCallback(async () => {
         if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);

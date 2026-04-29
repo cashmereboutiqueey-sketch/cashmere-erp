@@ -2,16 +2,29 @@ import Cookies from 'js-cookie';
 
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api`;
 
-/** Drop-in replacement for fetch() that automatically injects the Bearer token */
-export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
-    const token = Cookies.get('access_token');
-    return fetch(url, {
-        ...options,
-        headers: {
-            ...(options.headers as Record<string, string> || {}),
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-    });
+// Registered by AuthContext — calls the refresh endpoint and updates cookies.
+// Returns the new access token, or null if refresh failed.
+let _refreshCallback: (() => Promise<string | null>) | null = null;
+let _isRefreshing = false;
+let _refreshQueue: Array<(token: string | null) => void> = [];
+
+export function registerRefreshCallback(cb: () => Promise<string | null>): void {
+    _refreshCallback = cb;
+}
+
+async function doRefresh(): Promise<string | null> {
+    if (_isRefreshing) {
+        return new Promise(resolve => _refreshQueue.push(resolve));
+    }
+    _isRefreshing = true;
+    try {
+        const token = _refreshCallback ? await _refreshCallback() : null;
+        _refreshQueue.forEach(resolve => resolve(token));
+        _refreshQueue = [];
+        return token;
+    } finally {
+        _isRefreshing = false;
+    }
 }
 
 function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
@@ -23,12 +36,38 @@ function authHeaders(extra: Record<string, string> = {}): Record<string, string>
     };
 }
 
+// Executes a fetch, retries once with a refreshed token on 401.
+// `makeFetch` must re-read the cookie each call so the retry gets the new token.
+async function withRetry(makeFetch: () => Promise<Response>): Promise<Response> {
+    let res = await makeFetch();
+    if (res.status === 401 && _refreshCallback) {
+        const newToken = await doRefresh();
+        if (newToken) {
+            res = await makeFetch();
+        }
+    }
+    return res;
+}
+
+/** Drop-in replacement for fetch() that injects Bearer token and retries on 401. */
+export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+    return withRetry(() => {
+        const token = Cookies.get('access_token');
+        return fetch(url, {
+            ...options,
+            headers: {
+                ...(options.headers as Record<string, string> || {}),
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+        });
+    });
+}
+
 const api = {
     get: async <T>(endpoint: string): Promise<{ data: T }> => {
-        const res = await fetch(`${BASE_URL}${endpoint}`, {
-            cache: 'no-store',
-            headers: authHeaders(),
-        });
+        const res = await withRetry(() =>
+            fetch(`${BASE_URL}${endpoint}`, { cache: 'no-store', headers: authHeaders() })
+        );
         if (!res.ok) {
             const errorBody = await res.text();
             throw new Error(`API Error ${res.status}: ${errorBody || res.statusText}`);
@@ -37,12 +76,11 @@ const api = {
         return { data };
     },
 
-    post: async <T>(endpoint: string, body: any): Promise<{ data: T }> => {
-        const res = await fetch(`${BASE_URL}${endpoint}`, {
-            method: 'POST',
-            headers: authHeaders(),
-            body: JSON.stringify(body),
-        });
+    post: async <T>(endpoint: string, body: unknown): Promise<{ data: T }> => {
+        const bodyStr = JSON.stringify(body);
+        const res = await withRetry(() =>
+            fetch(`${BASE_URL}${endpoint}`, { method: 'POST', headers: authHeaders(), body: bodyStr })
+        );
         if (!res.ok) {
             const errorBody = await res.text();
             throw new Error(`API Error ${res.status}: ${errorBody || res.statusText}`);
@@ -51,12 +89,11 @@ const api = {
         return { data };
     },
 
-    patch: async <T>(endpoint: string, body: any): Promise<{ data: T }> => {
-        const res = await fetch(`${BASE_URL}${endpoint}`, {
-            method: 'PATCH',
-            headers: authHeaders(),
-            body: JSON.stringify(body),
-        });
+    patch: async <T>(endpoint: string, body: unknown): Promise<{ data: T }> => {
+        const bodyStr = JSON.stringify(body);
+        const res = await withRetry(() =>
+            fetch(`${BASE_URL}${endpoint}`, { method: 'PATCH', headers: authHeaders(), body: bodyStr })
+        );
         if (!res.ok) {
             const errorBody = await res.text();
             throw new Error(`API Error ${res.status}: ${errorBody || res.statusText}`);
@@ -65,12 +102,11 @@ const api = {
         return { data };
     },
 
-    put: async <T>(endpoint: string, body: any): Promise<{ data: T }> => {
-        const res = await fetch(`${BASE_URL}${endpoint}`, {
-            method: 'PUT',
-            headers: authHeaders(),
-            body: JSON.stringify(body),
-        });
+    put: async <T>(endpoint: string, body: unknown): Promise<{ data: T }> => {
+        const bodyStr = JSON.stringify(body);
+        const res = await withRetry(() =>
+            fetch(`${BASE_URL}${endpoint}`, { method: 'PUT', headers: authHeaders(), body: bodyStr })
+        );
         if (!res.ok) {
             const errorBody = await res.text();
             throw new Error(`API Error ${res.status}: ${errorBody || res.statusText}`);
@@ -80,10 +116,9 @@ const api = {
     },
 
     delete: async (endpoint: string): Promise<void> => {
-        const res = await fetch(`${BASE_URL}${endpoint}`, {
-            method: 'DELETE',
-            headers: authHeaders(),
-        });
+        const res = await withRetry(() =>
+            fetch(`${BASE_URL}${endpoint}`, { method: 'DELETE', headers: authHeaders() })
+        );
         if (!res.ok) {
             const errorBody = await res.text();
             throw new Error(`API Error ${res.status}: ${errorBody || res.statusText}`);
@@ -91,11 +126,13 @@ const api = {
     },
 
     postForm: async <T>(endpoint: string, formData: FormData): Promise<{ data: T }> => {
-        const token = Cookies.get('access_token');
-        const res = await fetch(`${BASE_URL}${endpoint}`, {
-            method: 'POST',
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            body: formData,
+        const res = await withRetry(() => {
+            const token = Cookies.get('access_token');
+            return fetch(`${BASE_URL}${endpoint}`, {
+                method: 'POST',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                body: formData,
+            });
         });
         if (!res.ok) {
             const errorBody = await res.text();

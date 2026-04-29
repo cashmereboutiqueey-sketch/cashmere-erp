@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip3 show *)",
+      "Bash(pip3 install *)",
+      "Bash(curl -s -X GET https://developers.hostinger.com/api/dns/v1/zones/cashmerebotique.tech -H 'Authorization: Bearer wby2SwleWUeR7uihNd9Ad1IQAmKkai7YKiIZzU2Hd203ac32' -H 'Content-Type: application/json')",
+      "Bash(python -m json.tool)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
+    ]
+  }
+}

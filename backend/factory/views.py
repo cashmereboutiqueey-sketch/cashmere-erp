@@ -236,6 +236,41 @@ class BOMViewSet(viewsets.ModelViewSet):
     queryset = BOM.objects.prefetch_related('items__raw_material').all()
     serializer_class = BOMSerializer
     permission_classes = [IsAuthenticated, HasFactoryAccess]
+    filterset_fields = ['product']
+
+    def _apply_pricing(self, request, product_id, warnings):
+        """Recalculate and save product costing after BOM create/update."""
+        try:
+            from brand.models import Product
+            from finance.models import ProductCosting
+            factory_margin = Decimal(str(request.data.get('factory_margin', 0)))
+            labor_cost = Decimal(str(request.data.get('labor_cost', 0)))
+            overhead_cost = Decimal(str(request.data.get('overhead_cost', 0)))
+            items_data = request.data.get('items', [])
+            material_ids = [item['raw_material'] for item in items_data]
+            materials = {m.id: m.cost_per_unit for m in RawMaterial.objects.filter(id__in=material_ids)}
+            prod = Product.objects.get(id=product_id)
+            costing, _ = ProductCosting.objects.get_or_create(product=prod)
+            costing.direct_labor_cost = labor_cost
+            costing.overhead_allocation = overhead_cost
+            costing.factory_margin_percent = factory_margin
+            costing.save()
+            prod.factory_margin = factory_margin
+            prod.standard_cost = costing.transfer_price
+            prod.save()
+        except Exception as e:
+            logger.error(f"BOM pricing update failed for product {product_id}: {e}", exc_info=True)
+            warnings.append(f"BOM saved but pricing update failed: {str(e)}")
+
+    def update(self, request, *args, **kwargs):
+        warnings = []
+        response = super().update(request, *args, **kwargs)
+        if response.status_code in (200, 201):
+            product_id = request.data.get('product') or self.get_object().product_id
+            self._apply_pricing(request, product_id, warnings)
+            if warnings:
+                response.data['warnings'] = warnings
+        return response
 
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
@@ -267,28 +302,7 @@ class BOMViewSet(viewsets.ModelViewSet):
                 warnings.append(f"Variant propagation failed: {str(e)}")
 
         # Update product pricing
-        try:
-            from brand.models import Product
-            from finance.models import ProductCosting
-            product_id = request.data.get('product')
-            factory_margin = Decimal(str(request.data.get('factory_margin', 0)))
-            labor_cost = Decimal(str(request.data.get('labor_cost', 0)))
-            overhead_cost = Decimal(str(request.data.get('overhead_cost', 0)))
-            items_data = request.data.get('items', [])
-            material_ids = [item['raw_material'] for item in items_data]
-            materials = {m.id: m.cost_per_unit for m in RawMaterial.objects.filter(id__in=material_ids)}
-            prod = Product.objects.get(id=product_id)
-            costing, _ = ProductCosting.objects.get_or_create(product=prod)
-            costing.direct_labor_cost = labor_cost
-            costing.overhead_allocation = overhead_cost
-            costing.factory_margin_percent = factory_margin
-            costing.save()
-            prod.factory_margin = factory_margin
-            prod.standard_cost = costing.transfer_price
-            prod.save()
-        except Exception as e:
-            logger.error(f"BOM pricing update failed for product {request.data.get('product')}: {e}", exc_info=True)
-            warnings.append(f"BOM saved but pricing update failed: {str(e)}")
+        self._apply_pricing(request, request.data.get('product'), warnings)
 
         if warnings:
             response.data['warnings'] = warnings

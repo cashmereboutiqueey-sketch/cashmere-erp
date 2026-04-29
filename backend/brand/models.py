@@ -237,6 +237,11 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+        ]
+
     def save(self, *args, **kwargs):
         if not self.order_number:
             import random

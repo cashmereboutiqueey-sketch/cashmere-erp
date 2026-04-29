@@ -38,27 +38,61 @@ function BOMBuilderContent() {
     const searchParams = useSearchParams();
     const productIdParam = searchParams.get('productId') || "";
 
-    const [products, setProducts] = useState<Product[]>([]);
+    const [allProducts, setAllProducts] = useState<Product[]>([]);
     const [materials, setMaterials] = useState<RawMaterial[]>([]);
+    const [bomProductIds, setBomProductIds] = useState<Set<number>>(new Set());
     const [selectedProduct, setSelectedProduct] = useState<string>(productIdParam);
+    const [editingBomId, setEditingBomId] = useState<number | null>(null);
     const [lines, setLines] = useState<BOMLineItem[]>([]);
-    const [factoryMargin, setFactoryMargin] = useState<number>(30); // Default 30%
+    const [factoryMargin, setFactoryMargin] = useState<number>(30);
     const [laborCost, setLaborCost] = useState<number>(0);
     const [overheadCost, setOverheadCost] = useState<number>(0);
-
     const [applyToVariants, setApplyToVariants] = useState(false);
+    const [editProductId, setEditProductId] = useState<string>('');
 
-    // Fetch Data on Load
+    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    const productsWithoutBOM = allProducts.filter(p => !bomProductIds.has(p.id));
+    const productsWithBOM = allProducts.filter(p => bomProductIds.has(p.id));
+
+    // Fetch products, materials, and existing BOMs
     useEffect(() => {
         if (!token) return;
         Promise.all([
-            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json()),
-            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/materials/`, { headers: { 'Authorization': `Bearer ${token}` } }).then(r => r.json())
-        ]).then(([prodData, matData]) => {
-            setProducts(Array.isArray(prodData) ? prodData : prodData.results || prodData.data || []);
-            setMaterials(Array.isArray(matData) ? matData : matData.results || matData.data || []);
+            fetch(`${API}/api/brand/products/?page_size=500&lite=true`, { headers }).then(r => r.json()),
+            fetch(`${API}/api/factory/materials/?page_size=500`, { headers }).then(r => r.json()),
+            fetch(`${API}/api/factory/boms/?page_size=500`, { headers }).then(r => r.json()),
+        ]).then(([prodData, matData, bomData]) => {
+            const prods: Product[] = Array.isArray(prodData) ? prodData : prodData.results || [];
+            const mats: RawMaterial[] = Array.isArray(matData) ? matData : matData.results || [];
+            const boms: { id: number; product: number; items: BOMLineItem[] }[] = Array.isArray(bomData) ? bomData : bomData.results || [];
+            setAllProducts(prods);
+            setMaterials(mats);
+            setBomProductIds(new Set(boms.map(b => b.product)));
         });
     }, [token]);
+
+    // Load existing BOM when edit product is selected
+    const loadBomForEdit = async (productId: string) => {
+        if (!productId) { setEditProductId(''); setSelectedProduct(''); setEditingBomId(null); setLines([]); return; }
+        setEditProductId(productId);
+        setSelectedProduct(productId);
+        try {
+            const res = await fetch(`${API}/api/factory/boms/?product=${productId}`, { headers });
+            const data = await res.json();
+            const boms = Array.isArray(data) ? data : data.results || [];
+            if (boms.length > 0) {
+                const bom = boms[0];
+                setEditingBomId(bom.id);
+                setLines(bom.items.map((item: { raw_material: number; quantity: number; waste_percentage: number }) => ({
+                    raw_material_id: item.raw_material,
+                    quantity: item.quantity,
+                    waste_percentage: item.waste_percentage,
+                })));
+            }
+        } catch (e) { console.error(e); }
+    };
 
     const addLine = () => {
         setLines([...lines, { raw_material_id: 0, quantity: 1, waste_percentage: 0 }]);
@@ -86,6 +120,7 @@ function BOMBuilderContent() {
     const saveBOM = async () => {
         if (!selectedProduct) return alert(t('bom.alerts.selectProduct'));
         if (lines.length === 0) return alert(t('bom.alerts.noItems'));
+        if (lines.some(l => !l.raw_material_id)) return alert('Please select a material for every row.');
 
         const payload = {
             product: parseInt(selectedProduct),
@@ -94,29 +129,40 @@ function BOMBuilderContent() {
             items: lines.map(line => ({
                 raw_material: line.raw_material_id,
                 quantity: line.quantity,
-                waste_percentage: line.waste_percentage
+                waste_percentage: line.waste_percentage,
             })),
             labor_cost: laborCost,
-            overhead_cost: overheadCost
+            overhead_cost: overheadCost,
         };
 
+        const isUpdate = !!editingBomId;
+        const url = isUpdate
+            ? `${API}/api/factory/boms/${editingBomId}/`
+            : `${API}/api/factory/boms/`;
+        const method = isUpdate ? 'PATCH' : 'POST';
+
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/boms/`, {
-                method: 'POST',
+            const res = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
             });
 
             if (res.ok) {
-                alert(t('bom.alerts.saved'));
-                // Optional: redirect or clear
+                alert(isUpdate ? 'BOM updated successfully.' : t('bom.alerts.saved'));
+                // Update local state so newly created BOM appears in the edit list
+                if (!isUpdate) {
+                    setBomProductIds(prev => new Set([...prev, parseInt(selectedProduct)]));
+                }
                 setLines([]);
-                setSelectedProduct("");
+                setSelectedProduct('');
+                setEditProductId('');
+                setEditingBomId(null);
                 setApplyToVariants(false);
             } else {
                 const err = await res.json();
                 console.error(err);
-                alert(t('bom.alerts.error') + ": " + JSON.stringify(err));
+                alert(t('bom.alerts.error') + ': ' + JSON.stringify(err));
             }
         } catch (e) {
             console.error(e);
@@ -140,20 +186,53 @@ function BOMBuilderContent() {
 
             {/* Header: Product Selection */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-stone-200 mb-6 flex gap-6 items-center">
-                <div className="w-1/3">
-                    <label className="block text-xs font-bold uppercase text-stone-500 mb-1">{t('bom.targetProduct')}</label>
-                    <select
-                        className="w-full border-stone-300 rounded-md shadow-sm focus:ring-cashmere-maroon focus:border-cashmere-maroon sm:text-sm"
-                        value={selectedProduct}
-                        onChange={(e) => setSelectedProduct(e.target.value)}
-                    >
-                        <option value="">{t('bom.selectProduct')}</option>
-                        {products.map(p => (
-                            <option key={p.id} value={p.id}>{p.sku} - {p.name}</option>
-                        ))}
-                    </select>
+                <div className="w-1/3 space-y-4">
+                    {/* New BOM — products without a BOM */}
+                    <div>
+                        <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
+                            {t('bom.targetProduct')}
+                            {productsWithoutBOM.length > 0 && (
+                                <span className="ml-2 text-amber-600 font-normal normal-case">
+                                    ({productsWithoutBOM.length} need a BOM)
+                                </span>
+                            )}
+                        </label>
+                        <select
+                            className="w-full border-stone-300 rounded-md shadow-sm focus:ring-cashmere-maroon focus:border-cashmere-maroon sm:text-sm"
+                            value={editingBomId ? '' : selectedProduct}
+                            onChange={(e) => { setEditingBomId(null); setEditProductId(''); setSelectedProduct(e.target.value); setLines([]); }}
+                        >
+                            <option value="">{t('bom.selectProduct')}</option>
+                            {productsWithoutBOM.map(p => (
+                                <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                    <div className="mt-3 flex items-center gap-2">
+                    {/* Edit existing BOM */}
+                    {productsWithBOM.length > 0 && (
+                        <div>
+                            <label className="block text-xs font-bold uppercase text-stone-500 mb-1">
+                                Edit Existing BOM
+                                <span className="ml-2 text-stone-400 font-normal normal-case">({productsWithBOM.length} products)</span>
+                            </label>
+                            <select
+                                className="w-full border-stone-300 rounded-md shadow-sm focus:ring-cashmere-maroon focus:border-cashmere-maroon sm:text-sm"
+                                value={editProductId}
+                                onChange={(e) => loadBomForEdit(e.target.value)}
+                            >
+                                <option value="">Select to edit…</option>
+                                {productsWithBOM.map(p => (
+                                    <option key={p.id} value={p.id}>{p.sku} — {p.name}</option>
+                                ))}
+                            </select>
+                            {editingBomId && (
+                                <p className="text-xs text-emerald-600 mt-1 font-medium">✓ Editing existing BOM — Save will update it.</p>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
                         <input
                             type="checkbox"
                             id="applyAll"

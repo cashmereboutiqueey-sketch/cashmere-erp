@@ -84,8 +84,11 @@ class SupplierPayment(models.Model):
         if not self.pk: # Only on create
             with transaction.atomic():
                 # 1. Deduct from Supplier Balance (Debt Decreases)
-                self.supplier.balance -= self.amount
-                self.supplier.save()
+                # select_for_update prevents concurrent payments from racing on the same supplier
+                supplier = Supplier.objects.select_for_update().get(pk=self.supplier_id)
+                supplier.balance -= self.amount
+                supplier.save()
+                self.supplier = supplier
                 
                 # 2. Create Financial Transaction (Expense)
                 from finance.models import FinancialTransaction
@@ -269,76 +272,65 @@ class ProductionJob(models.Model):
         if self.status != self.JobStatus.QC:
             raise ValidationError("Only jobs in QC status can be completed.")
 
-        try:
-            # 3. Create Financial Transaction (Inter-Company)
-            from finance.models import FinancialTransaction, ProductCosting
-            
-            # Ensure costing exists
-            costing, _ = ProductCosting.objects.get_or_create(product=self.product)
-            unit_price = costing.transfer_price
-            
-            total_value = unit_price * Decimal(self.quantity)
+        # 3. Create Financial Transaction (Inter-Company)
+        from finance.models import FinancialTransaction, ProductCosting
 
-            # A) Brand Side: Cost of Goods (Payable to Factory)
-            # Type TRANSFER appears as Red (Expense) in Brand Finance Frontend
-            FinancialTransaction.objects.create(
-                module=FinancialTransaction.ModuleType.BRAND,
+        costing, _ = ProductCosting.objects.get_or_create(product=self.product)
+        total_value = costing.transfer_price * Decimal(self.quantity)
+
+        # A) Brand Side: Cost of Goods (Payable to Factory)
+        FinancialTransaction.objects.get_or_create(
+            reference_id=self.name,
+            module=FinancialTransaction.ModuleType.BRAND,
+            category="Inventory Purchase",
+            defaults=dict(
                 type=FinancialTransaction.TransactionType.TRANSFER_TO_BRAND,
-                reference_id=self.name,
                 amount=total_value,
                 description=f"Payable to Factory: {self.quantity} x {self.product.sku}",
-                category="Inventory Purchase"
             )
+        )
 
-            # B) Factory Side: Revenue (Receivable from Brand)
-            FinancialTransaction.objects.create(
-                module=FinancialTransaction.ModuleType.FACTORY,
+        # B) Factory Side: Revenue (Receivable from Brand)
+        FinancialTransaction.objects.get_or_create(
+            reference_id=self.name,
+            module=FinancialTransaction.ModuleType.FACTORY,
+            category="Finished Goods Sales",
+            defaults=dict(
                 type=FinancialTransaction.TransactionType.SALE_REVENUE,
-                reference_id=self.name,
                 amount=total_value,
                 description=f"Transfer Revenue: {self.quantity} x {self.product.sku}",
-                category="Finished Goods Sales"
             )
-            
-            # 4. Update Source Order Status (if applicable)
-            if self.source_order:
-                from brand.models import Order as BrandOrder
-                self.source_order.status = BrandOrder.OrderStatus.READY
-                self.source_order.save()
+        )
 
-            # 5. TRANSFER TO BRAND INVENTORY
-            from brand.models import Inventory, Location
-            
-            # Resolve Location
-            location = None
-            if target_location_id:
-                location = Location.objects.filter(id=target_location_id).first()
-            
-            if not location:
-                # Default to first Warehouse location
-                location = Location.objects.filter(type=Location.LocationType.WAREHOUSE).first()
+        # 4. Update Source Order Status (if applicable)
+        if self.source_order:
+            from brand.models import Order as BrandOrder
+            self.source_order.status = BrandOrder.OrderStatus.READY
+            self.source_order.save()
 
-            if not location:
-                raise ValidationError("No Warehouse location found. Please create a Warehouse location in Brand settings before completing production.")
+        # 5. Transfer finished goods to Brand Inventory
+        from brand.models import Inventory, Location
 
-            # Update/Create Inventory Record
-            inventory, created = Inventory.objects.get_or_create(
-                product=self.product,
-                location=location,
-                defaults={'quantity': 0}
-            )
-            inventory.quantity += self.quantity
-            inventory.save()
+        location = None
+        if target_location_id:
+            location = Location.objects.filter(id=target_location_id).first()
+        if not location:
+            location = Location.objects.filter(type=Location.LocationType.WAREHOUSE).first()
+        if not location:
+            raise ValidationError("No Warehouse location found. Please create a Warehouse location in Brand settings before completing production.")
 
-            # 6. Update Job Status
-            self.status = self.JobStatus.COMPLETED
-            self.end_date = timezone.now().date()
-            self.save()
+        inventory, _ = Inventory.objects.get_or_create(
+            product=self.product,
+            location=location,
+            defaults={'quantity': 0}
+        )
+        inventory.quantity += self.quantity
+        inventory.save()
 
-        except Exception as e:
-            # Log but don't stop the job completion if finance fails strictly
-            # But for now we raise to ensure data integrity
-            raise e
+        # 6. Update Job Status
+        self.status = self.JobStatus.COMPLETED
+        self.end_date = timezone.now().date()
+        self.save()
 
 
 

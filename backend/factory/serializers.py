@@ -104,6 +104,13 @@ class BOMSerializer(serializers.ModelSerializer):
             BOMItem.objects.create(bom=bom, **item_data)
         return bom
 
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('items', [])
+        instance.items.all().delete()
+        for item_data in items_data:
+            BOMItem.objects.create(bom=instance, **item_data)
+        return instance
+
 class ProductionJobSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True)

@@ -18,7 +18,14 @@ logger = logging.getLogger(__name__)
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().order_by('name').prefetch_related('inventory', 'productionjob_set', 'orderitem_set')
     permission_classes = [IsAuthenticated, HasBrandAccess]
-    
+
+    def get_permissions(self):
+        # LiteProductSerializer has no financial fields — any authenticated user
+        # may read the lite list so factory/finance dropdowns (e.g. BOM builder) work.
+        if self.action == 'list' and self.request.query_params.get('lite'):
+            return [IsAuthenticated()]
+        return super().get_permissions()
+
     def get_serializer_class(self):
         if self.request.query_params.get('lite'):
             from .serializers import LiteProductSerializer

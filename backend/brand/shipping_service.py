@@ -54,7 +54,6 @@ class ShippingService:
             
             # Mock Success
             logger.info(f"Shipping API Mock: Sent Order {order.order_number} with payload: {payload}")
-            print(f"--- MOCK SHIPPING API CALL ---\nPayload: {payload}\n------------------------------")
             
             return {
                 "success": True,
