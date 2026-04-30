@@ -100,12 +100,16 @@ export default function POSPage() {
     const fetchProductData = React.useCallback(() => {
         if (!token) return;
 
-        // Fetch Products with updated Inventory info
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/`, {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/?page_size=500`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
-            .then(res => res.json())
-            .then(data => {
+            .then(async res => {
+                if (!res.ok) {
+                    console.error('Products API error:', res.status, await res.text());
+                    setLoading(false);
+                    return;
+                }
+                const data = await res.json();
                 const list = Array.isArray(data) ? data : (data.results || []);
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 setProducts(list.map((p: any) => ({
@@ -116,7 +120,7 @@ export default function POSPage() {
                 setLoading(false);
             })
             .catch(err => {
-                console.error(err);
+                console.error('Products fetch failed:', err);
                 setLoading(false);
             });
     }, [token]);
@@ -144,11 +148,18 @@ export default function POSPage() {
             .then(data => {
                 const locs = Array.isArray(data) ? data : (data.results || []);
                 setLocations(locs);
-                const mainWarehouse = locs.find((l: Location) => l.name === "Main Warehouse");
-                if (mainWarehouse) {
-                    setSelectedLocation(mainWarehouse.id.toString());
-                } else if (locs.length > 0) {
-                    setSelectedLocation(locs[0].id.toString());
+                // Restore last-used location from localStorage, fall back to first showroom/store
+                const saved = typeof window !== 'undefined' && localStorage.getItem('pos_location');
+                const savedLoc = saved && locs.find((l: Location) => l.id.toString() === saved);
+                if (savedLoc) {
+                    setSelectedLocation(savedLoc.id.toString());
+                } else {
+                    const preferred =
+                        locs.find((l: Location) => l.type === 'SHOWROOM') ||
+                        locs.find((l: Location) => l.type === 'STORE') ||
+                        locs.find((l: Location) => l.type === 'WAREHOUSE') ||
+                        locs[0];
+                    if (preferred) setSelectedLocation(preferred.id.toString());
                 }
             })
             .catch(err => console.error(err));
@@ -512,7 +523,10 @@ export default function POSPage() {
                                 <select
                                     className="border-none text-sm font-bold text-stone-700 focus:ring-0 cursor-pointer bg-transparent"
                                     value={selectedLocation}
-                                    onChange={(e) => setSelectedLocation(e.target.value)}
+                                    onChange={(e) => {
+                                        setSelectedLocation(e.target.value);
+                                        if (typeof window !== 'undefined') localStorage.setItem('pos_location', e.target.value);
+                                    }}
                                 >
                                     {locations.map(loc => (
                                         <option key={loc.id} value={loc.id}>{loc.name} ({loc.type})</option>

@@ -26,6 +26,7 @@ export default function EventsPage() {
     const { token } = useAuth();
     const [events, setEvents] = useState<Location[]>([]);
     const [warehouses, setWarehouses] = useState<Location[]>([]);
+    const [showrooms, setShowrooms] = useState<Location[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Create Event State
@@ -57,6 +58,7 @@ export default function EventsPage() {
                 const prods = Array.isArray(prodData) ? prodData : (prodData.results ?? []);
                 setEvents(locations.filter((l: any) => l.type === 'EVENT'));
                 setWarehouses(locations.filter((l: any) => l.type === 'WAREHOUSE'));
+                setShowrooms(locations.filter((l: any) => l.type === 'SHOWROOM'));
                 setProducts(prods);
             })
             .catch(err => console.error('Events page fetch error:', err))
@@ -73,6 +75,7 @@ export default function EventsPage() {
             const locations = Array.isArray(data) ? data : (data.results ?? []);
             setEvents(locations.filter((l: any) => l.type === 'EVENT'));
             setWarehouses(locations.filter((l: any) => l.type === 'WAREHOUSE'));
+            setShowrooms(locations.filter((l: any) => l.type === 'SHOWROOM'));
         } catch (err) {
             console.error(err);
         }
@@ -185,7 +188,39 @@ export default function EventsPage() {
                 </div>
             </header>
 
+            {/* Showrooms Section */}
+            {showrooms.length > 0 && (
+                <>
+                    <h2 className="text-lg font-bold text-stone-700 mb-4 mt-2">{t('events.showrooms') || 'Showrooms'}</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        {showrooms.map(showroom => (
+                            <div key={showroom.id} className="bg-white p-6 rounded-xl shadow-sm border border-cashmere-maroon/20 group hover:shadow-md transition-all">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="p-3 bg-cashmere-maroon/10 text-cashmere-maroon rounded-full">
+                                        <MapPin size={24} />
+                                    </div>
+                                    <span className="px-2 py-1 bg-cashmere-maroon/10 text-cashmere-maroon text-xs font-bold rounded-full">SHOWROOM</span>
+                                </div>
+                                <h3 className="text-xl font-bold text-stone-800 mb-6">{showroom.name}</h3>
+                                <div className="space-y-3 pt-4 border-t border-stone-100">
+                                    <button
+                                        onClick={() => {
+                                            setTransferData({ ...transferData, source: showroom.id.toString(), target: '' });
+                                            setIsTransferOpen(true);
+                                        }}
+                                        className="w-full py-2 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold rounded flex items-center justify-center gap-2 text-sm"
+                                    >
+                                        <Truck size={14} /> {t('events.sendStock') || 'Send to Event'}
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
+
             {/* Active Events Grid */}
+            <h2 className="text-lg font-bold text-stone-700 mb-4">{t('events.activeEvents') || 'Active Events'}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {events.length === 0 ? (
                     <div className="col-span-full py-16 text-center border-2 border-dashed border-stone-200 rounded-xl">
@@ -211,7 +246,7 @@ export default function EventsPage() {
                             <div className="space-y-3 pt-4 border-t border-stone-100">
                                 <button
                                     onClick={() => {
-                                        setTransferData({ ...transferData, target: event.id.toString(), source: warehouses[0]?.id.toString() });
+                                        setTransferData({ ...transferData, target: event.id.toString(), source: (showrooms[0] ?? warehouses[0])?.id.toString() ?? '' });
                                         setIsTransferOpen(true);
                                     }}
                                     className="w-full py-2 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold rounded flex items-center justify-center gap-2 text-sm"
@@ -220,8 +255,7 @@ export default function EventsPage() {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        // Quick Return Logic pre-fill
-                                        setTransferData({ ...transferData, source: event.id.toString(), target: warehouses[0]?.id.toString() });
+                                        setTransferData({ ...transferData, source: event.id.toString(), target: (showrooms[0] ?? warehouses[0])?.id.toString() ?? '' });
                                         setIsTransferOpen(true);
                                     }}
                                     className="w-full py-2 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold rounded flex items-center justify-center gap-2 text-sm"
@@ -268,7 +302,7 @@ export default function EventsPage() {
                                 onChange={e => setTransferData({ ...transferData, source: e.target.value })}
                             >
                                 <option value="">Select Source...</option>
-                                {[...warehouses, ...events].map(l => (
+                                {[...showrooms, ...warehouses, ...events].map(l => (
                                     <option key={l.id} value={l.id}>{l.name} ({l.type})</option>
                                 ))}
                             </select>
@@ -282,7 +316,7 @@ export default function EventsPage() {
                                 onChange={e => setTransferData({ ...transferData, target: e.target.value })}
                             >
                                 <option value="">Select Target...</option>
-                                {[...warehouses, ...events].map(l => (
+                                {[...showrooms, ...warehouses, ...events].map(l => (
                                     <option key={l.id} value={l.id}>{l.name} ({l.type})</option>
                                 ))}
                             </select>

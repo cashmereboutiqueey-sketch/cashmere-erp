@@ -13,8 +13,8 @@ class FinancialMaskMixin:
         if not request or not request.user.is_authenticated:
             return self.mask_fields(data)
 
-        # Allowed roles
-        allowed_groups = ['Admin', 'Accountant', 'General Manager']
+        # Allowed roles — Brand Manager included so POS/inventory pages can show prices
+        allowed_groups = ['Admin', 'Accountant', 'General Manager', 'Brand Manager']
         user_groups = request.user.groups.values_list('name', flat=True)
         
         if request.user.is_superuser or any(g in allowed_groups for g in user_groups):
@@ -81,9 +81,7 @@ class ProductSerializer(FinancialMaskMixin, serializers.ModelSerializer):
         fields = '__all__'
 
     def get_inventory(self, obj):
-        # Return a list of {location_id: X, quantity: Y}
-        # Use prefetched objects to avoid N+1 queries
-        return [{'location': inv.location_id, 'quantity': inv.quantity} for inv in obj.inventory.all()]
+        return [{'location': inv.location_id, 'quantity': float(inv.quantity)} for inv in obj.inventory.all()]
 
 class CustomerInteractionSerializer(serializers.ModelSerializer):
     class Meta:

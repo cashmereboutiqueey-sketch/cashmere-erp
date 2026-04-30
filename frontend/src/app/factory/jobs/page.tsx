@@ -91,9 +91,12 @@ export default function ActiveJobsPage() {
                 .then(data => {
                     const locs: { id: number; name: string; type: string }[] = Array.isArray(data) ? data : (data.results || []);
                     setLocations(locs);
-                    // Default: first WAREHOUSE, then first of any type
-                    const wh = locs.find(l => l.type === 'WAREHOUSE') || locs[0];
-                    if (wh) setTransferLocationId(wh.id.toString());
+                    // Default: first SHOWROOM, then WAREHOUSE, then any
+                    const preferred =
+                        locs.find(l => l.type === 'SHOWROOM') ||
+                        locs.find(l => l.type === 'WAREHOUSE') ||
+                        locs[0];
+                    if (preferred) setTransferLocationId(preferred.id.toString());
                 })
                 .catch(err => console.error('Failed to fetch locations', err));
         }
