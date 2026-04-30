@@ -159,17 +159,27 @@ class MaterialPurchaseViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def perform_create(self, serializer):
-        purchase = serializer.save()
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            purchase = serializer.save()
+        except Exception as e:
+            logger.error(f"MaterialPurchase save failed: {e}", exc_info=True)
+            raise DRFValidationError({"detail": str(e)})
+
         if purchase.amount_paid > 0:
             from finance.models import FinancialTransaction
-            FinancialTransaction.objects.create(
-                module=FinancialTransaction.ModuleType.FACTORY,
-                type=FinancialTransaction.TransactionType.EXPENSE,
-                amount=purchase.amount_paid,
-                description=f"Purchase from {purchase.supplier.name} ({purchase.raw_material.name})",
-                category="Raw Material",
-                reference_id=f"PURCH-{purchase.supplier.id}-{purchase.id}"
-            )
+            try:
+                FinancialTransaction.objects.create(
+                    module=FinancialTransaction.ModuleType.FACTORY,
+                    type=FinancialTransaction.TransactionType.EXPENSE,
+                    amount=purchase.amount_paid,
+                    description=f"Purchase from {purchase.supplier.name} ({purchase.raw_material.name})",
+                    category="Raw Material",
+                    reference_id=f"PURCH-{purchase.supplier.id}-{purchase.id}"
+                )
+            except Exception as e:
+                logger.error(f"FinancialTransaction creation failed for purchase {purchase.id}: {e}", exc_info=True)
+                raise DRFValidationError({"detail": f"Purchase saved but finance log failed: {str(e)}"})
 
 
 class SupplierPaymentViewSet(viewsets.ModelViewSet):

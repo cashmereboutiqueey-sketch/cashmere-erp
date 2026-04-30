@@ -114,7 +114,6 @@ class FinancialTransaction(models.Model):
             models.Index(fields=['type', 'module', 'date']),
             models.Index(fields=['module', 'category']),
         ]
-        unique_together = [('reference_id', 'module', 'category')]
 
     def __str__(self) -> str:
         return f"{self.get_type_display()}: {self.amount} ({self.date})"

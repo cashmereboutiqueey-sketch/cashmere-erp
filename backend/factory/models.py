@@ -53,10 +53,12 @@ class MaterialPurchase(models.Model):
             # Keep the in-memory reference consistent
             self.raw_material = locked
 
-            # Update supplier balance (debt = total cost - amount paid upfront)
+            # Update supplier balance with row-level lock (same pattern as SupplierPayment)
             remaining_debt = self.total_cost - self.amount_paid
-            self.supplier.balance += remaining_debt
-            self.supplier.save()
+            locked_supplier = Supplier.objects.select_for_update().get(pk=self.supplier_id)
+            locked_supplier.balance += remaining_debt
+            locked_supplier.save()
+            self.supplier = locked_supplier
 
         super().save(*args, **kwargs)
 
