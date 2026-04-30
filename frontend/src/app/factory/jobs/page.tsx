@@ -50,6 +50,10 @@ export default function ActiveJobsPage() {
     // Selection State for Pending Jobs
     const [selectedJobIds, setSelectedJobIds] = useState<Set<number>>(new Set());
 
+    // Locations for transfer target
+    const [locations, setLocations] = useState<{ id: number; name: string; type: string }[]>([]);
+    const [transferLocationId, setTransferLocationId] = useState<string>('');
+
     // Create Manual Job State
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
@@ -82,6 +86,16 @@ export default function ActiveJobsPage() {
         if (token) {
             fetchJobs();
             fetchProducts();
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/locations/`, { headers: { 'Authorization': `Bearer ${token}` } })
+                .then(r => r.json())
+                .then(data => {
+                    const locs: { id: number; name: string; type: string }[] = Array.isArray(data) ? data : (data.results || []);
+                    setLocations(locs);
+                    // Default: first WAREHOUSE, then first of any type
+                    const wh = locs.find(l => l.type === 'WAREHOUSE') || locs[0];
+                    if (wh) setTransferLocationId(wh.id.toString());
+                })
+                .catch(err => console.error('Failed to fetch locations', err));
         }
     }, [token]);
 
@@ -200,7 +214,8 @@ export default function ActiveJobsPage() {
             console.log(`Attempting to complete job ${selectedJob.id}...`);
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/jobs/${selectedJob.id}/complete/`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ location_id: transferLocationId ? parseInt(transferLocationId) : null }),
             });
 
             if (res.ok) {
@@ -574,7 +589,20 @@ export default function ActiveJobsPage() {
                         <div className="space-y-4 mb-8 bg-stone-50 p-4 rounded-lg border border-stone-100">
                             <div className="flex justify-between"><span className="text-stone-500 text-sm">{t('factoryJobs.product')}</span><span className="font-bold text-stone-800">{selectedJob.product_sku}</span></div>
                             <div className="flex justify-between"><span className="text-stone-500 text-sm">{t('factoryJobs.quantity')}</span><span className="font-bold text-stone-800">{selectedJob.quantity} {t('factoryJobs.units')}</span></div>
-                            <div className="flex justify-between"><span className="text-stone-500 text-sm">{t('factoryJobs.target')}</span><span className="font-bold text-cashmere-maroon flex items-center gap-1">{t('factoryJobs.mainWarehouse')} <ArrowRight size={12} /></span></div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-stone-500 text-sm">{t('factoryJobs.target')}</span>
+                                <select
+                                    className="border-stone-300 rounded-md text-sm font-bold text-cashmere-maroon focus:ring-cashmere-maroon focus:border-cashmere-maroon"
+                                    value={transferLocationId}
+                                    onChange={e => setTransferLocationId(e.target.value)}
+                                >
+                                    {locations.map(loc => (
+                                        <option key={loc.id} value={loc.id}>
+                                            {loc.name} ({loc.type})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         <div className="flex justify-end gap-3">
