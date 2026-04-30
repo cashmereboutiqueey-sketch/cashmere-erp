@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('brand', '0022_shippingmanifest_order_detailed_status_and_more'),
+        ('brand', '0023_alter_inventory_quantity'),
     ]
 
     operations = [
