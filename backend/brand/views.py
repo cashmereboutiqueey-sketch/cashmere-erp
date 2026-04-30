@@ -784,11 +784,15 @@ class ShopifyViewSet(viewsets.ViewSet):
             service = ShopifyService()
             shopify_products = service.fetch_products()
             
-            # Ensure Default Location (Main Warehouse)
-            main_wh, _ = Location.objects.get_or_create(
-                name="Main Warehouse",
-                defaults={'type': 'WAREHOUSE', 'address': 'Default'}
+            # Use the first warehouse location; only create one if none exist at all
+            main_wh = (
+                Location.objects.filter(type='WAREHOUSE').order_by('id').first()
+                or Location.objects.order_by('id').first()
             )
+            if not main_wh:
+                main_wh = Location.objects.create(
+                    name="Main Warehouse", type='WAREHOUSE', address='Default'
+                )
             
             count_created = 0
             count_updated = 0

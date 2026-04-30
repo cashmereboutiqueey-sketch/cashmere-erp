@@ -315,9 +315,13 @@ class ProductionJob(models.Model):
         if target_location_id:
             location = Location.objects.filter(id=target_location_id).first()
         if not location:
-            location = Location.objects.filter(type=Location.LocationType.WAREHOUSE).first()
+            # Prefer WAREHOUSE type, fall back to any location so a showroom/store still works
+            location = (
+                Location.objects.filter(type=Location.LocationType.WAREHOUSE).order_by('id').first()
+                or Location.objects.order_by('id').first()
+            )
         if not location:
-            raise ValidationError("No Warehouse location found. Please create a Warehouse location in Brand settings before completing production.")
+            raise ValidationError("No location found. Please create a location in Brand settings before completing production.")
 
         inventory, _ = Inventory.objects.get_or_create(
             product=self.product,

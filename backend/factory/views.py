@@ -335,7 +335,8 @@ class ProductionJobViewSet(viewsets.ModelViewSet):
     def complete(self, request, pk=None):
         job = self.get_object()
         try:
-            job.complete_production()
+            location_id = request.data.get('location_id') or None
+            job.complete_production(target_location_id=int(location_id) if location_id else None)
             return Response(self.get_serializer(job).data)
         except Exception as e:
             return Response({'error': self._clean_error(e)}, status=400)
