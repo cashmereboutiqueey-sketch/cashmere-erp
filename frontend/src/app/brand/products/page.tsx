@@ -47,6 +47,8 @@ export default function ProductCatalogPage() {
     const [search, setSearch] = useState('');
     const [categories, setCategories] = useState<Category[]>([]);
     const [selectedGroup, setSelectedGroup] = useState<{ name: string, variants: Product[] } | null>(null);
+    const [isGroupEditOpen, setIsGroupEditOpen] = useState(false);
+    const [groupEditData, setGroupEditData] = useState<{ category?: number | ''; style?: string }>({});
 
     const fetchProducts = useCallback(() => {
         if (!token) return;
@@ -72,14 +74,7 @@ export default function ProductCatalogPage() {
             headers: { 'Authorization': `Bearer ${token}` }
         })
             .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data)) {
-                    setCategories(data);
-                } else {
-                    console.error("Categories API returned non-array:", data);
-                    setCategories([]);
-                }
-            })
+            .then(data => setCategories(Array.isArray(data) ? data : (data.results || [])))
             .catch(err => console.error("Failed to fetch categories", err));
     }, [token]);
 
@@ -263,6 +258,33 @@ export default function ProductCatalogPage() {
             console.error(e);
             alert('Network Error');
         }
+    };
+
+    const handleOpenGroupEdit = () => {
+        if (!selectedGroup) return;
+        const first = selectedGroup.variants[0];
+        setGroupEditData({ category: first.category ?? '', style: first.style || '' });
+        setIsGroupEditOpen(true);
+    };
+
+    const handleSaveGroupEdit = async () => {
+        if (!selectedGroup || !token) return;
+        const payload: Record<string, any> = {};
+        if (groupEditData.category !== '' && groupEditData.category !== undefined) payload.category = groupEditData.category;
+        if (groupEditData.style !== undefined) payload.style = groupEditData.style;
+
+        await Promise.all(
+            selectedGroup.variants.map(v =>
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/products/${v.id}/`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(payload)
+                })
+            )
+        );
+        setIsGroupEditOpen(false);
+        setSelectedGroup(null);
+        fetchProducts();
     };
 
     const filteredProducts = products.filter(p =>
@@ -498,12 +520,20 @@ export default function ProductCatalogPage() {
                                     )}
 
                                     {/* Variant Badge */}
-                                    <div className="absolute top-2 right-2 z-20">
+                                    <div className="absolute top-2 left-2 z-20">
                                         <div className="bg-white/90 backdrop-blur-sm text-cashmere-black text-xs font-bold px-2 py-1 rounded-md shadow-sm border border-stone-100 flex items-center gap-1">
                                             <LayoutGrid size={12} className="text-stone-400" />
                                             {variantCount} {variantCount === 1 ? 'Variant' : 'Variants'}
                                         </div>
                                     </div>
+                                    {/* Quick Edit button */}
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleEdit(mainProduct); }}
+                                        className="absolute top-2 right-2 z-20 bg-white/90 p-1.5 rounded-full shadow-sm hover:bg-blue-500 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                                        title="Edit this product"
+                                    >
+                                        <Edit size={14} />
+                                    </button>
                                 </div>
 
                                 {/* Content Area */}
@@ -567,35 +597,50 @@ export default function ProductCatalogPage() {
                 title={selectedGroup?.name || 'Product Group'}
             >
                 <div className="min-w-[50vw]">
-                    <div className="flex justify-between items-center mb-6">
-                        <p className="text-stone-500">Manage all variants for this style.</p>
-                        <button
-                            onClick={() => {
-                                // Create new variant in this group
-                                handleCreate();
-                                // Pre-fill style/name
-                                setTimeout(() => {
-                                    setEditingProduct(prev => ({
-                                        ...prev,
-                                        name: selectedGroup?.name || '',
-                                        style: selectedGroup?.variants[0]?.style || '',
-                                        description: selectedGroup?.variants[0]?.description || '',
-                                        // Copy financials from first variant
-                                        standard_cost: selectedGroup?.variants[0]?.standard_cost,
-                                        brand_overhead: selectedGroup?.variants[0]?.brand_overhead,
-                                        brand_profit_margin: selectedGroup?.variants[0]?.brand_profit_margin,
-                                        retail_price: selectedGroup?.variants[0]?.retail_price
-                                    }));
-                                    // Pre-fill image if possible?
-                                    if (selectedGroup?.variants[0]?.image || selectedGroup?.variants[0]?.image_url) {
-                                        setImagePreview(selectedGroup.variants[0].image || selectedGroup.variants[0].image_url || null);
-                                    }
-                                }, 0);
-                            }}
-                            className="btn-primary flex items-center gap-2 py-2 px-4 text-sm"
-                        >
-                            <Plus size={16} /> Add Variant
-                        </button>
+                    {/* Group shared properties bar */}
+                    <div className="flex items-center justify-between bg-stone-50 border border-stone-200 rounded-lg px-4 py-3 mb-6">
+                        <div className="flex items-center gap-6 text-sm">
+                            <div>
+                                <span className="text-xs font-bold uppercase text-stone-400 block">Collection</span>
+                                <span className="font-bold text-stone-700">{selectedGroup?.variants[0]?.category_name || '— None —'}</span>
+                            </div>
+                            <div>
+                                <span className="text-xs font-bold uppercase text-stone-400 block">Style</span>
+                                <span className="font-bold text-stone-700">{selectedGroup?.variants[0]?.style || '— None —'}</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleOpenGroupEdit}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold border border-stone-300 rounded-lg hover:bg-white transition-colors text-stone-600"
+                            >
+                                <Edit size={14} /> Edit All
+                            </button>
+                            <button
+                                onClick={() => {
+                                    handleCreate();
+                                    setTimeout(() => {
+                                        setEditingProduct(prev => ({
+                                            ...prev,
+                                            name: selectedGroup?.name || '',
+                                            style: selectedGroup?.variants[0]?.style || '',
+                                            description: selectedGroup?.variants[0]?.description || '',
+                                            standard_cost: selectedGroup?.variants[0]?.standard_cost,
+                                            brand_overhead: selectedGroup?.variants[0]?.brand_overhead,
+                                            brand_profit_margin: selectedGroup?.variants[0]?.brand_profit_margin,
+                                            retail_price: selectedGroup?.variants[0]?.retail_price,
+                                            category: selectedGroup?.variants[0]?.category,
+                                        }));
+                                        if (selectedGroup?.variants[0]?.image || selectedGroup?.variants[0]?.image_url) {
+                                            setImagePreview(selectedGroup.variants[0].image || selectedGroup.variants[0].image_url || null);
+                                        }
+                                    }, 0);
+                                }}
+                                className="btn-primary flex items-center gap-2 py-1.5 px-3 text-sm"
+                            >
+                                <Plus size={14} /> Add Variant
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto p-1">
@@ -633,6 +678,39 @@ export default function ProductCatalogPage() {
                                 </button>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </Dialog>
+
+            {/* Group Edit Dialog */}
+            <Dialog isOpen={isGroupEditOpen} onClose={() => setIsGroupEditOpen(false)} title={`Edit All Variants — ${selectedGroup?.name}`}>
+                <div className="space-y-5 min-w-[360px]">
+                    <p className="text-sm text-stone-500">Changes apply to all {selectedGroup?.variants.length} variant(s) in this group.</p>
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">Collection</label>
+                        <select
+                            className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm font-medium"
+                            value={groupEditData.category ?? ''}
+                            onChange={e => setGroupEditData({ ...groupEditData, category: e.target.value ? Number(e.target.value) : '' })}
+                        >
+                            <option value="">— None —</option>
+                            {categories.map(c => (
+                                <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-stone-500 mb-1.5">Style / Season</label>
+                        <input
+                            className="w-full border border-stone-200 rounded-lg px-3 py-2.5 text-sm font-medium"
+                            value={groupEditData.style || ''}
+                            onChange={e => setGroupEditData({ ...groupEditData, style: e.target.value })}
+                            placeholder="e.g. Summer 2025"
+                        />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-3 border-t border-stone-100">
+                        <button onClick={() => setIsGroupEditOpen(false)} className="px-4 py-2 text-sm font-bold text-stone-500 hover:text-stone-800">Cancel</button>
+                        <button onClick={handleSaveGroupEdit} className="btn-primary flex items-center gap-2 text-sm"><Save size={15} /> Save All</button>
                     </div>
                 </div>
             </Dialog>
