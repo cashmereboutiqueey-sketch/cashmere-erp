@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Tent, MapPin, Truck, ArrowRightLeft, Plus } from 'lucide-react';
+import { Tent, MapPin, Truck, ArrowRightLeft, Plus, PackageCheck } from 'lucide-react';
 import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,12 +36,9 @@ export default function EventsPage() {
     // Transfer State
     const [isTransferOpen, setIsTransferOpen] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
-    const [transferData, setTransferData] = useState({
-        source: '',
-        target: '',
-        product: '',
-        quantity: ''
-    });
+    const [transferSource, setTransferSource] = useState('');
+    const [transferTarget, setTransferTarget] = useState('');
+    const [transferQtys, setTransferQtys] = useState<Record<number, string>>({});
 
     useEffect(() => {
         if (!token) return;
@@ -115,53 +112,67 @@ export default function EventsPage() {
         }
     };
 
-    const handleTransfer = async () => {
-        // Logging for Debugging
-        console.log("Starting Transfer...", transferData);
-
-        if (!transferData.source || !transferData.target || !transferData.product || !transferData.quantity) {
-            alert("All fields are required");
-            return;
-        }
-
-        try {
-            const payload = {
-                source_location: parseInt(transferData.source),
-                target_location: parseInt(transferData.target),
-                items: [
-                    { product: parseInt(transferData.product), quantity: parseInt(transferData.quantity) }
-                ]
-            };
-            console.log("Sending Payload:", payload);
-
-            const res = await fetch(`${API}/api/brand/inventory/transfer/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                alert("Stock Transferred Successfully!");
-                setIsTransferOpen(false);
-                setTransferData({ source: '', target: '', product: '', quantity: '' });
-                fetchProducts();
-            } else {
-                const err = await res.json();
-                console.error("Server Error:", err);
-                alert(`Transfer Failed: ${err.error || JSON.stringify(err)}`);
-            }
-        } catch (e) {
-            console.error("Network Error:", e);
-            alert("Transfer Error: Check console for details");
-        }
-    };
-
     const getStockAt = (productId: number, locationId: number) => {
         const product = products.find(p => p.id === productId);
         if (!product?.inventory) return 0;
         const item = product.inventory.find(i => i.location === locationId);
         return item ? item.quantity : 0;
     };
+
+    const openTransfer = (source = '', target = '') => {
+        setTransferSource(source);
+        setTransferTarget(target);
+        setTransferQtys({});
+        setIsTransferOpen(true);
+    };
+
+    const sourceProducts = transferSource
+        ? products.filter(p => getStockAt(p.id, parseInt(transferSource)) > 0)
+        : [];
+
+    const fillAll = () => {
+        const filled: Record<number, string> = {};
+        sourceProducts.forEach(p => {
+            filled[p.id] = String(getStockAt(p.id, parseInt(transferSource)));
+        });
+        setTransferQtys(filled);
+    };
+
+    const handleTransfer = async () => {
+        if (!transferSource || !transferTarget) {
+            alert("Please select source and target locations");
+            return;
+        }
+        const items = Object.entries(transferQtys)
+            .map(([id, qty]) => ({ product: parseInt(id), quantity: parseInt(qty) }))
+            .filter(i => i.quantity > 0);
+
+        if (items.length === 0) {
+            alert("Enter quantity for at least one product");
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API}/api/brand/inventory/transfer/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ source_location: parseInt(transferSource), target_location: parseInt(transferTarget), items })
+            });
+
+            if (res.ok) {
+                alert(`${items.length} item(s) transferred successfully!`);
+                setIsTransferOpen(false);
+                fetchProducts();
+            } else {
+                const err = await res.json();
+                alert(`Transfer Failed: ${err.error || JSON.stringify(err)}`);
+            }
+        } catch (e) {
+            alert("Transfer Error: Check console for details");
+        }
+    };
+
+    const allLocations = [...showrooms, ...warehouses, ...events];
 
     if (loading) return <div className="p-8 text-center text-stone-500">{t('common.loading')}</div>;
 
@@ -174,7 +185,7 @@ export default function EventsPage() {
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={() => setIsTransferOpen(true)}
+                        onClick={() => openTransfer()}
                         className="btn-secondary flex items-center gap-2"
                     >
                         <ArrowRightLeft size={16} /> {t('events.transferStock')}
@@ -204,10 +215,7 @@ export default function EventsPage() {
                                 <h3 className="text-xl font-bold text-stone-800 mb-6">{showroom.name}</h3>
                                 <div className="space-y-3 pt-4 border-t border-stone-100">
                                     <button
-                                        onClick={() => {
-                                            setTransferData({ ...transferData, source: showroom.id.toString(), target: '' });
-                                            setIsTransferOpen(true);
-                                        }}
+                                        onClick={() => openTransfer(showroom.id.toString(), '')}
                                         className="w-full py-2 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold rounded flex items-center justify-center gap-2 text-sm"
                                     >
                                         <Truck size={14} /> {t('events.sendStock') || 'Send to Event'}
@@ -245,19 +253,13 @@ export default function EventsPage() {
 
                             <div className="space-y-3 pt-4 border-t border-stone-100">
                                 <button
-                                    onClick={() => {
-                                        setTransferData({ ...transferData, target: event.id.toString(), source: (showrooms[0] ?? warehouses[0])?.id.toString() ?? '' });
-                                        setIsTransferOpen(true);
-                                    }}
+                                    onClick={() => openTransfer((showrooms[0] ?? warehouses[0])?.id.toString() ?? '', event.id.toString())}
                                     className="w-full py-2 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold rounded flex items-center justify-center gap-2 text-sm"
                                 >
                                     <Truck size={14} /> {t('events.sendStock')}
                                 </button>
                                 <button
-                                    onClick={() => {
-                                        setTransferData({ ...transferData, source: event.id.toString(), target: (showrooms[0] ?? warehouses[0])?.id.toString() ?? '' });
-                                        setIsTransferOpen(true);
-                                    }}
+                                    onClick={() => openTransfer(event.id.toString(), (showrooms[0] ?? warehouses[0])?.id.toString() ?? '')}
                                     className="w-full py-2 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold rounded flex items-center justify-center gap-2 text-sm"
                                 >
                                     <ArrowRightLeft size={14} /> {t('events.returnStock')}
@@ -289,80 +291,110 @@ export default function EventsPage() {
                 </div>
             </Dialog>
 
-            {/* Transfer Stock Modal */}
-            <Dialog isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)} title={t('events.transferDialog')}>
-                <div className="space-y-6">
+            {/* Bulk Transfer Stock Modal */}
+            <Dialog isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)} title="Bulk Stock Transfer">
+                <div className="space-y-4" style={{ minWidth: '560px' }}>
                     {/* From -> To */}
-                    <div className="flex items-center gap-4 bg-stone-50 p-4 rounded-lg border border-stone-200">
+                    <div className="flex items-center gap-3 bg-stone-50 p-3 rounded-lg border border-stone-200">
                         <div className="flex-1">
                             <label className="block text-xs font-bold text-stone-500 mb-1 uppercase">{t('events.from')}</label>
                             <select
                                 className="w-full bg-white border-stone-300 rounded text-sm"
-                                value={transferData.source}
-                                onChange={e => setTransferData({ ...transferData, source: e.target.value })}
+                                value={transferSource}
+                                onChange={e => { setTransferSource(e.target.value); setTransferQtys({}); }}
                             >
                                 <option value="">Select Source...</option>
-                                {[...showrooms, ...warehouses, ...events].map(l => (
+                                {allLocations.map(l => (
                                     <option key={l.id} value={l.id}>{l.name} ({l.type})</option>
                                 ))}
                             </select>
                         </div>
-                        <ArrowRightLeft size={20} className="text-stone-400 mt-4" />
+                        <ArrowRightLeft size={18} className="text-stone-400 mt-5 shrink-0" />
                         <div className="flex-1">
                             <label className="block text-xs font-bold text-stone-500 mb-1 uppercase">{t('events.to')}</label>
                             <select
                                 className="w-full bg-white border-stone-300 rounded text-sm"
-                                value={transferData.target}
-                                onChange={e => setTransferData({ ...transferData, target: e.target.value })}
+                                value={transferTarget}
+                                onChange={e => setTransferTarget(e.target.value)}
                             >
                                 <option value="">Select Target...</option>
-                                {[...showrooms, ...warehouses, ...events].map(l => (
+                                {allLocations.map(l => (
                                     <option key={l.id} value={l.id}>{l.name} ({l.type})</option>
                                 ))}
                             </select>
                         </div>
                     </div>
 
-                    {/* Product Selection */}
-                    <div>
-                        <label className="block text-sm font-medium text-stone-700 mb-1">{t('products.product')}</label>
-                        <select
-                            className="w-full border-stone-200 rounded-lg"
-                            value={transferData.product}
-                            onChange={e => setTransferData({ ...transferData, product: e.target.value })}
-                        >
-                            <option value="">Select Product...</option>
-                            {products.map(p => {
-                                const stock = transferData.source ? getStockAt(p.id, parseInt(transferData.source)) : 0;
-                                return (
-                                    <option key={p.id} value={p.id}>
-                                        {p.name} ({p.sku}) - {transferData.source ? `${stock} Available` : ''}
-                                    </option>
-                                );
-                            })}
-                        </select>
-                    </div>
+                    {/* Product List */}
+                    {transferSource ? (
+                        sourceProducts.length === 0 ? (
+                            <div className="text-center py-8 text-stone-400 text-sm">No stock available at this location</div>
+                        ) : (
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm font-bold text-stone-600">
+                                        {sourceProducts.length} products available
+                                        {Object.values(transferQtys).filter(q => parseInt(q) > 0).length > 0 && (
+                                            <span className="ml-2 text-cashmere-maroon">
+                                                · {Object.values(transferQtys).filter(q => parseInt(q) > 0).length} selected
+                                            </span>
+                                        )}
+                                    </span>
+                                    <button
+                                        onClick={fillAll}
+                                        className="flex items-center gap-1 text-xs font-bold text-cashmere-maroon border border-cashmere-maroon/30 px-3 py-1.5 rounded hover:bg-cashmere-maroon/5"
+                                    >
+                                        <PackageCheck size={13} /> Fill All from Stock
+                                    </button>
+                                </div>
+                                <div className="border border-stone-200 rounded-lg overflow-hidden">
+                                    <div className="grid grid-cols-12 bg-stone-100 px-3 py-2 text-xs font-bold text-stone-500 uppercase">
+                                        <div className="col-span-6">Product</div>
+                                        <div className="col-span-3 text-center">Available</div>
+                                        <div className="col-span-3 text-center">Transfer Qty</div>
+                                    </div>
+                                    <div className="max-h-72 overflow-y-auto divide-y divide-stone-100">
+                                        {sourceProducts.map(p => {
+                                            const available = getStockAt(p.id, parseInt(transferSource));
+                                            const qty = transferQtys[p.id] ?? '';
+                                            const isOver = parseInt(qty) > available;
+                                            return (
+                                                <div key={p.id} className={`grid grid-cols-12 px-3 py-2 items-center hover:bg-stone-50 ${parseInt(qty) > 0 ? 'bg-green-50' : ''}`}>
+                                                    <div className="col-span-6">
+                                                        <div className="text-sm font-medium text-stone-800 truncate">{p.name}</div>
+                                                        <div className="text-xs text-stone-400">{p.sku}</div>
+                                                    </div>
+                                                    <div className="col-span-3 text-center text-sm font-bold text-stone-600">{available}</div>
+                                                    <div className="col-span-3 flex justify-center">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max={available}
+                                                            placeholder="0"
+                                                            value={qty}
+                                                            onChange={e => setTransferQtys(prev => ({ ...prev, [p.id]: e.target.value }))}
+                                                            className={`w-16 text-center text-sm border rounded py-1 ${isOver ? 'border-red-400 bg-red-50' : 'border-stone-300'}`}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    ) : (
+                        <div className="text-center py-8 text-stone-400 text-sm">Select a source location to see available stock</div>
+                    )}
 
-                    {/* Quantity */}
-                    <div>
-                        <label className="block text-sm font-medium text-stone-700 mb-1">{t('common.quantity')}</label>
-                        <input
-                            type="number"
-                            className="w-full border-stone-200 rounded-lg"
-                            value={transferData.quantity}
-                            onChange={e => setTransferData({ ...transferData, quantity: e.target.value })}
-                            min="1"
-                        />
-                        {transferData.product && transferData.source && (
-                            <p className="text-xs text-stone-400 mt-1">
-                                {t('events.maxAvailable')}: {getStockAt(parseInt(transferData.product), parseInt(transferData.source))}
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
-                        <button onClick={() => setIsTransferOpen(false)} className="text-stone-500 hover:text-stone-800 px-4 py-2 text-sm font-bold">{t('common.cancel')}</button>
-                        <button onClick={handleTransfer} className="btn-primary">{t('common.confirm')}</button>
+                    <div className="flex justify-between items-center pt-3 border-t border-stone-100">
+                        <span className="text-xs text-stone-400">
+                            {Object.values(transferQtys).reduce((sum, q) => sum + (parseInt(q) || 0), 0)} total units to transfer
+                        </span>
+                        <div className="flex gap-3">
+                            <button onClick={() => setIsTransferOpen(false)} className="text-stone-500 hover:text-stone-800 px-4 py-2 text-sm font-bold">{t('common.cancel')}</button>
+                            <button onClick={handleTransfer} className="btn-primary">{t('common.confirm')}</button>
+                        </div>
                     </div>
                 </div>
             </Dialog>
