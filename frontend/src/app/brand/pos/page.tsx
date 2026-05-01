@@ -2,7 +2,7 @@
 
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Trash2, Plus, Minus, Search, ScanBarcode, MapPin, UserPlus, X, Box, Factory, ImageIcon, Printer } from 'lucide-react'; // Added Printer
+import { ShoppingBag, Trash2, Plus, Minus, Search, ScanBarcode, MapPin, UserPlus, X, Box, Factory, ImageIcon, Printer, Package } from 'lucide-react';
 import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Receipt from '@/components/Receipt';
@@ -89,6 +89,7 @@ export default function POSPage() {
 
     // Model Selection State
     const [selectedModel, setSelectedModel] = useState<{ name: string, variants: Product[] } | null>(null);
+    const [variantQtys, setVariantQtys] = useState<Record<number, number>>({});
 
     // Receipt State
     const [lastOrder, setLastOrder] = useState<any | null>(null);
@@ -227,8 +228,6 @@ export default function POSPage() {
     };
 
     const addToCart = (product: Product) => {
-        // Optional: Check stock before adding? The user might want to oversell/backorder.
-        // For now, allow it but maybe warn visually. 
         setCart(prev => {
             const existing = prev.find(item => item.id === product.id);
             if (existing) {
@@ -238,6 +237,44 @@ export default function POSPage() {
             }
             return [...prev, { ...product, quantity: 1, discount: 0 }];
         });
+    };
+
+    const addToCartQty = (product: Product, qty: number) => {
+        if (qty <= 0) return;
+        setCart(prev => {
+            const existing = prev.find(item => item.id === product.id);
+            if (existing) {
+                return prev.map(item =>
+                    item.id === product.id ? { ...item, quantity: item.quantity + qty } : item
+                );
+            }
+            return [...prev, { ...product, quantity: qty, discount: 0 }];
+        });
+    };
+
+    const openVariantModal = (name: string, variants: Product[]) => {
+        setSelectedModel({ name, variants });
+        const init: Record<number, number> = {};
+        variants.forEach(v => { init[v.id] = 1; });
+        setVariantQtys(init);
+    };
+
+    const fillQtysFromStock = () => {
+        if (!selectedModel) return;
+        const newQtys: Record<number, number> = {};
+        selectedModel.variants.forEach(v => {
+            newQtys[v.id] = Math.max(0, Math.floor(Number(getStockForLocation(v))));
+        });
+        setVariantQtys(newQtys);
+    };
+
+    const addAllToCart = () => {
+        if (!selectedModel) return;
+        selectedModel.variants.forEach(v => {
+            const qty = variantQtys[v.id] ?? 0;
+            if (qty > 0) addToCartQty(v, qty);
+        });
+        setSelectedModel(null);
     };
 
     const removeFromCart = (productId: number) => {
@@ -693,7 +730,7 @@ export default function POSPage() {
                                     <button
                                         onClick={() => {
                                             // Open Variant Modal
-                                            setSelectedModel({ name: modelName, variants });
+                                            openVariantModal(modelName, variants);
                                         }}
                                         className="w-full text-left"
                                     >
@@ -745,70 +782,109 @@ export default function POSPage() {
                 onClose={() => setSelectedModel(null)}
                 title={selectedModel?.name || 'Select Variant'}
             >
-                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-                    {[...(selectedModel?.variants || [])].sort((a, b) => getTotalStock(b) - getTotalStock(a)).map(variant => {
-                        const stockHere = getStockForLocation(variant);
-                        const stockTotal = getTotalStock(variant);
+                {/* Sub-header: total in-stock + Fill from Stock button */}
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-stone-100">
+                    <p className="text-sm text-stone-500">
+                        <span className="font-bold text-stone-700">
+                            {(selectedModel?.variants || []).reduce((s, v) => s + Math.max(0, Number(getStockForLocation(v))), 0)}
+                        </span> pcs available here
+                    </p>
+                    <button
+                        onClick={fillQtysFromStock}
+                        className="text-xs font-bold text-cashmere-maroon border border-cashmere-maroon/40 px-3 py-1.5 rounded-full hover:bg-cashmere-maroon/5 transition-colors flex items-center gap-1"
+                    >
+                        <Package size={12} /> Fill All from Stock
+                    </button>
+                </div>
+
+                <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
+                    {[...(selectedModel?.variants || [])].sort((a, b) => Number(getStockForLocation(b)) - Number(getStockForLocation(a))).map(variant => {
+                        const stockHere = Number(getStockForLocation(variant));
+                        const stockTotal = Number(getTotalStock(variant));
                         const isOOS = stockTotal <= 0;
                         const hasStockElsewhere = stockTotal > 0 && stockHere <= 0;
-
-                        const variantLabel = variant.sku;
+                        const qty = variantQtys[variant.id] ?? 1;
 
                         return (
                             <div key={variant.id} className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${isOOS ? 'border-stone-100 bg-stone-50 opacity-60' : hasStockElsewhere ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
-                                <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-stone-200 rounded-md overflow-hidden flex-shrink-0">
+                                {/* Left: image + info */}
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="w-10 h-10 bg-stone-200 rounded-md overflow-hidden flex-shrink-0">
                                         {variant.image || variant.image_url ? (
                                             <img src={variant.image_url || variant.image} alt={variant.sku} className="w-full h-full object-cover" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-stone-400"><ShoppingBag size={16} /></div>
+                                            <div className="w-full h-full flex items-center justify-center text-stone-400"><ShoppingBag size={14} /></div>
                                         )}
                                     </div>
-                                    <div>
-                                        <h4 className="font-bold text-stone-800">{variantLabel}</h4>
-                                        <div className={`text-xs font-bold mt-1 ${isOOS ? 'text-red-500' : hasStockElsewhere ? 'text-amber-600' : 'text-green-600'}`}>
-                                            {isOOS ? 'Out of Stock' : hasStockElsewhere ? `${stockTotal} pcs (other warehouse)` : `${stockHere} pcs here`}
+                                    <div className="min-w-0">
+                                        <h4 className="font-bold text-stone-800 text-sm truncate">{variant.sku}</h4>
+                                        <div className={`text-xs font-bold mt-0.5 ${isOOS ? 'text-red-500' : hasStockElsewhere ? 'text-amber-600' : 'text-green-600'}`}>
+                                            {isOOS ? 'Out of Stock' : hasStockElsewhere ? `${stockTotal} pcs (other location)` : `${stockHere} pcs here`}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <div className="text-right mr-3">
-                                        <p className="font-bold text-cashmere-maroon">{variant.price.toLocaleString()}</p>
-                                    </div>
+                                {/* Right: price + qty input + add button */}
+                                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                                    <p className="font-bold text-cashmere-maroon text-sm w-16 text-right">{variant.price.toLocaleString()}</p>
 
                                     {isOOS ? (
                                         <button
                                             onClick={() => { setProductionRequestData({ product: variant, quantity: '10' }); setIsRequestProductionOpen(true); }}
-                                            className="bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-700 shadow-sm flex items-center gap-1 text-xs font-bold"
-                                            title="Request Production"
+                                            className="bg-stone-800 text-white px-2 py-1.5 rounded-lg hover:bg-stone-700 flex items-center gap-1 text-xs font-bold"
                                         >
-                                            <Factory size={14} /> Request
+                                            <Factory size={12} /> Request
                                         </button>
                                     ) : (
-                                        <button
-                                            onClick={() => addToCart(variant)}
-                                            className="bg-cashmere-gold text-white p-2 rounded-lg hover:bg-yellow-600 shadow-sm transition-colors"
-                                            title="Add to Cart"
-                                        >
-                                            <Plus size={18} />
-                                        </button>
+                                        <>
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={999}
+                                                value={qty}
+                                                onChange={e => setVariantQtys(prev => ({ ...prev, [variant.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                                                className="w-14 text-center border border-stone-300 rounded-lg text-sm font-bold py-1.5 focus:ring-cashmere-maroon focus:border-cashmere-maroon"
+                                            />
+                                            <button
+                                                onClick={() => { addToCartQty(variant, qty); }}
+                                                disabled={qty <= 0}
+                                                className="bg-cashmere-gold text-white p-2 rounded-lg hover:bg-yellow-600 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm transition-colors"
+                                                title="Add to Cart"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                             </div>
-                        )
+                        );
                     })}
 
                     {selectedModel?.variants.length === 0 && (
                         <p className="text-center text-stone-400 py-4">No variants found.</p>
                     )}
                 </div>
-                <div className="pt-4 border-t border-stone-100 flex justify-end">
+
+                {/* Footer */}
+                <div className="pt-4 border-t border-stone-100 flex items-center justify-between gap-3 mt-3">
                     <button
                         onClick={() => setSelectedModel(null)}
-                        className="text-stone-500 font-bold text-sm hover:underline"
+                        className="text-stone-500 font-bold text-sm hover:text-stone-800 px-4 py-2"
                     >
-                        Close
+                        {t('common.cancel')}
+                    </button>
+                    <button
+                        onClick={addAllToCart}
+                        disabled={Object.values(variantQtys).every(q => q <= 0)}
+                        className="btn-primary flex items-center gap-2 flex-1 justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        <ShoppingBag size={16} />
+                        Add All to Cart
+                        {Object.values(variantQtys).reduce((s, q) => s + Math.max(0, q), 0) > 0 && (
+                            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold">
+                                {Object.values(variantQtys).reduce((s, q) => s + Math.max(0, q), 0)} pcs
+                            </span>
+                        )}
                     </button>
                 </div>
             </Dialog>
