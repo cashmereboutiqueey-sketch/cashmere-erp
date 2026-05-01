@@ -651,17 +651,26 @@ export default function POSPage() {
 
                 {loading ? (
                     <div className="text-center py-12 text-stone-400">{t('common.loading')}</div>
+                ) : products.length === 0 ? (
+                    <div className="col-span-full flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-stone-200 rounded-xl">
+                        <ShoppingBag size={48} className="text-stone-300 mb-4" />
+                        <p className="text-stone-500 font-bold text-lg">No products loaded</p>
+                        <p className="text-stone-400 text-sm mt-1">Check the browser console (F12) for API errors</p>
+                        <p className="text-stone-400 text-xs mt-2">
+                            Location: {locations.find(l => l.id.toString() === selectedLocation)?.name || '(none selected)'}
+                        </p>
+                    </div>
+                ) : filteredProducts.length === 0 ? (
+                    <div className="col-span-full flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-stone-200 rounded-xl">
+                        <ShoppingBag size={48} className="text-stone-300 mb-4" />
+                        <p className="text-stone-500 font-bold text-lg">No matching products</p>
+                        <p className="text-stone-400 text-sm mt-1">{products.length} products loaded — clear search or category filter</p>
+                    </div>
                 ) : (
                     <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         {Object.entries(
                             filteredProducts.reduce((acc, product) => {
-                                // Group by Name (Model)
-                                // Clean name to remove variant info if present (e.g. "Shirt (Red)" -> "Shirt")
-                                // Assumption: 'name' might contain variant info, but ideally we use a base name.
-                                // For now, we'll assume exact name match = same model.
-                                // Or better, we can strip (...) if standard naming used.
-                                // Let's try exact name usage first as requested.
-                                const name = product.name.split('(')[0].trim();
+                                const name = (product.name || product.sku || '?').split('(')[0].trim();
                                 if (!acc[name]) acc[name] = [];
                                 acc[name].push(product);
                                 return acc;
