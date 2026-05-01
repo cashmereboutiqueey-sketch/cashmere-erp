@@ -40,12 +40,8 @@ export default function CollectionsPage() {
         })
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setCategories(data);
-                } else {
-                    console.error("Categories API returned non-array:", data);
-                    setCategories([]);
-                }
+                const list = Array.isArray(data) ? data : (data.results || []);
+                setCategories(list);
                 setLoading(false);
             })
             .catch(err => {
