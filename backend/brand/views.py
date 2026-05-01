@@ -34,7 +34,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         if self.request.query_params.get('lite'):
-            return Product.objects.all().order_by('name')
+            return Product.objects.prefetch_related('inventory').order_by('name')
 
         from django.db.models import Sum, Q, DecimalField
         from django.db.models.functions import Coalesce

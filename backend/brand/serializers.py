@@ -61,9 +61,14 @@ class CategorySerializer(FinancialMaskMixin, serializers.ModelSerializer):
         fields = '__all__'
 
 class LiteProductSerializer(serializers.ModelSerializer):
+    inventory = serializers.SerializerMethodField()
+
+    def get_inventory(self, obj):
+        return [{'location': inv.location_id, 'quantity': float(inv.quantity)} for inv in obj.inventory.all()]
+
     class Meta:
         model = Product
-        fields = ['id', 'name', 'sku', 'barcode', 'image']
+        fields = ['id', 'name', 'sku', 'barcode', 'image', 'inventory']
 
 class ProductSerializer(FinancialMaskMixin, serializers.ModelSerializer):
     # Include inventory details (read-only) to see stock per location in frontend
