@@ -36,8 +36,9 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.request.query_params.get('lite'):
             return Product.objects.all().order_by('name')
 
-        from django.db.models import Sum, Q
+        from django.db.models import Sum, Q, DecimalField
         from django.db.models.functions import Coalesce
+        from decimal import Decimal
 
         return super().get_queryset().annotate(
             total_produced=Coalesce(
@@ -50,7 +51,8 @@ class ProductViewSet(viewsets.ModelViewSet):
             ),
             stock_remaining=Coalesce(
                 Sum('inventory__quantity'),
-                0
+                Decimal('0'),
+                output_field=DecimalField()
             )
         )
     
