@@ -27,6 +27,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// secure=true only in production (HTTPS); sameSite=strict blocks CSRF via cross-origin requests
+const ACCESS_COOKIE_OPTS: Cookies.CookieAttributes = {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+};
+const REFRESH_COOKIE_OPTS: Cookies.CookieAttributes = {
+    ...ACCESS_COOKIE_OPTS,
+    expires: 30,
+};
+
 function decodeUser(accessToken: string): User | null {
     try {
         const decoded: any = jwtDecode(accessToken);
@@ -80,9 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!res.ok) return false;
             const data = await res.json();
             const newAccess = data.access;
-            Cookies.set("access_token", newAccess);
+            Cookies.set("access_token", newAccess, ACCESS_COOKIE_OPTS);
             // Rotate refresh token if backend sends one back
-            if (data.refresh) Cookies.set("refresh_token", data.refresh);
+            if (data.refresh) Cookies.set("refresh_token", data.refresh, REFRESH_COOKIE_OPTS);
             setToken(newAccess);
             setUser(decodeUser(newAccess));
             // Reschedule refresh for the new token's lifetime
@@ -155,8 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const login = (accessToken: string, refreshToken: string) => {
-        Cookies.set("access_token", accessToken);
-        Cookies.set("refresh_token", refreshToken);
+        Cookies.set("access_token", accessToken, ACCESS_COOKIE_OPTS);
+        Cookies.set("refresh_token", refreshToken, REFRESH_COOKIE_OPTS);
         setToken(accessToken);
         setUser(decodeUser(accessToken));
         scheduleRefresh(accessToken, () => tryRefreshToken(), refreshTimerRef);
