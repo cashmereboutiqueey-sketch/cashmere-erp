@@ -91,16 +91,11 @@ class OrderService:
         - Credits factory MAIN treasury (if exists)
         - Records INTERCOMPANY_PAYMENT on brand ledger
         - Records SALE_REVENUE on factory ledger
-        Idempotent: checks reference_id before creating.
+        Idempotent: order row is locked first so concurrent webhooks queue, not duplicate.
         """
         from finance.models import ProductCosting, Treasury
 
         ref_id = f"ICPAY-{order.order_number}"
-        if FinancialTransaction.objects.filter(
-            reference_id=ref_id,
-            module=FinancialTransaction.ModuleType.BRAND
-        ).exists():
-            return
 
         factory_total = Decimal('0.00')
         for item in order.items.select_related('product').all():
@@ -115,6 +110,15 @@ class OrderService:
             return
 
         with db_transaction.atomic():
+            # Lock the order row so concurrent calls (e.g. duplicate Shopify webhooks)
+            # queue here instead of both passing the idempotency check below.
+            Order.objects.select_for_update().get(pk=order.pk)
+
+            if FinancialTransaction.objects.filter(
+                reference_id=ref_id,
+                module=FinancialTransaction.ModuleType.BRAND
+            ).exists():
+                return
             brand_treasury = Treasury.objects.select_for_update().filter(
                 module=Treasury.ModuleType.BRAND, type=Treasury.TreasuryType.MAIN
             ).first()
@@ -158,21 +162,24 @@ class OrderService:
     def _record_brand_revenue(order: Order):
         """
         Records the Sale Revenue in the Finance Ledger (Brand Module).
+        Idempotent: order row lock prevents concurrent duplicate inserts.
         """
         ref_id = f"SALE-{order.order_number}"
-        if not FinancialTransaction.objects.filter(
-            reference_id=ref_id,
-            module=FinancialTransaction.ModuleType.BRAND
-        ).exists():
-            FinancialTransaction.objects.create(
-                type=FinancialTransaction.TransactionType.SALE_REVENUE,
-                module=FinancialTransaction.ModuleType.BRAND,
-                category='Sales Revenue',
-                amount=order.total_price,
+        with db_transaction.atomic():
+            Order.objects.select_for_update().get(pk=order.pk)
+            if not FinancialTransaction.objects.filter(
                 reference_id=ref_id,
-                description=f"Revenue from Order #{order.order_number} ({order.payment_method})",
-                treasury=None # Goes to general ledger, or link to a specific safe if needed
-            )
+                module=FinancialTransaction.ModuleType.BRAND
+            ).exists():
+                FinancialTransaction.objects.create(
+                    type=FinancialTransaction.TransactionType.SALE_REVENUE,
+                    module=FinancialTransaction.ModuleType.BRAND,
+                    category='Sales Revenue',
+                    amount=order.total_price,
+                    reference_id=ref_id,
+                    description=f"Revenue from Order #{order.order_number} ({order.payment_method})",
+                    treasury=None
+                )
 
     @staticmethod
     def _update_customer_metrics(order: Order):
