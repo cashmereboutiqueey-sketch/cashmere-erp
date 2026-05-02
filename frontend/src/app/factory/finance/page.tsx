@@ -10,6 +10,7 @@ import KPICard from '@/components/KPICard';
 import MetricsGrid, { MetricItem } from '@/components/MetricsGrid';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 interface Treasury {
     id: number;
@@ -98,7 +99,7 @@ export default function FactoryFinancePage() {
                 setFormData({ ...formData, amount: '', description: '', reference_id: '' });
                 fetchData();
             } else {
-                alert("Failed to record transaction");
+                toast.error("Failed to record transaction");
             }
         } catch (err) {
             console.error(err);

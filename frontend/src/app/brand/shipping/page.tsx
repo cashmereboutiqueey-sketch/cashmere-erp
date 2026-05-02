@@ -8,6 +8,7 @@ import Dialog from '@/components/Dialog';
 import WaybillModal from '@/components/WaybillModal';
 
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 // ... (existing imports)
 
@@ -63,9 +64,9 @@ export default function ShippingPage() {
     };
 
     const handleCreateManifest = () => {
-        if (selectedIndices.length === 0) return alert("Select orders first");
+        { toast.error("Select orders first"); return; }
         // Logic to create manifest
-        alert(`Creating manifest for ${selectedIndices.length} orders...`);
+        toast.error(`Creating manifest for ${selectedIndices.length} orders...`);
     };
 
     const renderReadyTab = () => (
@@ -80,7 +81,7 @@ export default function ShippingPage() {
                     </button>
                     <button
                         onClick={() => {
-                            if (selectedIndices.length === 0) return alert("Select orders to print");
+                            { toast.error("Select orders to print"); return; }
                             setShowWaybillModal(true);
                         }}
                         className="bg-white border border-stone-200 text-stone-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-stone-50"
@@ -130,15 +131,15 @@ export default function ShippingPage() {
                 body: JSON.stringify({ updates })
             });
             if (res.ok) {
-                alert("Reconciliation Complete!");
+                toast.success("Reconciliation Complete!");
                 fetchOrders();
                 setReconcileData({});
             } else {
-                alert("Failed to update status");
+                toast.error("Failed to update status");
             }
         } catch (err) {
             console.error(err);
-            alert("Error submitting updates");
+            toast.error("Error submitting updates");
         }
     };
 

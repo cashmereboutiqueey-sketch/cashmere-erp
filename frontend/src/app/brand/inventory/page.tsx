@@ -21,6 +21,7 @@ interface InventoryItem {
 }
 
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 // ... (existing imports)
 
@@ -103,7 +104,7 @@ export default function BrandInventoryPage() {
 
         try {
             await Promise.all(requests);
-            alert("Orders Sent to Factory successfully!");
+            toast.success("Orders Sent to Factory successfully!");
             setShowRestockModal(false);
             setSelectedItems([]);
             setOrderSource('Store Restock');
@@ -111,7 +112,7 @@ export default function BrandInventoryPage() {
             setOrderDetails('');
         } catch (error) {
             console.error(error);
-            alert("Failed to send some orders.");
+            toast.error("Failed to send some orders.");
         }
     };
 
@@ -136,7 +137,7 @@ export default function BrandInventoryPage() {
             });
 
             if (res.ok) {
-                alert("Product Updated Successfully!");
+                toast.success("Product Updated Successfully!");
                 setIsEditOpen(false);
                 setEditItem(null);
                 setEditImage(null);
@@ -150,11 +151,11 @@ export default function BrandInventoryPage() {
                         setFilteredData(data);
                     });
             } else {
-                alert("Failed to update product");
+                toast.error("Failed to update product");
             }
         } catch (e) {
             console.error(e);
-            alert("Network Error");
+            toast.error("Network Error");
         }
     };
 

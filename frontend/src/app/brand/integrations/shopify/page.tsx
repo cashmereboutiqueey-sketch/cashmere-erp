@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Save, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
+import toast from '@/lib/toast';
 
 export default function ShopifySettingsPage() {
     const { t } = useLanguage();
@@ -83,14 +84,14 @@ export default function ShopifySettingsPage() {
             });
 
             if (res.ok) {
-                alert("Settings Saved");
+                toast.success("Settings Saved");
                 checkConnection();
             } else {
-                alert("Failed to save");
+                toast.error("Failed to save");
             }
         } catch (e) {
             console.error(e);
-            alert("Error saving settings");
+            toast.error("Error saving settings");
         } finally {
             setSaving(false);
         }

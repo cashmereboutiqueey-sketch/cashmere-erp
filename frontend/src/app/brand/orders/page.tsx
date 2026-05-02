@@ -6,6 +6,7 @@ import DataGrid from '@/components/DataGrid';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Dialog from '@/components/Dialog';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 export default function OrdersPage() {
     const { t } = useLanguage();
@@ -63,17 +64,17 @@ export default function OrdersPage() {
 
             if (res.ok) {
                 const data = await res.json();
-                alert(`Success: ${data.message || 'Order Fulfilled'}`);
+                toast.success(`Success: ${data.message || 'Order Fulfilled'}`);
                 setOrders(prev => prev.map((o: any) => o.id === selectedOrder.id ? { ...o, status: 'FULFILLED', shipping_company: shippingCompany } : o));
                 setIsFulfillOpen(false);
                 setSelectedOrder(null);
             } else {
                 const errData = await res.json();
-                alert(`Failed to fulfill order: ${errData.error || JSON.stringify(errData)}`);
+                toast.error(`Failed to fulfill order: ${errData.error || JSON.stringify(errData)}`);
             }
         } catch (e) {
             console.error(e);
-            alert('Network error occurred while fulfilling order.');
+            toast.error('Network error occurred while fulfilling order.');
         }
     };
 

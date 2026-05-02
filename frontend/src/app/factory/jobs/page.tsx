@@ -5,6 +5,7 @@ import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+import toast from '@/lib/toast';
     Play,
     CheckCircle,
     AlertCircle,
@@ -125,8 +126,8 @@ export default function ActiveJobsPage() {
     };
 
     const handleCreateJob = async () => {
-        if (!newJobData.product) return alert("Please select a product");
-        if (newJobData.quantity <= 0) return alert("Quantity must be greater than 0");
+        { toast.error("Please select a product"); return; }
+        { toast.error("Quantity must be greater than 0"); return; }
 
         try {
             // Generate a manual job name
@@ -148,18 +149,18 @@ export default function ActiveJobsPage() {
             });
 
             if (res.ok) {
-                alert("Job Created Successfully!");
+                toast.success("Job Created Successfully!");
                 setIsCreateDialogOpen(false);
                 setNewJobData({ product: '', quantity: 1, notes: '' });
                 fetchJobs();
             } else {
                 const err = await res.json();
                 console.error("Create failed:", err);
-                alert("Failed to create job: " + JSON.stringify(err));
+                toast.error("Failed to create job: " + JSON.stringify(err));
             }
         } catch (error) {
             console.error("Network error:", error);
-            alert("Network error occurred.");
+            toast.error("Network error occurred.");
         }
     };
 
@@ -200,11 +201,11 @@ export default function ActiveJobsPage() {
                 if (msg.startsWith("['") && msg.endsWith("']")) {
                     msg = msg.slice(2, -2);
                 }
-                alert("Action Failed: " + msg);
+                toast.error("Action Failed: " + msg);
             }
         } catch (error) {
             console.error("Network or parsing error:", error);
-            alert("Failed to perform action. Check console for details.");
+            toast.error("Failed to perform action. Check console for details.");
         }
     };
 
@@ -225,7 +226,7 @@ export default function ActiveJobsPage() {
                 console.log("Job completed successfully.");
                 setShowTransferModal(false);
                 fetchJobs();
-                alert(`Job Completed Successfully! Inventory transferred.`);
+                toast.success(`Job Completed Successfully! Inventory transferred.`);
             } else {
                 const err = await res.json();
                 console.error("Transfer failed:", err);
@@ -239,11 +240,11 @@ export default function ActiveJobsPage() {
                 if (msg.startsWith("['") && msg.endsWith("']")) {
                     msg = msg.slice(2, -2);
                 }
-                alert("Transfer Error:\n" + msg);
+                toast.error("Transfer Error:\n" + msg);
             }
         } catch (err) {
             console.error("Network error during transfer:", err);
-            alert("Transfer failed due to network error. Check console.");
+            toast.error("Transfer failed due to network error. Check console.");
         } finally {
             setIsSubmitting(false);
         }
@@ -375,11 +376,11 @@ export default function ActiveJobsPage() {
                                             }
 
                                             if (failed.length === 0) {
-                                                alert(`All ${succeeded.length} job(s) started successfully!`);
+                                                toast.success(`All ${succeeded.length} job(s) started successfully!`);
                                                 setActiveTab('IN_PROGRESS');
                                             } else {
                                                 const failMsgs = failed.map(r => r.error || `Job ${r.id} failed`).join('\n');
-                                                alert(`${succeeded.length} started, ${failed.length} failed:\n${failMsgs}`);
+                                                toast.success(`${succeeded.length} started, ${failed.length} failed:\n${failMsgs}`);
                                             }
                                         }}
                                         disabled={groupSelectedIds.length === 0}

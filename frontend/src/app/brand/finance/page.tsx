@@ -11,6 +11,7 @@ import Dialog from '@/components/Dialog';
 import MetricsGrid, { MetricItem } from '@/components/MetricsGrid';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 interface Treasury {
     id: number;
@@ -90,11 +91,11 @@ export default function BrandFinancePage() {
     const handleTransfer = async () => {
         const amount = parseFloat(transferAmount);
         if (!transferAmount || isNaN(amount) || amount <= 0) {
-            return alert(t('finance.alerts.invalidAmount') || 'Enter a valid amount');
+            { toast.error(t('finance.alerts.invalidAmount') || 'Enter a valid amount'); return; }
         }
         const available = treasuries.daily ? parseFloat(treasuries.daily.balance) : 0;
         if (amount > available) {
-            return alert(t('finance.alerts.insufficientFunds') || `Insufficient funds. Available: ${available.toLocaleString()} EGP`);
+            { toast.error(t('finance.alerts.insufficientFunds') || `Insufficient funds. Available: ${available.toLocaleString()} EGP`); return; }
         }
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/finance/treasury/transfer_to_main/`, {
@@ -106,9 +107,9 @@ export default function BrandFinancePage() {
                 setIsTransferOpen(false);
                 setTransferAmount('');
                 fetchData();
-                alert(t('common.save') + "!"); // Generic success
+                toast.success(t('common.save') + "!"); // Generic success
             } else {
-                alert(t('finance.alerts.transferFailed'));
+                toast.error(t('finance.alerts.transferFailed'));
             }
         } catch (err) {
             console.error(err);
@@ -138,7 +139,7 @@ export default function BrandFinancePage() {
                 setFormData({ ...formData, amount: '', description: '', reference_id: '' });
                 fetchData();
             } else {
-                alert("Failed to record transaction");
+                toast.error("Failed to record transaction");
             }
         } catch (err) {
             console.error(err);

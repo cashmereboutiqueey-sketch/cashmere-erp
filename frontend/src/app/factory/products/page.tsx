@@ -6,6 +6,7 @@ import { Tag, Layers, ChevronRight, Plus, Package } from 'lucide-react';
 import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 interface Product {
     id: number;
@@ -90,7 +91,7 @@ export default function FactoryProductCatalog() {
     }, [fetchProducts, token]);
 
     const handleCreateVariants = async () => {
-        if (!formData.name || !formData.baseSku) return alert("Name and Base SKU are required");
+        { toast.error("Name and Base SKU are required"); return; }
 
         setCreating(true);
         // Use selected colors/sizes or defaults
@@ -136,10 +137,10 @@ export default function FactoryProductCatalog() {
             setFormData({ name: '', baseSku: '', description: '', colors: [], sizes: [], retail_price: '' });
             setImageFile(null);
             fetchProducts();
-            alert(`Created ${requests.length} variants!`);
+            toast.success(`Created ${requests.length} variants!`);
         } catch (err) {
             console.error(err);
-            alert("Some items failed to create. Check unique SKU constraints.");
+            toast.error("Some items failed to create. Check unique SKU constraints.");
         } finally {
             setCreating(false);
         }
@@ -190,14 +191,14 @@ export default function FactoryProductCatalog() {
 
             await Promise.all(updates);
 
-            alert("Style Image Updated Successfully!");
+            toast.success("Style Image Updated Successfully!");
             setIsEditOpen(false);
             setEditStyle(null);
             setEditImage(null);
             fetchProducts();
         } catch (e) {
             console.error(e);
-            alert("Failed to update image");
+            toast.error("Failed to update image");
         }
     };
 

@@ -22,6 +22,7 @@ interface Customer {
 }
 
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 // ... (existing imports)
 
@@ -81,7 +82,7 @@ export default function CustomersPage() {
     // Initial fetch handled by the effect above due to dependency on state
 
     const handleCreate = async () => {
-        if (!formData.name || !formData.phone) return alert("Name and Phone are required");
+        { toast.error("Name and Phone are required"); return; }
         if (!token) return;
 
         try {
@@ -99,7 +100,7 @@ export default function CustomersPage() {
                 setFormData({ name: '', phone: '', email: '' });
                 fetchCustomers();
             } else {
-                alert("Failed to create customer");
+                toast.error("Failed to create customer");
             }
         } catch (err) {
             console.error(err);

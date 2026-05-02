@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Save, CheckCircle, Truck, Info } from 'lucide-react';
+import toast from '@/lib/toast';
 
 export default function ShippingSettingsPage() {
     const { t } = useLanguage();
@@ -21,7 +22,7 @@ export default function ShippingSettingsPage() {
         // Simulate API call
         setTimeout(() => {
             setSaving(false);
-            alert("Shipping Settings Saved (Simulation)");
+            toast.success("Shipping Settings Saved (Simulation)");
         }, 1000);
     };
 

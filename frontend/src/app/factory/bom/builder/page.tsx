@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 interface Product {
     id: number;
@@ -118,9 +119,9 @@ function BOMBuilderContent() {
     };
 
     const saveBOM = async () => {
-        if (!selectedProduct) return alert(t('bom.alerts.selectProduct'));
-        if (lines.length === 0) return alert(t('bom.alerts.noItems'));
-        if (lines.some(l => !l.raw_material_id)) return alert('Please select a material for every row.');
+        { toast.error(t('bom.alerts.selectProduct')); return; }
+        { toast.error(t('bom.alerts.noItems')); return; }
+        { toast.error('Please select a material for every row.'); return; }
 
         const payload = {
             product: parseInt(selectedProduct),
@@ -149,7 +150,7 @@ function BOMBuilderContent() {
             });
 
             if (res.ok) {
-                alert(isUpdate ? 'BOM updated successfully.' : t('bom.alerts.saved'));
+                toast.success(isUpdate ? 'BOM updated successfully.' : t('bom.alerts.saved'));
                 // Update local state so newly created BOM appears in the edit list
                 if (!isUpdate) {
                     setBomProductIds(prev => new Set([...prev, parseInt(selectedProduct)]));
@@ -162,11 +163,11 @@ function BOMBuilderContent() {
             } else {
                 const err = await res.json();
                 console.error(err);
-                alert(t('bom.alerts.error') + ': ' + JSON.stringify(err));
+                toast.error(t('bom.alerts.error') + ': ' + JSON.stringify(err));
             }
         } catch (e) {
             console.error(e);
-            alert(t('bom.alerts.error'));
+            toast.error(t('bom.alerts.error'));
         }
     };
 

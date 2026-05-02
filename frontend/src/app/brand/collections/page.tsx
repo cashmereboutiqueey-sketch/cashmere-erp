@@ -6,6 +6,7 @@ import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Plus, Edit, ShoppingBag, Folder } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 interface Category {
     id: number;
@@ -74,10 +75,10 @@ export default function CollectionsPage() {
                 setIsDialogOpen(false);
                 fetchCategories();
             } else {
-                alert("Failed to save");
+                toast.error("Failed to save");
             }
         } catch (e) {
-            alert("Error saving category");
+            toast.error("Error saving category");
         }
     };
 
@@ -96,14 +97,14 @@ export default function CollectionsPage() {
             });
             const data = await res.json();
             if (res.ok) {
-                alert('Success: Collection Sync Initiated');
+                toast.success('Success: Collection Sync Initiated');
                 fetchCategories();
             } else {
-                alert('Failed: ' + (data.error || 'Unknown error'));
+                toast.error('Failed: ' + (data.error || 'Unknown error'));
             }
         } catch (e) {
             console.error(e);
-            alert('Network Error');
+            toast.error('Network Error');
         }
     };
 

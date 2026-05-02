@@ -5,6 +5,7 @@ import { Tent, MapPin, Truck, ArrowRightLeft, Plus, PackageCheck } from 'lucide-
 import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 interface Location {
     id: number;
@@ -105,7 +106,7 @@ export default function EventsPage() {
                 setIsCreateOpen(false);
                 fetchLocations();
             } else {
-                alert("Failed to create event");
+                toast.error("Failed to create event");
             }
         } catch (err) {
             console.error(err);
@@ -140,7 +141,7 @@ export default function EventsPage() {
 
     const handleTransfer = async () => {
         if (!transferSource || !transferTarget) {
-            alert("Please select source and target locations");
+            toast.error("Please select source and target locations");
             return;
         }
         const items = Object.entries(transferQtys)
@@ -148,7 +149,7 @@ export default function EventsPage() {
             .filter(i => i.quantity > 0);
 
         if (items.length === 0) {
-            alert("Enter quantity for at least one product");
+            toast.error("Enter quantity for at least one product");
             return;
         }
 
@@ -160,15 +161,15 @@ export default function EventsPage() {
             });
 
             if (res.ok) {
-                alert(`${items.length} item(s) transferred successfully!`);
+                toast.success(`${items.length} item(s) transferred successfully!`);
                 setIsTransferOpen(false);
                 fetchProducts();
             } else {
                 const err = await res.json();
-                alert(`Transfer Failed: ${err.error || JSON.stringify(err)}`);
+                toast.error(`Transfer Failed: ${err.error || JSON.stringify(err)}`);
             }
         } catch (e) {
-            alert("Transfer Error: Check console for details");
+            toast.error("Transfer Error: Check console for details");
         }
     };
 

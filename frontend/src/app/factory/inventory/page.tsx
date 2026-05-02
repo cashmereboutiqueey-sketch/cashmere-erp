@@ -6,6 +6,7 @@ import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { ImageIcon } from 'lucide-react';
+import toast from '@/lib/toast';
 
 interface Material {
     id: number;
@@ -70,7 +71,7 @@ export default function InventoryPage() {
     }, [token]);
 
     const handleCreate = async () => {
-        if (!formData.name) return alert("Name is required");
+        { toast.error("Name is required"); return; }
 
         const data = new FormData();
         data.append('name', formData.name);
@@ -108,7 +109,7 @@ export default function InventoryPage() {
                 setImageFile(null);
                 fetchData();
             } else {
-                alert("Failed to add stock");
+                toast.error("Failed to add stock");
             }
         } catch (err) {
             console.error(err);
@@ -141,7 +142,7 @@ export default function InventoryPage() {
             });
 
             if (res.ok) {
-                alert("Restock Successful!");
+                toast.success("Restock Successful!");
                 setIsRestockOpen(false);
                 fetchData();
             } else {
@@ -155,11 +156,11 @@ export default function InventoryPage() {
                     console.error("Non-JSON error:", errorMessage);
                     errorMessage = "Server Error (Check Console for details)";
                 }
-                alert("Failed: " + errorMessage);
+                toast.error("Failed: " + errorMessage);
             }
         } catch (e) {
             console.error(e);
-            alert("Network Error - Check Console");
+            toast.error("Network Error - Check Console");
         }
     };
 

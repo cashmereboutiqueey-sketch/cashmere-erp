@@ -11,6 +11,7 @@ import KPICard from '@/components/KPICard';
 import DataGrid from '@/components/DataGrid';
 import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
+import toast from '@/lib/toast';
 
 export default function FactoryHRPage() {
     const { t } = useLanguage();
@@ -110,7 +111,7 @@ export default function FactoryHRPage() {
             const msg = error.response?.data
                 ? JSON.stringify(error.response.data)
                 : (error.message || 'Failed to create worker');
-            alert(`Error: ${msg}`);
+            toast.error(`Error: ${msg}`);
         }
     };
 
@@ -123,11 +124,11 @@ export default function FactoryHRPage() {
                 hours_worked: Number(hoursWorked),
                 notes: 'Logged via HR Dashboard'
             });
-            alert('Attendance Logged!');
+            toast.success('Attendance Logged!');
             setHoursWorked('');
             fetchData(); // Refresh stats
         } catch (error) {
-            alert('Failed to log attendance');
+            toast.error('Failed to log attendance');
         }
     };
 
@@ -140,18 +141,18 @@ export default function FactoryHRPage() {
                 quantity: Number(productionQuantity),
                 job: selectedJobId ? Number(selectedJobId) : undefined
             });
-            alert('Production Logged!');
+            toast.success('Production Logged!');
             setProductionQuantity('');
             fetchData(); // Refresh stats
         } catch (error) {
-            alert('Failed to log production');
+            toast.error('Failed to log production');
         }
     };
 
     const handleProcessPayroll = async () => {
         const total = payrollData.reduce((sum, p) => sum + Number(p.total_pay), 0);
         if (total <= 0) {
-            alert('No payroll amount to process.');
+            toast.error('No payroll amount to process.');
             return;
         }
 
@@ -161,10 +162,10 @@ export default function FactoryHRPage() {
 
         try {
             const res = await hrService.processPayroll(payrollStartDate, payrollEndDate);
-            alert(res.message);
+            toast.error(res.message);
         } catch (error: any) {
             const msg = error.response?.data?.error || 'Failed to process payroll';
-            alert(`Error: ${msg}`);
+            toast.error(`Error: ${msg}`);
         }
     };
 

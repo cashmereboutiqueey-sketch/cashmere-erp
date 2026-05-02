@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserPlus, Trash2, Edit2, Shield, Check, X } from 'lucide-react';
+import toast from '@/lib/toast';
 
 interface ERPUser {
     id: number;
@@ -69,7 +70,7 @@ export default function UsersPage() {
     useEffect(() => { if (token) fetchUsers(); }, [token]);
 
     const handleCreate = async () => {
-        if (!form.username || !form.password) return alert('Username and password required.');
+        { toast.error('Username and password required.'); return; }
         const res = await fetch(`${apiBase}/api/users/`, {
             method: 'POST', headers,
             body: JSON.stringify(form),
@@ -80,7 +81,7 @@ export default function UsersPage() {
             fetchUsers();
         } else {
             const data = await res.json();
-            alert(data.error || 'Failed to create user.');
+            toast.error(data.error || 'Failed to create user.');
         }
     };
 
@@ -90,14 +91,14 @@ export default function UsersPage() {
             body: JSON.stringify(editForm),
         });
         if (res.ok) { setEditingId(null); fetchUsers(); }
-        else { const d = await res.json(); alert(d.error || 'Update failed.'); }
+        else { const d = await res.json(); toast.error(d.error || 'Update failed.'); }
     };
 
     const handleDelete = async (id: number, username: string) => {
         if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
         const res = await fetch(`${apiBase}/api/users/${id}/`, { method: 'DELETE', headers });
         if (res.ok) fetchUsers();
-        else { const d = await res.json(); alert(d.error || 'Delete failed.'); }
+        else { const d = await res.json(); toast.error(d.error || 'Delete failed.'); }
     };
 
     const startEdit = (u: ERPUser) => {

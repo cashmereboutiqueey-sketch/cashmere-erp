@@ -5,6 +5,7 @@ import { DollarSign, FileText, Send, Clock } from 'lucide-react';
 import DataGrid from '@/components/DataGrid';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 interface Transaction {
     id: number;
@@ -48,7 +49,7 @@ export default function ExpensesPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.amount || !formData.description) return alert(t('finance.alerts.required'));
+        { toast.error(t('finance.alerts.required')); return; }
 
         setSubmitting(true);
         try {
@@ -67,7 +68,7 @@ export default function ExpensesPage() {
                 setFormData({ amount: '', description: '', reference_id: '' });
                 fetchTransactions();
             } else {
-                alert("Failed to record expense");
+                toast.error("Failed to record expense");
             }
         } catch (err) {
             console.error(err);

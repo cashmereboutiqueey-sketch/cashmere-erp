@@ -35,6 +35,7 @@ interface Category {
 }
 
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 // ... (existing imports)
 
@@ -145,12 +146,12 @@ export default function ProductCatalogPage() {
         const file = e.target.files?.[0];
         if (file) {
             if (!file.type.startsWith('image/')) {
-                alert('Please select an image file (JPG, PNG, WEBP, etc.)');
+                toast.error('Please select an image file (JPG, PNG, WEBP, etc.)');
                 e.target.value = '';
                 return;
             }
             if (file.size > 5 * 1024 * 1024) {
-                alert('Image too large. Maximum size is 5MB.');
+                toast.error('Image too large. Maximum size is 5MB.');
                 e.target.value = '';
                 return;
             }
@@ -221,16 +222,16 @@ export default function ProductCatalogPage() {
             });
 
             if (res.ok) {
-                alert(t('common.saved') || 'Saved successfully!');
+                toast.success(t('common.saved') || 'Saved successfully!');
                 setIsEditOpen(false);
                 fetchProducts();
             } else {
                 const err = await res.json();
-                alert(`Error: ${JSON.stringify(err)}`);
+                toast.error(`Error: ${JSON.stringify(err)}`);
             }
         } catch (error) {
             console.error(error);
-            alert("Save failed");
+            toast.error("Save failed");
         }
     };
 
@@ -250,13 +251,13 @@ export default function ProductCatalogPage() {
             // ...
             const data = await res.json();
             if (res.ok) {
-                alert('Success: Pushed to Shopify');
+                toast.success('Success: Pushed to Shopify');
             } else {
-                alert('Failed: ' + (data.error || 'Unknown error'));
+                toast.error('Failed: ' + (data.error || 'Unknown error'));
             }
         } catch (e) {
             console.error(e);
-            alert('Network Error');
+            toast.error('Network Error');
         }
     };
 

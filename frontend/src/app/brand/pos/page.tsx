@@ -7,6 +7,7 @@ import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Receipt from '@/components/Receipt';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 interface InventoryItem {
     location: number;
@@ -298,7 +299,7 @@ export default function POSPage() {
     };
 
     const handleCreateCustomer = async () => {
-        if (!newCustomerData.name || !newCustomerData.phone) return alert(t('pos.alerts.nameRequired'));
+        { toast.error(t('pos.alerts.nameRequired')); return; }
 
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/customers/`, {
@@ -314,7 +315,7 @@ export default function POSPage() {
                 setIsAddCustomerOpen(false);
                 setNewCustomerData({ name: '', phone: '', email: '' });
             } else {
-                alert(t('pos.alerts.createFailed'));
+                toast.error(t('pos.alerts.createFailed'));
             }
         } catch (err) {
             console.error(err);
@@ -341,28 +342,28 @@ export default function POSPage() {
             });
 
             if (res.ok) {
-                alert(`${t('pos.alerts.reqSent')}${jobName}`);
+                toast.success(`${t('pos.alerts.reqSent')}${jobName}`);
                 setIsRequestProductionOpen(false);
             } else {
                 const err = await res.json();
-                alert(`${t('pos.alerts.reqFailed')}${JSON.stringify(err)}`);
+                toast.error(`${t('pos.alerts.reqFailed')}${JSON.stringify(err)}`);
             }
         } catch (e) {
             console.error(e);
-            alert(t('pos.alerts.reqError'));
+            toast.error(t('pos.alerts.reqError'));
         }
     };
 
     const handleCheckout = async () => {
-        if (cart.length === 0) return alert("Cart is empty!");
-        if (!selectedLocation) return alert("Please select a location");
-        if (!paymentMethod) return alert("Please select a payment method");
+        { toast.error("Cart is empty!"); return; }
+        { toast.error("Please select a location"); return; }
+        { toast.error("Please select a payment method"); return; }
 
         const paid = parseFloat(amountPaid) || 0;
         const remaining = cartTotal - paid;
 
         if (remaining > 0 && !selectedCustomer) {
-            return alert("Customer required for partial payment/debt");
+            { toast.error("Customer required for partial payment/debt"); return; }
         }
 
         try {
@@ -436,7 +437,7 @@ export default function POSPage() {
             setLastOrder({ ...receiptOrder, items: receiptItems });
 
             // Success notification
-            alert(`${t('pos.alerts.orderSuccess')} ${createdOrder.order_number}!${isMadeToOrder ? '\nProduction jobs created.' : ''}`);
+            toast.success(`${t('pos.alerts.orderSuccess')} ${createdOrder.order_number}!${isMadeToOrder ? '\nProduction jobs created.' : ''}`);
 
             // Print receipt at 80mm (override the 58mm label default)
             setTimeout(() => {
@@ -464,7 +465,7 @@ export default function POSPage() {
 
         } catch (error) {
             console.error(error);
-            alert(`${t('pos.alerts.checkoutFailed')}: ${error}`);
+            toast.error(`${t('pos.alerts.checkoutFailed')}: ${error}`);
         }
     };
 
@@ -1178,12 +1179,12 @@ function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
                 setFoundOrder(list[0]);
                 setReturnItems({});
             } else {
-                alert("Order not found");
+                toast.error("Order not found");
                 setFoundOrder(null);
             }
         } catch (e) {
             console.error(e);
-            alert("Error searching order");
+            toast.error("Error searching order");
         }
     };
 
@@ -1194,7 +1195,7 @@ function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
             .filter(([_, qty]) => qty > 0)
             .map(([id, qty]) => ({ id: parseInt(id), quantity: qty }));
 
-        if (itemsPayload.length === 0) return alert("Select items to return");
+        { toast.error("Select items to return"); return; }
 
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/${foundOrder.id}/return_items/`, {
@@ -1205,18 +1206,18 @@ function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
 
             if (res.ok) {
                 const result = await res.json();
-                alert(`Return Processed!\nRefund Amount: ${result.refund_amount} EGP`);
+                toast.success(`Return Processed!\nRefund Amount: ${result.refund_amount} EGP`);
                 onClose();
                 setFoundOrder(null);
                 setReturnItems({});
                 setSearchQuery('');
             } else {
                 const err = await res.json();
-                alert(`Failed: ${JSON.stringify(err)}`);
+                toast.error(`Failed: ${JSON.stringify(err)}`);
             }
         } catch (e) {
             console.error(e);
-            alert("Network Error");
+            toast.error("Network Error");
         }
     };
 

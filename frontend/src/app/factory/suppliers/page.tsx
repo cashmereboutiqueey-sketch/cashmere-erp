@@ -7,6 +7,7 @@ import Dialog from '@/components/Dialog';
 import { Plus, DollarSign, History, ShoppingCart } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from '@/lib/toast';
 
 interface Supplier {
     id: number;
@@ -87,7 +88,7 @@ export default function SuppliersPage() {
     // --- Actions ---
 
     const handleCreateSupplier = async () => {
-        if (!createForm.name) return alert("Name is required");
+        { toast.error("Name is required"); return; }
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/suppliers/`, {
                 method: 'POST',
@@ -104,7 +105,7 @@ export default function SuppliersPage() {
 
     const handleRegisterPurchase = async () => {
         if (!purchaseForm.supplier || !purchaseForm.raw_material || !purchaseForm.quantity || !purchaseForm.cost_per_unit) {
-            return alert("All fields are required");
+            { toast.error("All fields are required"); return; }
         }
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/purchases/`, {
@@ -123,13 +124,13 @@ export default function SuppliersPage() {
                 setPurchaseForm({ supplier: '', raw_material: '', quantity: '', cost_per_unit: '' });
                 fetchData(); // Update balance
             } else {
-                alert("Failed to register purchase");
+                toast.error("Failed to register purchase");
             }
         } catch (err) { console.error(err); }
     };
 
     const handleRegisterPayment = async () => {
-        if (!paymentForm.supplier || !paymentForm.amount) return alert("Supplier and Amount are required");
+        { toast.error("Supplier and Amount are required"); return; }
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/payments/`, {
                 method: 'POST',
@@ -146,7 +147,7 @@ export default function SuppliersPage() {
                 setPaymentForm({ supplier: '', amount: '', method: 'CASH', notes: '' });
                 fetchData(); // Update balance
             } else {
-                alert("Failed to register payment");
+                toast.error("Failed to register payment");
             }
         } catch (err) { console.error(err); }
     };

@@ -4,6 +4,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ToastContainer from "@/components/ToastContainer";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
@@ -22,6 +23,7 @@ export default function RootLayout({
         <AuthProvider>
           <LanguageProvider>
             {children}
+            <ToastContainer />
           </LanguageProvider>
         </AuthProvider>
       </body>
