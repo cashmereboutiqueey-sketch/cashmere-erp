@@ -130,6 +130,7 @@ export interface Order {
   customer: number | null;
   customer_name: string | null;
   customer_email: string | null;
+  customer_phone: string | null;
   location: number | null;
   shopify_order_id: string | null;
   total_price: number | null;
