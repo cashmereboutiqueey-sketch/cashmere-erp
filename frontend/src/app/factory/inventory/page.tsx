@@ -71,7 +71,7 @@ export default function InventoryPage() {
     }, [token]);
 
     const handleCreate = async () => {
-        { toast.error("Name is required"); return; }
+        if (!formData.name.trim()) { toast.error("Name is required"); return; }
 
         const data = new FormData();
         data.append('name', formData.name);

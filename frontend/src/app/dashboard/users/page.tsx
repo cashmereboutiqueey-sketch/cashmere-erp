@@ -70,7 +70,7 @@ export default function UsersPage() {
     useEffect(() => { if (token) fetchUsers(); }, [token]);
 
     const handleCreate = async () => {
-        { toast.error('Username and password required.'); return; }
+        if (!form.username || !form.password) { toast.error('Username and password required.'); return; }
         const res = await fetch(`${apiBase}/api/users/`, {
             method: 'POST', headers,
             body: JSON.stringify(form),

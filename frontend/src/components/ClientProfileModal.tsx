@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Phone, Mail, Calendar, MapPin, Tag, ShoppingBag, Clock, MessageCircle, Send } from 'lucide-react';
 import Dialog from './Dialog';
+import type { Customer } from '@/types';
 
 interface Interaction {
     id: number;
@@ -10,26 +11,14 @@ interface Interaction {
     date: string;
 }
 
-interface Order {
+interface LocalOrder {
     id: number;
+    customer: number | null;
     order_number: string;
-    total_price: string;
+    total_price: number | null;
     created_at: string;
     status: string;
-    items: any[];
-}
-
-interface Customer {
-    id: number;
-    name: string;
-    phone: string;
-    email?: string;
-    tier: string;
-    sizing_profile: any;
-    style_preferences?: string;
-    ltv_score: string;
-    birth_date?: string;
-    total_spent: string;
+    items: { product_name?: string; quantity: number; unit_price?: number }[];
 }
 
 interface ClientProfileModalProps {
@@ -41,7 +30,7 @@ interface ClientProfileModalProps {
 
 export default function ClientProfileModal({ customer, isOpen, onClose, onUpdate }: ClientProfileModalProps) {
     const [interactions, setInteractions] = useState<Interaction[]>([]);
-    const [orders, setOrders] = useState<Order[]>([]);
+    const [orders, setOrders] = useState<LocalOrder[]>([]);
     const [note, setNote] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -70,7 +59,8 @@ export default function ClientProfileModal({ customer, isOpen, onClose, onUpdate
             const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/`);
             const orderData = await orderRes.json();
             // Client-side filter for now as I didn't add filter backend (yet)
-            const myOrders = orderData.filter((o: any) => o.customer === customer.id);
+            const allOrders: LocalOrder[] = Array.isArray(orderData) ? orderData : (orderData.results || []);
+            const myOrders = allOrders.filter(o => o.customer === customer.id);
             setOrders(myOrders);
 
         } catch (err) {
@@ -148,7 +138,7 @@ export default function ClientProfileModal({ customer, isOpen, onClose, onUpdate
                         <div className="pt-6 border-t border-stone-100">
                             <h3 className="text-xs font-bold uppercase text-stone-400 mb-3">Sizing Profile</h3>
                             <div className="grid grid-cols-3 gap-2">
-                                {Object.entries(customer.sizing_profile || {}).map(([k, v]: any) => (
+                                {Object.entries(customer.sizing_profile || {}).map(([k, v]) => (
                                     <div key={k} className="bg-stone-100 p-2 rounded text-center">
                                         <div className="text-xs text-stone-500 uppercase">{k}</div>
                                         <div className="font-bold text-stone-800">{v}</div>
@@ -177,11 +167,11 @@ export default function ClientProfileModal({ customer, isOpen, onClose, onUpdate
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <div className="text-xs text-stone-500">Total Spent</div>
-                                    <div className="text-xl font-serif text-stone-800">{parseFloat(customer.total_spent).toLocaleString()}</div>
+                                    <div className="text-xl font-serif text-stone-800">{Number(customer.total_spent).toLocaleString()}</div>
                                 </div>
                                 <div>
                                     <div className="text-xs text-stone-500">LTV Score</div>
-                                    <div className="text-xl font-serif text-stone-800">{parseFloat(customer.ltv_score).toLocaleString()}</div>
+                                    <div className="text-xl font-serif text-stone-800">{Number(customer.ltv_score).toLocaleString()}</div>
                                 </div>
                             </div>
                         </div>
@@ -209,11 +199,11 @@ export default function ClientProfileModal({ customer, isOpen, onClose, onUpdate
                                         <div className="font-bold text-stone-800">#{order.order_number}</div>
                                         <div className="text-xs text-stone-500">{new Date(order.created_at).toLocaleDateString()}</div>
                                     </div>
-                                    <div className="font-mono text-stone-600">{parseFloat(order.total_price).toLocaleString()}</div>
+                                    <div className="font-mono text-stone-600">{Number(order.total_price ?? 0).toLocaleString()}</div>
                                 </div>
                                 {/* Items Preview */}
                                 <div className="space-y-1 mt-2">
-                                    {order.items?.map((item: any, idx: number) => (
+                                    {order.items?.map((item, idx) => (
                                         <div key={idx} className="flex justify-between text-sm text-stone-600">
                                             <span>{item.quantity}x {item.product ? `Product #${item.product}` : 'Item'}</span> {/* Ideally resolve Product Name */}
                                         </div>

@@ -6,25 +6,9 @@ import Dialog from '@/components/Dialog';
 import ClientProfileModal from '@/components/ClientProfileModal';
 import { User, Phone, Crown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-interface Customer {
-    id: number;
-    name: string;
-    phone: string;
-    email?: string;
-    tier: string;
-    sizing_profile: any;
-    ltv_score: string;
-    birth_date?: string;
-    style_preferences?: string;
-    total_spent: string;
-    current_debt: string;
-}
-
 import { useAuth } from '@/contexts/AuthContext';
 import toast from '@/lib/toast';
-
-// ... (existing imports)
+import type { Customer } from '@/types';
 
 export default function CustomersPage() {
     const { t, language } = useLanguage();
@@ -82,7 +66,7 @@ export default function CustomersPage() {
     // Initial fetch handled by the effect above due to dependency on state
 
     const handleCreate = async () => {
-        { toast.error("Name and Phone are required"); return; }
+        if (!formData.name || !formData.phone) { toast.error("Name and Phone are required"); return; }
         if (!token) return;
 
         try {
@@ -151,8 +135,8 @@ export default function CustomersPage() {
             label: t('brandCustomers.ltv'),
             render: (row: Customer) => (
                 <div>
-                    <div className="font-serif font-bold text-stone-800">{(parseFloat(row.total_spent) || 0).toLocaleString()} {t('common.currency') || 'EGP'}</div>
-                    {(parseFloat(row.ltv_score) || 0) > 0 && <div className="text-[10px] text-stone-400">LTV: {(parseFloat(row.ltv_score) || 0).toLocaleString()}</div>}
+                    <div className="font-serif font-bold text-stone-800">{(Number(row.total_spent) || 0).toLocaleString()} {t('common.currency') || 'EGP'}</div>
+                    {(Number(row.ltv_score) || 0) > 0 && <div className="text-[10px] text-stone-400">LTV: {(Number(row.ltv_score) || 0).toLocaleString()}</div>}
                 </div>
             )
         },
@@ -160,7 +144,7 @@ export default function CustomersPage() {
             key: 'current_debt',
             label: t('brandCustomers.debt'),
             render: (row: Customer) => {
-                const debt = parseFloat(row.current_debt);
+                const debt = Number(row.current_debt);
                 return debt > 0 ? (
                     <span className="bg-red-50 text-red-700 px-2 py-1 rounded-full text-xs font-bold border border-red-100">
                         {debt.toLocaleString()} {t('common.currency') || 'EGP'} {t('brandCustomers.due')}

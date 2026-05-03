@@ -8,8 +8,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.db.models import Sum, F
 from django.db import transaction
 from decimal import Decimal
-from .models import FinancialTransaction, Treasury
-from .serializers import FinancialTransactionSerializer, TreasurySerializer
+from .models import FinancialTransaction, Treasury, ProductCosting, FactoryOverhead
+from .serializers import FinancialTransactionSerializer, TreasurySerializer, ProductCostingSerializer, FactoryOverheadSerializer
 from core.permissions import HasFinanceAccess
 
 
@@ -310,3 +310,17 @@ class MetricsViewSet(viewsets.ViewSet):
         ]
 
         return Response(metrics)
+
+
+class ProductCostingViewSet(viewsets.ModelViewSet):
+    queryset = ProductCosting.objects.select_related('product').all()
+    serializer_class = ProductCostingSerializer
+    permission_classes = [IsAuthenticated, HasFinanceAccess]
+    filterset_fields = ['product']
+
+
+class FactoryOverheadViewSet(viewsets.ModelViewSet):
+    queryset = FactoryOverhead.objects.all().order_by('-month')
+    serializer_class = FactoryOverheadSerializer
+    permission_classes = [IsAuthenticated, HasFinanceAccess]
+    filterset_fields = ['month']

@@ -91,7 +91,7 @@ export default function FactoryProductCatalog() {
     }, [fetchProducts, token]);
 
     const handleCreateVariants = async () => {
-        { toast.error("Name and Base SKU are required"); return; }
+        if (!formData.name || !formData.baseSku) { toast.error("Name and Base SKU are required"); return; }
 
         setCreating(true);
         // Use selected colors/sizes or defaults

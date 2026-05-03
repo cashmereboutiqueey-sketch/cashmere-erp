@@ -16,7 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
+from django.conf import settings
 from users.views import MyTokenObtainPairView
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -26,9 +27,16 @@ from rest_framework_simplejwt.views import (
 def health(request):
     return JsonResponse({"status": "ok"})
 
+# Redirect the old /admin/ path to 404 so bots/scanners find nothing
+def admin_404(request, *args, **kwargs):
+    raise Http404
+
+ADMIN_URL = getattr(settings, 'ADMIN_URL', 'cashmere-admin-panel/')
+
 urlpatterns = [
     path('api/', health),
-    path('admin/', admin.site.urls),
+    path('admin/', admin_404),          # Old default path — returns 404
+    path(ADMIN_URL, admin.site.urls),   # Real path set via ADMIN_URL env var
     # Authentication
     path('api/token/', MyTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

@@ -99,10 +99,15 @@ class Inventory(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='inventory')
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='stock')
     quantity = models.DecimalField(max_digits=10, decimal_places=3, default=Decimal('0.000'))
-    
+
     class Meta:
         unique_together = ('product', 'location')
         verbose_name_plural = "Inventory"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.quantity != self.quantity.to_integral_value():
+            raise ValidationError({'quantity': 'Inventory quantity must be a whole number for finished goods.'})
 
     def __str__(self) -> str:
         return f"{self.product.sku} @ {self.location.name}: {self.quantity}"

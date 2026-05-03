@@ -9,6 +9,9 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=Csv())
 
+# Admin panel URL — change this in production via env var, never leave it as /admin/
+ADMIN_URL = config('ADMIN_URL', default='cashmere-admin-panel/')
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',

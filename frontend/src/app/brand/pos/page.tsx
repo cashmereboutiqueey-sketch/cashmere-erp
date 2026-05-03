@@ -299,7 +299,7 @@ export default function POSPage() {
     };
 
     const handleCreateCustomer = async () => {
-        { toast.error(t('pos.alerts.nameRequired')); return; }
+        if (!newCustomerData.name || !newCustomerData.phone) { toast.error(t('pos.alerts.nameRequired')); return; }
 
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/customers/`, {
@@ -355,15 +355,15 @@ export default function POSPage() {
     };
 
     const handleCheckout = async () => {
-        { toast.error("Cart is empty!"); return; }
-        { toast.error("Please select a location"); return; }
-        { toast.error("Please select a payment method"); return; }
+        if (cart.length === 0) { toast.error("Cart is empty!"); return; }
+        if (!selectedLocation) { toast.error("Please select a location"); return; }
+        if (!paymentMethod) { toast.error("Please select a payment method"); return; }
 
         const paid = parseFloat(amountPaid) || 0;
         const remaining = cartTotal - paid;
 
         if (remaining > 0 && !selectedCustomer) {
-            { toast.error("Customer required for partial payment/debt"); return; }
+            toast.error("Customer required for partial payment/debt"); return;
         }
 
         try {
@@ -1195,7 +1195,7 @@ function ReturnsModal({ isOpen, onClose, t }: { isOpen: boolean, onClose: () => 
             .filter(([_, qty]) => qty > 0)
             .map(([id, qty]) => ({ id: parseInt(id), quantity: qty }));
 
-        { toast.error("Select items to return"); return; }
+        if (itemsPayload.length === 0) { toast.error("Select items to return"); return; }
 
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/${foundOrder.id}/return_items/`, {

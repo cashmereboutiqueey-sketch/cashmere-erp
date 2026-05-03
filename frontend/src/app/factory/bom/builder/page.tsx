@@ -119,9 +119,9 @@ function BOMBuilderContent() {
     };
 
     const saveBOM = async () => {
-        { toast.error(t('bom.alerts.selectProduct')); return; }
-        { toast.error(t('bom.alerts.noItems')); return; }
-        { toast.error('Please select a material for every row.'); return; }
+        if (!selectedProduct) { toast.error(t('bom.alerts.selectProduct')); return; }
+        if (lines.length === 0) { toast.error(t('bom.alerts.noItems')); return; }
+        if (lines.some(l => !l.raw_material_id)) { toast.error('Please select a material for every row.'); return; }
 
         const payload = {
             product: parseInt(selectedProduct),

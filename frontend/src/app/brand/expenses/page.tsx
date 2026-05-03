@@ -49,7 +49,7 @@ export default function ExpensesPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        { toast.error(t('finance.alerts.required')); return; }
+        if (!formData.amount || !formData.description) { toast.error(t('finance.alerts.required')); return; }
 
         setSubmitting(true);
         try {

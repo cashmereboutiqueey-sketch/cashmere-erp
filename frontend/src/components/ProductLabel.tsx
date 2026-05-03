@@ -23,10 +23,11 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
                 ref={ref}
                 style={{
                     width: '58mm',
-                    padding: '4mm',
+                    padding: '4mm 4mm 0 4mm',
                     pageBreakAfter: 'always',
                     fontFamily: 'Arial, sans-serif',
-                    backgroundColor: 'white'
+                    backgroundColor: 'white',
+                    display: 'inline-block'
                 }}
             >
                 {/* Brand Header */}

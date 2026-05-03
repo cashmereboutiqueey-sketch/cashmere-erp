@@ -7,23 +7,23 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import Dialog from '@/components/Dialog';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from '@/lib/toast';
+import type { Order } from '@/types';
 
 export default function OrdersPage() {
     const { t } = useLanguage();
     const { token } = useAuth();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [orders, setOrders] = useState<any[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [search, setSearch] = useState('');
 
     // Fulfillment Dialog State
     const [isFulfillOpen, setIsFulfillOpen] = useState(false);
-    const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+    const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [shippingCompany, setShippingCompany] = useState('BOSTA');
 
     const [isViewOpen, setIsViewOpen] = useState(false);
-    const [viewOrder, setViewOrder] = useState<any | null>(null);
+    const [viewOrder, setViewOrder] = useState<Order | null>(null);
 
     useEffect(() => {
         if (token) fetchOrders();
@@ -46,9 +46,9 @@ export default function OrdersPage() {
         }
     };
 
-    const openFulfillDialog = (order: any) => {
+    const openFulfillDialog = (order: Order) => {
         setSelectedOrder(order);
-        setShippingCompany('BOSTA'); // Default
+        setShippingCompany('BOSTA');
         setIsFulfillOpen(true);
     };
 
@@ -65,7 +65,7 @@ export default function OrdersPage() {
             if (res.ok) {
                 const data = await res.json();
                 toast.success(`Success: ${data.message || 'Order Fulfilled'}`);
-                setOrders(prev => prev.map((o: any) => o.id === selectedOrder.id ? { ...o, status: 'FULFILLED', shipping_company: shippingCompany } : o));
+                setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: 'FULFILLED' as Order['status'], shipping_company: shippingCompany as Order['shipping_company'] } : o));
                 setIsFulfillOpen(false);
                 setSelectedOrder(null);
             } else {
@@ -101,7 +101,7 @@ export default function OrdersPage() {
         );
     };
 
-    const filteredOrders = orders.filter((order: any) => {
+    const filteredOrders = orders.filter((order: Order) => {
         const matchesSearch =
             order.order_number?.toLowerCase().includes(search.toLowerCase()) ||
             order.customer_name?.toLowerCase().includes(search.toLowerCase());
@@ -120,41 +120,40 @@ export default function OrdersPage() {
         {
             key: "order_number",
             label: t('orders.orderNumber'),
-            render: (row: any) => <span className="font-mono text-xs font-bold">{row.order_number}</span>
+            render: (row: Order) => <span className="font-mono text-xs font-bold">{row.order_number}</span>
         },
         {
             key: "created_at",
             label: t('common.date'),
-            render: (row: any) => <span className="text-stone-500 text-xs">{new Date(row.created_at).toLocaleDateString()}</span>
+            render: (row: Order) => <span className="text-stone-500 text-xs">{new Date(row.created_at).toLocaleDateString()}</span>
         },
         {
             key: "customer",
             label: t('orders.customer'),
-            render: (row: any) => (
+            render: (row: Order) => (
                 <div>
                     <div className="font-bold text-stone-800">{row.customer_name || 'Guest'}</div>
-                    <div className="text-xs text-stone-400">{row.customer_phone || '-'}</div>
                 </div>
             )
         },
         {
             key: "total_price",
             label: t('common.total'),
-            render: (row: any) => (
+            render: (row: Order) => (
                 <span className="font-serif font-bold text-cashmere-maroon">
-                    {row.total_price ? `${parseFloat(row.total_price).toLocaleString()} EGP` : '---'}
+                    {row.total_price != null ? `${Number(row.total_price).toLocaleString()} EGP` : '---'}
                 </span>
             )
         },
         {
             key: "status",
             label: t('common.status'),
-            render: (row: any) => <StatusBadge status={row.status} />
+            render: (row: Order) => <StatusBadge status={row.status} />
         },
         {
             key: "actions",
             label: t('common.actions'),
-            render: (row: any) => (
+            render: (row: Order) => (
                 <div className="flex gap-2">
                     {(row.status === 'READY' || row.status === 'PAID') && (
                         <button
@@ -242,8 +241,8 @@ export default function OrdersPage() {
                             <div><span className="font-bold text-stone-500">Phone</span><p>{viewOrder.customer_phone || '—'}</p></div>
                             <div><span className="font-bold text-stone-500">Status</span><p>{viewOrder.status}</p></div>
                             <div><span className="font-bold text-stone-500">Payment</span><p>{viewOrder.payment_method}</p></div>
-                            <div><span className="font-bold text-stone-500">Total</span><p className="font-bold text-cashmere-maroon">{parseFloat(viewOrder.total_price || 0).toLocaleString()} EGP</p></div>
-                            <div><span className="font-bold text-stone-500">Amount Paid</span><p>{parseFloat(viewOrder.amount_paid || 0).toLocaleString()} EGP</p></div>
+                            <div><span className="font-bold text-stone-500">Total</span><p className="font-bold text-cashmere-maroon">{Number(viewOrder.total_price ?? 0).toLocaleString()} EGP</p></div>
+                            <div><span className="font-bold text-stone-500">Amount Paid</span><p>{Number(viewOrder.amount_paid ?? 0).toLocaleString()} EGP</p></div>
                             <div><span className="font-bold text-stone-500">Date</span><p>{new Date(viewOrder.created_at).toLocaleDateString()}</p></div>
                             <div><span className="font-bold text-stone-500">Shipping</span><p>{viewOrder.shipping_company || '—'}</p></div>
                         </div>

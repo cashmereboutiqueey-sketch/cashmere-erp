@@ -113,7 +113,7 @@ class InventorySerializer(FinancialMaskMixin, serializers.ModelSerializer):
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     product_barcode = serializers.CharField(source='product.barcode', read_only=True)
     location_name = serializers.CharField(source='location.name', read_only=True)
-    
+
     # Financials for Valuation
     product_cost = serializers.DecimalField(source='product.standard_cost', max_digits=10, decimal_places=2, read_only=True)
     product_price = serializers.DecimalField(source='product.retail_price', max_digits=10, decimal_places=2, read_only=True)
@@ -122,6 +122,11 @@ class InventorySerializer(FinancialMaskMixin, serializers.ModelSerializer):
     class Meta:
         model = Inventory
         fields = '__all__'
+
+    def validate_quantity(self, value):
+        if value != value.to_integral_value():
+            raise serializers.ValidationError("Inventory quantity must be a whole number for finished goods.")
+        return value
 
 class OrderItemSerializer(FinancialMaskMixin, serializers.ModelSerializer):
     class Meta:
@@ -151,22 +156,26 @@ class OrderSerializer(FinancialMaskMixin, serializers.ModelSerializer):
         return order
 
     def update(self, instance, validated_data):
-        items_data = validated_data.pop('items', [])
-        
-        # Update Order fields
-        instance.status = validated_data.get('status', instance.status)
-        instance.total_price = validated_data.get('total_price', instance.total_price)
-        instance.amount_paid = validated_data.get('amount_paid', instance.amount_paid)
-        instance.is_fully_paid = validated_data.get('is_fully_paid', instance.is_fully_paid)
-        instance.payment_method = validated_data.get('payment_method', instance.payment_method)
-        instance.customer = validated_data.get('customer', instance.customer)
-        instance.location = validated_data.get('location', instance.location)
-        instance.save()
-        
-        # Handle Items Update (Full replacement strategy for simplicity)
-        if items_data:
+        items_data = validated_data.pop('items', None)
+
+        # Guard: prevent zero-item replacement via PATCH (data loss footgun).
+        # Items are managed via the return_items action; PATCH is for scalar fields only.
+        if items_data is not None:
+            if len(items_data) == 0:
+                raise serializers.ValidationError(
+                    {'items': 'Cannot update an order to have zero items. Omit items to leave them unchanged.'}
+                )
             instance.items.all().delete()
             for item_data in items_data:
                 OrderItem.objects.create(order=instance, **item_data)
-                
+
+        updatable = [
+            'status', 'total_price', 'amount_paid', 'is_fully_paid',
+            'payment_method', 'customer', 'location', 'notes', 'discount',
+            'tracking_number', 'shipping_company', 'detailed_status',
+        ]
+        for field in updatable:
+            if field in validated_data:
+                setattr(instance, field, validated_data[field])
+        instance.save()
         return instance

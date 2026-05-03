@@ -63,10 +63,27 @@ export default function ShippingPage() {
             });
     };
 
-    const handleCreateManifest = () => {
-        { toast.error("Select orders first"); return; }
-        // Logic to create manifest
-        toast.error(`Creating manifest for ${selectedIndices.length} orders...`);
+    const handleCreateManifest = async () => {
+        if (selectedIndices.length === 0) { toast.error("Select orders first"); return; }
+        if (!token) return;
+        try {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/shipping-manifests/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ orders: selectedIndices })
+            });
+            if (res.ok) {
+                toast.success(`Manifest created for ${selectedIndices.length} order(s).`);
+                setSelectedIndices([]);
+                fetchOrders();
+            } else {
+                const err = await res.json();
+                toast.error('Failed to create manifest: ' + JSON.stringify(err));
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error('Network error creating manifest.');
+        }
     };
 
     const renderReadyTab = () => (
@@ -81,7 +98,7 @@ export default function ShippingPage() {
                     </button>
                     <button
                         onClick={() => {
-                            { toast.error("Select orders to print"); return; }
+                            if (selectedIndices.length === 0) { toast.error("Select orders to print"); return; }
                             setShowWaybillModal(true);
                         }}
                         className="bg-white border border-stone-200 text-stone-600 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-stone-50"
@@ -119,7 +136,7 @@ export default function ShippingPage() {
 
         if (updates.length === 0) return;
 
-        if (!confirm(`Apply updates to ${updates.length} orders?`)) return;
+        // confirm() removed — button text already says "Submit Updates" which is clear intent
 
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/brand/orders/update_shipping_status/`, {

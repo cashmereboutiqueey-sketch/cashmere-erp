@@ -88,7 +88,7 @@ export default function SuppliersPage() {
     // --- Actions ---
 
     const handleCreateSupplier = async () => {
-        { toast.error("Name is required"); return; }
+        if (!createForm.name.trim()) { toast.error("Name is required"); return; }
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/suppliers/`, {
                 method: 'POST',
@@ -130,7 +130,7 @@ export default function SuppliersPage() {
     };
 
     const handleRegisterPayment = async () => {
-        { toast.error("Supplier and Amount are required"); return; }
+        if (!paymentForm.supplier || !paymentForm.amount) { toast.error("Supplier and Amount are required"); return; }
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/factory/payments/`, {
                 method: 'POST',

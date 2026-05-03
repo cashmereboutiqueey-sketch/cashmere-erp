@@ -5,7 +5,6 @@ import Dialog from '@/components/Dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-import toast from '@/lib/toast';
     Play,
     CheckCircle,
     AlertCircle,
@@ -19,6 +18,7 @@ import toast from '@/lib/toast';
     CheckSquare,
     Square
 } from 'lucide-react';
+import toast from '@/lib/toast';
 
 interface Job {
     id: number;
@@ -126,8 +126,8 @@ export default function ActiveJobsPage() {
     };
 
     const handleCreateJob = async () => {
-        { toast.error("Please select a product"); return; }
-        { toast.error("Quantity must be greater than 0"); return; }
+        if (!newJobData.product) { toast.error("Please select a product"); return; }
+        if (newJobData.quantity < 1) { toast.error("Quantity must be greater than 0"); return; }
 
         try {
             // Generate a manual job name
