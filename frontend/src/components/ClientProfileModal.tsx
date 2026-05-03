@@ -18,7 +18,7 @@ interface LocalOrder {
     total_price: number | null;
     created_at: string;
     status: string;
-    items: { product_name?: string; quantity: number; unit_price?: number }[];
+    items: { product?: number; product_name?: string; quantity: number; unit_price?: number }[];
 }
 
 interface ClientProfileModalProps {
