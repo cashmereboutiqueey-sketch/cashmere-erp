@@ -97,14 +97,14 @@ export default function ProductCatalogPage() {
             const content = printArea?.innerHTML?.trim();
             if (!content) { window.print(); return; }
 
-            const win = window.open('', '_blank', 'width=260,height=420,toolbar=no,scrollbars=no,menubar=no,status=no');
+            const win = window.open('', '_blank', 'width=175,height=115,toolbar=no,scrollbars=no,menubar=no,status=no');
             if (!win) { window.print(); return; }
 
             win.document.write(`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>
-  @page { size: 58mm auto; margin: 0; }
+  @page { size: 40mm 25mm; margin: 0; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-  html, body { width: 58mm; height: fit-content; margin: 0; padding: 0; background: white; font-family: Arial, sans-serif; }
+  html, body { width: 40mm; height: 25mm; margin: 0; padding: 0; overflow: hidden; background: white; font-family: Arial, sans-serif; }
 </style></head>
 <body>${content}
 <script>window.onload=function(){setTimeout(function(){window.print();window.close();},150);};<\/script>

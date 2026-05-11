@@ -9,11 +9,7 @@ interface ProductLabelProps {
     currency?: string;
 }
 
-/**
- * Thermal Printer Label Component
- * Optimized for Xprinter XP-365B (58mm thermal paper)
- * Design matches retail product labels with CASHMERE branding
- */
+// 40mm × 25mm sticker label
 const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
     ({ product_name, product_sku, product_barcode, product_price, currency = 'LE' }, ref) => {
         const barcodeValue = product_barcode || product_sku;
@@ -22,37 +18,36 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
             <div
                 ref={ref}
                 style={{
-                    width: '58mm',
-                    padding: '4mm 4mm 0 4mm',
-                    pageBreakAfter: 'always',
+                    width: '40mm',
+                    height: '25mm',
+                    padding: '1.5mm 1.5mm 0 1.5mm',
+                    boxSizing: 'border-box',
                     fontFamily: 'Arial, sans-serif',
                     backgroundColor: 'white',
-                    display: 'inline-block'
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    overflow: 'hidden',
                 }}
             >
                 {/* Brand Header */}
-                <div className="text-center mb-2">
-                    <h1
-                        style={{
-                            fontSize: '28px',
-                            fontWeight: 'bold',
-                            letterSpacing: '4px',
-                            margin: '0',
-                            padding: '4px 0',
-                            color: '#000'
-                        }}
-                    >
-                        CASHMERE
-                    </h1>
+                <div style={{
+                    fontSize: '8px',
+                    fontWeight: 'bold',
+                    letterSpacing: '2.5px',
+                    lineHeight: 1,
+                }}>
+                    CASHMERE
                 </div>
 
-                {/* Barcode Section */}
-                <div className="flex justify-center mb-1">
+                {/* Barcode */}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <Barcode
                         value={barcodeValue}
-                        width={2.5}
-                        height={60}
-                        fontSize={16}
+                        width={0.9}
+                        height={20}
+                        fontSize={6}
                         margin={0}
                         displayValue={true}
                         background="#ffffff"
@@ -60,55 +55,39 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
                     />
                 </div>
 
-                {/* Product Name in Arabic/English */}
-                <div
-                    className="text-center mb-2"
-                    style={{
-                        fontSize: '14px',
-                        fontWeight: 'normal',
-                        direction: 'rtl',
-                        padding: '2px 0'
-                    }}
-                >
+                {/* Product Name */}
+                <div style={{
+                    fontSize: '6.5px',
+                    textAlign: 'center',
+                    direction: 'rtl',
+                    lineHeight: 1,
+                    width: '100%',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    padding: '0 2px',
+                }}>
                     {product_name}
                 </div>
 
-                {/* Price Section - Bold Black Box */}
-                <div
-                    style={{
-                        backgroundColor: '#000',
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '8px 12px',
-                        marginTop: '4px',
-                        borderRadius: '2px',
-                        WebkitPrintColorAdjust: 'exact',
-                        printColorAdjust: 'exact'
-                    }}
-                >
-                    <div
-                        style={{
-                            fontSize: '20px',
-                            fontWeight: 'bold',
-                            letterSpacing: '2px'
-                        }}
-                    >
-                        Price
-                    </div>
-                    <div
-                        style={{
-                            fontSize: '28px',
-                            fontWeight: 'bold',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                        }}
-                    >
-                        <span>{Number(product_price).toFixed(0)}</span>
-                        <span style={{ fontSize: '20px' }}>{currency}</span>
-                    </div>
+                {/* Price Bar */}
+                <div style={{
+                    backgroundColor: '#000',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '1.5px 4px',
+                    boxSizing: 'border-box',
+                    WebkitPrintColorAdjust: 'exact',
+                    printColorAdjust: 'exact',
+                } as React.CSSProperties}>
+                    <span style={{ fontSize: '7px', fontWeight: 'bold', letterSpacing: '0.5px' }}>Price</span>
+                    <span style={{ fontSize: '9px', fontWeight: 'bold' }}>
+                        {Number(product_price).toFixed(0)}{' '}
+                        <span style={{ fontSize: '7px' }}>{currency}</span>
+                    </span>
                 </div>
             </div>
         );
