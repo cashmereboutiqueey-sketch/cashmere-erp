@@ -28,11 +28,23 @@ jobs:
           cd /opt/cashmere
           docker compose -f docker-compose.prod.yml --env-file .env.production up -d --remove-orphans
 
+      - name: Wait for backend to be ready
+        run: |
+          echo "Waiting for backend container to finish startup (migrate + collectstatic in entrypoint)..."
+          for i in $(seq 1 30); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' cashmere-backend 2>/dev/null || echo "none")
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Backend is healthy."
+              break
+            fi
+            echo "  attempt $i: status=$STATUS"
+            sleep 5
+          done
+
       - name: Run migrations
         run: |
           cd /opt/cashmere
           docker compose -f docker-compose.prod.yml --env-file .env.production exec -T backend python manage.py migrate --noinput
-          docker compose -f docker-compose.prod.yml --env-file .env.production exec -T backend python manage.py collectstatic --noinput
 
       - name: Health check
         run: curl -fL https://cashmerebotique.tech/api/ && echo "OK"
