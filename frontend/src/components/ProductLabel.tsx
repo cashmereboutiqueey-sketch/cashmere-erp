@@ -9,22 +9,22 @@ interface ProductLabelProps {
     currency?: string;
 }
 
-// 40mm × 25mm sticker label — landscape orientation
+// 25mm × 40mm sticker label — portrait orientation
 const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
     ({ product_name, product_sku, product_barcode, product_price, currency = 'LE' }, ref) => {
         const barcodeValue = product_barcode || product_sku;
 
-        // Scale bar width so the barcode fits within ~37mm (140px at 96dpi).
+        // Scale bar width so the barcode fits within ~22mm (83px at 96dpi).
         // Code128 uses roughly 11 modules per char + ~57 modules overhead.
         const estimatedModules = barcodeValue.length * 11 + 57;
-        const barWidth = Math.min(0.9, Math.max(0.4, 140 / estimatedModules));
+        const barWidth = Math.min(0.9, Math.max(0.4, 83 / estimatedModules));
 
         return (
             <div
                 ref={ref}
                 style={{
-                    width: '40mm',
-                    height: '25mm',
+                    width: '25mm',
+                    height: '40mm',
                     padding: '1.5mm 1.5mm 0 1.5mm',
                     boxSizing: 'border-box',
                     fontFamily: 'Arial, sans-serif',

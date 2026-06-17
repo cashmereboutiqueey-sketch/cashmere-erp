@@ -97,15 +97,15 @@ export default function ProductCatalogPage() {
             const content = printArea?.innerHTML?.trim();
             if (!content) { window.print(); return; }
 
-            // 40mm × 25mm in CSS px at 96dpi ≈ 152 × 95; add ~30px for window chrome
-            const win = window.open('', '_blank', 'width=182,height=125,toolbar=no,scrollbars=no,menubar=no,status=no');
+            // 25mm × 40mm in CSS px at 96dpi ≈ 95 × 152; add ~30px for window chrome
+            const win = window.open('', '_blank', 'width=125,height=182,toolbar=no,scrollbars=no,menubar=no,status=no');
             if (!win) { window.print(); return; }
 
             win.document.write(`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><style>
-  @page { size: 40mm 25mm; margin: 0; }
+  @page { size: 25mm 40mm; margin: 0; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-  html, body { width: 40mm; height: 25mm; margin: 0; padding: 0; overflow: hidden; background: white; font-family: Arial, sans-serif; }
+  html, body { width: 25mm; height: 40mm; margin: 0; padding: 0; overflow: hidden; background: white; font-family: Arial, sans-serif; }
   svg { display: block; max-width: 100% !important; }
 </style></head>
 <body>${content}
