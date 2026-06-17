@@ -27,14 +27,18 @@ RUN pip install --upgrade pip && \
 # Copy project
 COPY . .
 
-# Create staticfiles directory
-RUN mkdir -p /app/staticfiles /app/media
+# Create staticfiles directory and non-root user
+RUN mkdir -p /app/staticfiles /app/media && \
+    addgroup --system appgroup && \
+    adduser --system --ingroup appgroup --no-create-home appuser && \
+    chown -R appuser:appgroup /app
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+USER appuser
 
 # Expose port
 EXPOSE 8000
 
-# Run migrations, collect static, and start server
-# Using ${PORT:-8000} allows Railway to assign a port dynamically if needed
-CMD python manage.py migrate \
-    && python manage.py collectstatic --noinput \
-    && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 4 --timeout 120
+ENTRYPOINT ["/entrypoint.sh"]

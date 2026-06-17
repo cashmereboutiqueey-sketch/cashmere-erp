@@ -25,34 +25,36 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
                 style={{
                     width: '25mm',
                     height: '40mm',
-                    padding: '1.5mm 1.5mm 0 1.5mm',
+                    padding: '1mm 1mm 0.5mm 1mm',
                     boxSizing: 'border-box',
                     fontFamily: 'Arial, sans-serif',
                     backgroundColor: 'white',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    justifyContent: 'flex-start',
+                    gap: '0.5mm',
                     overflow: 'hidden',
                 }}
             >
                 {/* Brand Header */}
                 <div style={{
-                    fontSize: '8px',
+                    fontSize: '7px',
                     fontWeight: 'bold',
-                    letterSpacing: '2.5px',
+                    letterSpacing: '2px',
                     lineHeight: 1,
+                    marginBottom: '0',
                 }}>
                     CASHMERE
                 </div>
 
                 {/* Barcode — constrained to available width */}
-                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', overflow: 'hidden', lineHeight: 0 }}>
                     <Barcode
                         value={barcodeValue}
                         width={barWidth}
-                        height={22}
-                        fontSize={6}
+                        height={18}
+                        fontSize={5}
                         margin={0}
                         displayValue={true}
                         background="#ffffff"
@@ -62,7 +64,7 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
 
                 {/* Product Name */}
                 <div style={{
-                    fontSize: '6.5px',
+                    fontSize: '6px',
                     textAlign: 'center',
                     direction: 'rtl',
                     lineHeight: 1,
@@ -70,7 +72,7 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
                     overflow: 'hidden',
                     whiteSpace: 'nowrap',
                     textOverflow: 'ellipsis',
-                    padding: '0 2px',
+                    padding: '0 1px',
                 }}>
                     {product_name}
                 </div>
@@ -83,15 +85,15 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    padding: '1.5px 4px',
+                    padding: '1px 3px',
                     boxSizing: 'border-box',
                     WebkitPrintColorAdjust: 'exact',
                     printColorAdjust: 'exact',
                 } as React.CSSProperties}>
-                    <span style={{ fontSize: '7px', fontWeight: 'bold', letterSpacing: '0.5px' }}>Price</span>
-                    <span style={{ fontSize: '9px', fontWeight: 'bold' }}>
+                    <span style={{ fontSize: '6.5px', fontWeight: 'bold', letterSpacing: '0.5px' }}>Price</span>
+                    <span style={{ fontSize: '8px', fontWeight: 'bold' }}>
                         {Number(product_price).toFixed(0)}{' '}
-                        <span style={{ fontSize: '7px' }}>{currency}</span>
+                        <span style={{ fontSize: '6.5px' }}>{currency}</span>
                     </span>
                 </div>
             </div>

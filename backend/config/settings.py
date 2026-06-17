@@ -151,6 +151,8 @@ CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
 # Required so Django knows requests come in as HTTPS when behind nginx SSL termination
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+SHOPIFY_WEBHOOK_SECRET = config('SHOPIFY_WEBHOOK_SECRET', default='')
+
 import logging
 logging.basicConfig(
     level=logging.WARNING,

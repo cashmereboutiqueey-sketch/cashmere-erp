@@ -1,12 +1,15 @@
-import Cookies from 'js-cookie';
-
 const BASE_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api`;
 
-// Registered by AuthContext — calls the refresh endpoint and updates cookies.
-// Returns the new access token, or null if refresh failed.
+// Registered by AuthContext — returns the current in-memory access token.
+let _getToken: (() => string | null) | null = null;
+// Registered by AuthContext — calls the refresh endpoint and returns the new access token.
 let _refreshCallback: (() => Promise<string | null>) | null = null;
 let _isRefreshing = false;
 let _refreshQueue: Array<(token: string | null) => void> = [];
+
+export function registerGetToken(fn: () => string | null): void {
+    _getToken = fn;
+}
 
 export function registerRefreshCallback(cb: () => Promise<string | null>): void {
     _refreshCallback = cb;
@@ -28,7 +31,7 @@ async function doRefresh(): Promise<string | null> {
 }
 
 function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
-    const token = Cookies.get('access_token');
+    const token = _getToken?.() ?? null;
     return {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -37,7 +40,6 @@ function authHeaders(extra: Record<string, string> = {}): Record<string, string>
 }
 
 // Executes a fetch, retries once with a refreshed token on 401.
-// `makeFetch` must re-read the cookie each call so the retry gets the new token.
 async function withRetry(makeFetch: () => Promise<Response>): Promise<Response> {
     let res = await makeFetch();
     if (res.status === 401 && _refreshCallback) {
@@ -52,7 +54,7 @@ async function withRetry(makeFetch: () => Promise<Response>): Promise<Response> 
 /** Drop-in replacement for fetch() that injects Bearer token and retries on 401. */
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
     return withRetry(() => {
-        const token = Cookies.get('access_token');
+        const token = _getToken?.() ?? null;
         return fetch(url, {
             ...options,
             headers: {
@@ -127,7 +129,7 @@ const api = {
 
     postForm: async <T>(endpoint: string, formData: FormData): Promise<{ data: T }> => {
         const res = await withRetry(() => {
-            const token = Cookies.get('access_token');
+            const token = _getToken?.() ?? null;
             return fetch(`${BASE_URL}${endpoint}`, {
                 method: 'POST',
                 headers: token ? { Authorization: `Bearer ${token}` } : {},

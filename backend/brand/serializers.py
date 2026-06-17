@@ -137,6 +137,7 @@ class OrderItemSerializer(FinancialMaskMixin, serializers.ModelSerializer):
 class OrderSerializer(FinancialMaskMixin, serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
     customer_name = serializers.CharField(source='customer.name', read_only=True)
+    customer_phone = serializers.CharField(source='customer.phone', read_only=True, allow_null=True)
     
     class Meta:
         model = Order
@@ -147,12 +148,22 @@ class OrderSerializer(FinancialMaskMixin, serializers.ModelSerializer):
 
     @transaction.atomic
     def create(self, validated_data):
+        from decimal import Decimal
         items_data = validated_data.pop('items', [])
-        order = Order.objects.create(**validated_data)
 
+        # Compute total_price server-side if not provided (e.g. POS checkout).
+        # unit_price in each item already reflects per-item discounts.
+        if not validated_data.get('total_price'):
+            items_net = sum(
+                Decimal(str(item['unit_price'])) * item['quantity']
+                for item in items_data
+            )
+            global_discount = validated_data.get('discount', Decimal('0.00'))
+            validated_data['total_price'] = max(Decimal('0.00'), items_net - global_discount)
+
+        order = Order.objects.create(**validated_data)
         for item_data in items_data:
             OrderItem.objects.create(order=order, **item_data)
-
         return order
 
     def update(self, instance, validated_data):

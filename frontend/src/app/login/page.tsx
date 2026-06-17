@@ -16,35 +16,30 @@ export default function LoginPage() {
         e.preventDefault();
         setError("");
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}`;
-        console.log("Attempting login to:", apiUrl);
-
         try {
-            const res = await fetch(`${apiUrl}/api/token/`, {
+            const res = await fetch('/api/auth/login', {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username, password }),
             });
 
             if (!res.ok) {
-                // Try to get error details
                 let errorMessage = "Invalid credentials";
                 try {
                     const errorData = await res.json();
                     errorMessage = errorData.detail || JSON.stringify(errorData);
-                } catch (e) {
-                    errorMessage = `Server Status: ${res.status}`;
+                } catch {
+                    errorMessage = `Server error (${res.status})`;
                 }
                 throw new Error(errorMessage);
             }
 
             const data = await res.json();
-            login(data.access, data.refresh);
+            // Refresh token is set as HttpOnly cookie by the API route.
+            // We only receive the access token here (in-memory only).
+            login(data.access);
         } catch (err: any) {
-            console.error("Login Error:", err);
-            setError(err.message || "Login failed. potentially a connection error.");
+            setError(err.message || "Login failed. Check your connection.");
         }
     };
 

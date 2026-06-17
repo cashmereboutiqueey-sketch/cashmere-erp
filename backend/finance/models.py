@@ -114,6 +114,15 @@ class FinancialTransaction(models.Model):
             models.Index(fields=['type', 'module', 'date']),
             models.Index(fields=['module', 'category']),
         ]
+        constraints = [
+            # Prevent duplicate ledger entries for the same reference per module.
+            # Partial: excludes rows where reference_id is empty (manual/bulk entries).
+            models.UniqueConstraint(
+                fields=['reference_id', 'module'],
+                condition=~models.Q(reference_id=''),
+                name='unique_reference_per_module',
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.get_type_display()}: {self.amount} ({self.date})"

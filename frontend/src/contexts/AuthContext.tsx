@@ -1,10 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
-import Cookies from "js-cookie";
 import { jwtDecode } from "jwt-decode";
 import { useRouter } from "next/navigation";
-import { registerRefreshCallback } from "@/services/api";
+import { registerRefreshCallback, registerGetToken } from "@/services/api";
 
 interface User {
     user_id: number;
@@ -18,24 +17,12 @@ interface AuthContextType {
     user: User | null;
     token: string | null;
     loading: boolean;
-    login: (token: string, refresh: string) => void;
+    login: (accessToken: string) => void;
     logout: () => void;
     hasRole: (role: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-// secure=true only in production (HTTPS); sameSite=strict blocks CSRF via cross-origin requests
-const ACCESS_COOKIE_OPTS: Cookies.CookieAttributes = {
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-};
-const REFRESH_COOKIE_OPTS: Cookies.CookieAttributes = {
-    ...ACCESS_COOKIE_OPTS,
-    expires: 30,
-};
 
 function decodeUser(accessToken: string): User | null {
     try {
@@ -79,23 +66,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => { tokenRef.current = token; }, [token]);
 
     const tryRefreshToken = useCallback(async (): Promise<boolean> => {
-        const refreshToken = Cookies.get("refresh_token");
-        if (!refreshToken) return false;
         try {
-            const res = await fetch(`${API_BASE}/api/token/refresh/`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refresh: refreshToken })
-            });
+            const res = await fetch('/api/auth/refresh', { method: 'POST' });
             if (!res.ok) return false;
             const data = await res.json();
             const newAccess = data.access;
-            Cookies.set("access_token", newAccess, ACCESS_COOKIE_OPTS);
-            // Rotate refresh token if backend sends one back
-            if (data.refresh) Cookies.set("refresh_token", data.refresh, REFRESH_COOKIE_OPTS);
             setToken(newAccess);
             setUser(decodeUser(newAccess));
-            // Reschedule refresh for the new token's lifetime
             scheduleRefresh(newAccess, () => tryRefreshToken(), refreshTimerRef);
             return true;
         } catch {
@@ -103,70 +80,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
-    // Wire api.ts 401-retry to this context's refresh function
+    // Wire api.ts token getter and 401-retry to this context
     useEffect(() => {
+        registerGetToken(() => tokenRef.current);
         registerRefreshCallback(async () => {
             const ok = await tryRefreshToken();
-            return ok ? (Cookies.get('access_token') ?? null) : null;
+            return ok ? tokenRef.current : null;
         });
     }, [tryRefreshToken]);
 
     const logout = useCallback(async () => {
         if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
 
-        // Blacklist the refresh token server-side
-        const refreshToken = Cookies.get("refresh_token");
-        if (refreshToken) {
-            try {
-                await fetch(`${API_BASE}/api/users/logout/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(tokenRef.current ? { 'Authorization': `Bearer ${tokenRef.current}` } : {})
-                    },
-                    body: JSON.stringify({ refresh: refreshToken })
-                });
-            } catch { /* network errors on logout are non-critical */ }
-        }
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: tokenRef.current ? { Authorization: `Bearer ${tokenRef.current}` } : {},
+            });
+        } catch { /* non-critical */ }
 
-        Cookies.remove("access_token");
-        Cookies.remove("refresh_token");
         setUser(null);
         setToken(null);
         router.push("/login");
     }, [router]);
 
+    // On mount: attempt silent token refresh from HttpOnly cookie
     useEffect(() => {
-        const storedToken = Cookies.get("access_token");
-        if (!storedToken) {
-            setLoading(false);
-            return;
-        }
-
-        try {
-            const decoded: any = jwtDecode(storedToken);
-            if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-                // Token expired — attempt silent refresh, keep loading=true until resolved
-                tryRefreshToken().then((ok: boolean) => {
-                    if (!ok) logout();
-                    setLoading(false);
-                });
-                return;
+        tryRefreshToken().then((ok) => {
+            if (!ok) {
+                // No valid session — stay logged out
             }
-            setToken(storedToken);
-            setUser(decodeUser(storedToken));
-            scheduleRefresh(storedToken, () => tryRefreshToken(), refreshTimerRef);
-        } catch {
-            logout();
-        }
-        setLoading(false);
+            setLoading(false);
+        });
 
         return () => { if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current); };
     }, []);
 
-    const login = (accessToken: string, refreshToken: string) => {
-        Cookies.set("access_token", accessToken, ACCESS_COOKIE_OPTS);
-        Cookies.set("refresh_token", refreshToken, REFRESH_COOKIE_OPTS);
+    // login: receives only access token (refresh token is set HttpOnly by the /api/auth/login route)
+    const login = (accessToken: string) => {
         setToken(accessToken);
         setUser(decodeUser(accessToken));
         scheduleRefresh(accessToken, () => tryRefreshToken(), refreshTimerRef);
