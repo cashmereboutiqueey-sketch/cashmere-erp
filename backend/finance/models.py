@@ -111,8 +111,8 @@ class FinancialTransaction(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['type', 'module', 'date']),
-            models.Index(fields=['module', 'category']),
+            models.Index(fields=['type', 'module', 'date'], name='finance_ft_type_module_date_idx'),
+            models.Index(fields=['module', 'category'], name='finance_ft_module_category_idx'),
         ]
         constraints = [
             # Prevent duplicate ledger entries for the same reference per module.

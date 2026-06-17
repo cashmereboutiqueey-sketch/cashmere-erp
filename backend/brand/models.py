@@ -244,7 +244,7 @@ class Order(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['status', 'created_at'], name='brand_order_status_created_idx'),
         ]
 
     def save(self, *args, **kwargs):
