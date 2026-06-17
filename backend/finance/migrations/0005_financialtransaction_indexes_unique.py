@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
         # Idempotency is enforced via get_or_create() in application code instead.
         migrations.AddIndex(
             model_name='financialtransaction',
-            index=models.Index(fields=['type', 'module', 'date'], name='finance_ft_type_module_date_idx'),
+            index=models.Index(fields=['type', 'module', 'date'], name='ft_type_module_date_idx'),
         ),
         migrations.AddIndex(
             model_name='financialtransaction',
