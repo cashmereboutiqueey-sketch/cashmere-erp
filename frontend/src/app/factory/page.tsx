@@ -36,7 +36,7 @@ export default function FactoryPage() {
                 console.error("Failed to fetch factory stats", err);
                 setLoading(false);
             });
-    }, []);
+    }, [token]);
 
     return (
         <div className="p-8">

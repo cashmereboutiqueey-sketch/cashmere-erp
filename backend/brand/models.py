@@ -209,7 +209,7 @@ class Order(models.Model):
     
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), help_text="Global Order Discount")
-    status = models.CharField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING, db_index=True)
+    status = models.CharField(max_length=20, choices=OrderStatus.choices, default=OrderStatus.PENDING)
     
     # Shipping / Logistics
     class DetailedStatus(models.TextChoices):

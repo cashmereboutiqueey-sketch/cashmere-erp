@@ -17,9 +17,10 @@ interface DataGridProps {
     selectable?: boolean;
     onSelectionChange?: (selectedIndices: number[]) => void;
     loading?: boolean;
+    rowKey?: (row: any) => string;
 }
 
-export default function DataGrid({ title, columns, data, action, selectable = false, onSelectionChange, loading = false }: DataGridProps) {
+export default function DataGrid({ title, columns, data, action, selectable = false, onSelectionChange, loading = false, rowKey }: DataGridProps) {
     const [selectedIndices, setSelectedIndices] = React.useState<number[]>([]);
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,7 +97,7 @@ export default function DataGrid({ title, columns, data, action, selectable = fa
                             </tr>
                         ) : (
                             data.map((row, rowIndex) => (
-                                <tr key={rowIndex} className={`hover:bg-amber-50/30 transition-colors ${selectable && selectedIndices.includes(rowIndex) ? 'bg-amber-50' : ''}`}>
+                                <tr key={rowKey ? rowKey(row) : rowIndex} className={`hover:bg-amber-50/30 transition-colors ${selectable && selectedIndices.includes(rowIndex) ? 'bg-amber-50' : ''}`}>
                                     {selectable && (
                                         <td className="px-4 py-1.5 whitespace-nowrap">
                                             <input

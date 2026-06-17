@@ -9,10 +9,10 @@ import time
 import tarfile
 import io
 
-HOST = "187.124.182.93"
-PORT = 22
-USER = "root"
-PASSWORD = "Cashmere-2026"
+HOST = os.environ.get("DEPLOY_HOST", "187.124.182.93")
+PORT = int(os.environ.get("DEPLOY_PORT", "22"))
+USER = os.environ.get("DEPLOY_USER", "root")
+PASSWORD = os.environ.get("DEPLOY_SERVER_PASSWORD", "")
 REMOTE_DIR = "/opt/cashmere"
 LOCAL_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -234,17 +234,18 @@ def create_superuser(client):
     if "EXISTS" in out:
         ok("Admin user already exists")
         return
+    admin_pass = os.environ.get("DJANGO_ADMIN_PASSWORD", "")
     ok_flag, out = run(client,
         f"cd {REMOTE_DIR} && docker compose -f docker-compose.prod.yml --env-file .env.production "
         f"exec -T backend python manage.py shell -c \""
         f"from django.contrib.auth.models import User; "
-        f"u=User.objects.create_superuser('admin','cashmereboutique.ey@gmail.com','Cashmere@Admin2026!'); "
+        f"u=User.objects.create_superuser('admin','cashmereboutique.ey@gmail.com','{admin_pass}'); "
         f"print('CREATED')"
         f"\"")
     if "CREATED" in out:
         ok("Superuser created:")
         ok("  Username: admin")
-        ok("  Password: Cashmere@Admin2026!")
+        ok("  Password: (set via DJANGO_ADMIN_PASSWORD env var)")
         ok("  Email:    cashmereboutique.ey@gmail.com")
     else:
         err("Superuser creation failed — create manually:")
@@ -279,14 +280,17 @@ def print_summary():
 
   Admin login
     Username:  admin
-    Password:  Cashmere@Admin2026!
+    Password:  (set via DJANGO_ADMIN_PASSWORD env var)
 
-  SSH to server:  ssh root@187.124.182.93
+  SSH to server:  ssh root@{HOST}
   Logs:           docker compose -f /opt/cashmere/docker-compose.prod.yml logs -f
 """)
 
 
 if __name__ == "__main__":
+    missing = [v for v in ("DEPLOY_SERVER_PASSWORD", "DJANGO_ADMIN_PASSWORD") if not os.environ.get(v)]
+    if missing:
+        sys.exit(f"ERROR: Required env vars not set: {', '.join(missing)}")
     client = connect()
     try:
         bootstrap(client)

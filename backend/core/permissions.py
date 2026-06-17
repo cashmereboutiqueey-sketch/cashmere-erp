@@ -35,6 +35,13 @@ class HasFinanceAccess(BasePermission):
         return bool(_groups(request.user) & FINANCE_ROLES) if request.user else False
 
 
+class IsFactoryManager(BasePermission):
+    message = 'Factory Manager or Admin role required.'
+
+    def has_permission(self, request, view):
+        return bool(_groups(request.user) & {'Factory Manager', 'Admin'}) if request.user else False
+
+
 class IsAdminUser(BasePermission):
     message = 'Admin role required.'
 

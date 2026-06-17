@@ -1,13 +1,15 @@
-"use client";
-
+import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import { LanguageProvider } from "@/contexts/LanguageContext";
-import { AuthProvider } from "@/contexts/AuthContext";
-import ToastContainer from "@/components/ToastContainer";
+import Providers from "./Providers";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-playfair" });
+
+export const metadata: Metadata = {
+  title: "Cashmere ERP",
+  description: "Operations management for Cashmere Boutique",
+};
 
 export default function RootLayout({
   children,
@@ -20,12 +22,7 @@ export default function RootLayout({
         className={`${inter.variable} ${playfair.variable} bg-gray-50 text-cashmere-black font-sans`}
         suppressHydrationWarning={true}
       >
-        <AuthProvider>
-          <LanguageProvider>
-            {children}
-            <ToastContainer />
-          </LanguageProvider>
-        </AuthProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

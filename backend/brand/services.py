@@ -1,4 +1,3 @@
-import datetime
 from decimal import Decimal
 from django.utils import timezone
 from django.db import transaction as db_transaction
@@ -61,27 +60,56 @@ class OrderService:
         if not order.location:
             return
 
-        for item in order.items.all():
-            # Find inventory
-            inv, created = Inventory.objects.get_or_create(
-                location=order.location,
-                product=item.product,
-                defaults={'quantity': 0}
-            )
-            
-            # Deduct quantity — allow negative to track overselling (backorders)
-            if inv.quantity < item.quantity:
-                import logging
-                logging.getLogger(__name__).warning(
-                    f"Oversell: product {item.product.sku} at location {order.location}, "
-                    f"available={inv.quantity}, ordered={item.quantity}"
+        import logging
+        _logger = logging.getLogger(__name__)
+
+        with db_transaction.atomic():
+            for item in order.items.all():
+                inv, _ = Inventory.objects.select_for_update().get_or_create(
+                    location=order.location,
+                    product=item.product,
+                    defaults={'quantity': 0}
                 )
-            inv.quantity -= item.quantity
-            inv.save()
-            
-        # Mark as deducted to prevent double counting
+                if inv.quantity < item.quantity:
+                    _logger.warning(
+                        "Oversell: product %s at location %s, available=%s, ordered=%s",
+                        item.product.sku, order.location, inv.quantity, item.quantity
+                    )
+                inv.quantity -= item.quantity
+                inv.save()
+
         order.inventory_deducted = True
         order.save()
+
+    @staticmethod
+    def restore_inventory(order: Order):
+        """
+        Restores inventory when an order is cancelled or fully returned.
+        Only runs if inventory was previously deducted.
+        """
+        if not order.inventory_deducted or not order.location:
+            return
+
+        import logging
+        _logger = logging.getLogger(__name__)
+
+        with db_transaction.atomic():
+            for item in order.items.all():
+                try:
+                    inv = Inventory.objects.select_for_update().get(
+                        location=order.location,
+                        product=item.product,
+                    )
+                    inv.quantity += item.quantity
+                    inv.save()
+                except Inventory.DoesNotExist:
+                    _logger.warning(
+                        "Inventory not found to restore: product %s at location %s",
+                        item.product.sku, order.location
+                    )
+
+        order.inventory_deducted = False
+        order.save(update_fields=['inventory_deducted'])
 
     @staticmethod
     def _settle_factory_payable(order: Order):
@@ -126,7 +154,7 @@ class OrderService:
                 module=Treasury.ModuleType.FACTORY, type=Treasury.TreasuryType.MAIN
             ).first()
 
-            today = datetime.date.today()
+            today = timezone.now().date()
 
             # Brand side: outflow (debit)
             FinancialTransaction.objects.create(
@@ -214,12 +242,13 @@ class OrderService:
         # Debt = sum of all active order totals minus what's been paid
         customer.current_debt = max(Decimal('0.00'), total_price - total_paid)
 
+        # Tier order: STANDARD < VIP < VVIP < ELITE (highest)
         if new_total > 50000:
-            customer.tier = Customer.Tier.VVIP
-        elif new_total > 20000:
-            customer.tier = Customer.Tier.VIP
-        elif new_total > 5000:
             customer.tier = Customer.Tier.ELITE
+        elif new_total > 20000:
+            customer.tier = Customer.Tier.VVIP
+        elif new_total > 5000:
+            customer.tier = Customer.Tier.VIP
         else:
             customer.tier = Customer.Tier.STANDARD
 

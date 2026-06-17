@@ -1,6 +1,10 @@
+import logging
 import requests
 from django.conf import settings
 from .models import ShopifyConfig, Product, Category
+
+logger = logging.getLogger(__name__)
+_TIMEOUT = (10, 30)  # (connect, read) seconds
 
 class ShopifyService:
     def __init__(self):
@@ -21,7 +25,7 @@ class ShopifyService:
     def test_connection(self):
         """Test connection and return shop info dict."""
         url = f"{self.base_url}/shop.json"
-        response = requests.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.headers, timeout=_TIMEOUT)
         if response.status_code != 200:
             raise Exception(f"Connection Failed ({response.status_code}): {response.text}")
         return response.json()['shop']
@@ -37,7 +41,7 @@ class ShopifyService:
         products = []
         
         while url:
-            response = requests.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers, timeout=_TIMEOUT)
             if response.status_code != 200:
                 raise Exception(f"Failed to fetch products ({response.status_code}): {response.text}")
                 
@@ -65,7 +69,7 @@ class ShopifyService:
         
         while url:
             # Note: Pagination logic is same as products
-            response = requests.get(url, headers=self.headers)
+            response = requests.get(url, headers=self.headers, timeout=_TIMEOUT)
             if response.status_code != 200:
                 raise Exception(f"Failed to fetch orders ({response.status_code}): {response.text}")
                 
@@ -85,9 +89,9 @@ class ShopifyService:
     def fetch_marketing_events(self):
         """Fetch marketing events (Ads) from Shopify."""
         url = f"{self.base_url}/marketing_events.json"
-        response = requests.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.headers, timeout=_TIMEOUT)
         if response.status_code != 200:
-            print(f"Marketing API warning: {response.text}")
+            logger.warning("Marketing API warning: %s", response.text)
             return []
         return response.json().get('marketing_events', [])
 
@@ -119,7 +123,7 @@ class ShopifyService:
         if getattr(product, 'image_url', None):
             payload["product"]["images"] = [{"src": product.image_url}]
 
-        response = requests.post(url, headers=self.headers, json=payload)
+        response = requests.post(url, headers=self.headers, json=payload, timeout=_TIMEOUT)
         if response.status_code == 201:
             data = response.json()['product']
             product.shopify_product_id = str(data['id'])
@@ -140,7 +144,7 @@ class ShopifyService:
                 "published": True
             }
         }
-        response = requests.post(url, headers=self.headers, json=payload)
+        response = requests.post(url, headers=self.headers, json=payload, timeout=_TIMEOUT)
         if response.status_code == 201:
             data = response.json()['custom_collection']
             category.shopify_collection_id = str(data['id'])

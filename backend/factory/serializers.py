@@ -105,10 +105,13 @@ class BOMSerializer(serializers.ModelSerializer):
         return bom
 
     def update(self, instance, validated_data):
-        items_data = validated_data.pop('items', [])
-        instance.items.all().delete()
-        for item_data in items_data:
-            BOMItem.objects.create(bom=instance, **item_data)
+        items_data = validated_data.pop('items', None)
+        if items_data is not None:
+            if len(items_data) == 0:
+                raise serializers.ValidationError({'items': 'BOM items cannot be empty. Provide at least one item or omit the field to leave unchanged.'})
+            instance.items.all().delete()
+            for item_data in items_data:
+                BOMItem.objects.create(bom=instance, **item_data)
         return instance
 
 class ProductionJobSerializer(serializers.ModelSerializer):

@@ -5,6 +5,7 @@ from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from django.db.models import Sum, F
 from django.db import transaction
 from decimal import Decimal
@@ -77,12 +78,20 @@ class FinancialTransactionViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         item = serializer.save()
         if item.treasury:
-            TT = FinancialTransaction.TransactionType
-            if item.type in (TT.EXPENSE, TT.INTERNAL_TRANSFER, TT.INTERCOMPANY_PAYMENT):
-                item.treasury.balance -= item.amount
-            elif item.type in (TT.SALE_REVENUE, TT.TRANSFER_TO_BRAND):
-                item.treasury.balance += item.amount
-            item.treasury.save()
+            with transaction.atomic():
+                treasury = item.treasury.__class__.objects.select_for_update().get(pk=item.treasury_id)
+                TT = FinancialTransaction.TransactionType
+                if item.type in (TT.EXPENSE, TT.INTERNAL_TRANSFER, TT.INTERCOMPANY_PAYMENT):
+                    treasury.balance -= item.amount
+                elif item.type in (TT.SALE_REVENUE, TT.TRANSFER_TO_BRAND):
+                    treasury.balance += item.amount
+                treasury.save()
+
+    def perform_update(self, serializer):
+        raise PermissionDenied("Financial transactions are immutable. Create a correcting entry instead.")
+
+    def perform_destroy(self, instance):
+        raise PermissionDenied("Financial transactions cannot be deleted.")
 
 
 class PnLView(APIView):
@@ -111,10 +120,25 @@ class PnLView(APIView):
         gross_profit = brand_revenue - cogs
         net_profit = gross_profit - total_expenses
 
+        # Factory revenue = what brand paid factory (SALE_REVENUE on factory ledger)
+        factory_revenue = FinancialTransaction.objects.filter(
+            type=TT.SALE_REVENUE,
+            module=MT.FACTORY
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        # Factory COGS = actual expenses (raw materials + labour)
+        factory_cogs = FinancialTransaction.objects.filter(
+            type=TT.EXPENSE,
+            module=MT.FACTORY
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        factory_profit = factory_revenue - factory_cogs
+
         return Response({
             "factory": {
-                "revenue": float(cogs),
-                "cogs": float(cogs),
+                "revenue": float(factory_revenue),
+                "cogs": float(factory_cogs),
+                "gross_profit": float(factory_profit),
             },
             "brand": {
                 "revenue": float(brand_revenue),

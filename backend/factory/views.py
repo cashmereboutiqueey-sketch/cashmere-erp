@@ -15,7 +15,7 @@ from .serializers import (
     MaterialPurchaseSerializer, SupplierPaymentSerializer,
     WorkerSerializer, WorkerAttendanceSerializer, ProductionLogSerializer
 )
-from core.permissions import HasFactoryAccess, HasFinanceAccess
+from core.permissions import HasFactoryAccess, HasFinanceAccess, IsFactoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +24,11 @@ class WorkerViewSet(viewsets.ModelViewSet):
     queryset = Worker.objects.filter(active=True).order_by('name')
     serializer_class = WorkerSerializer
     permission_classes = [IsAuthenticated, HasFactoryAccess]
+
+    def get_permissions(self):
+        if self.action == 'pay_payroll':
+            return [IsAuthenticated(), IsFactoryManager()]
+        return super().get_permissions()
 
     @action(detail=False, methods=['get'])
     def stats(self, request):
@@ -337,6 +342,18 @@ class ProductionJobViewSet(viewsets.ModelViewSet):
         job = self.get_object()
         try:
             job.start_production()
+            return Response(self.get_serializer(job).data)
+        except Exception as e:
+            return Response({'error': self._clean_error(e)}, status=400)
+
+    @action(detail=True, methods=['post'])
+    def submit_qc(self, request, pk=None):
+        job = self.get_object()
+        try:
+            if job.status != ProductionJob.JobStatus.IN_PROGRESS:
+                return Response({'error': 'Only IN_PROGRESS jobs can be submitted for QC.'}, status=400)
+            job.status = ProductionJob.JobStatus.QC
+            job.save(update_fields=['status', 'updated_at'])
             return Response(self.get_serializer(job).data)
         except Exception as e:
             return Response({'error': self._clean_error(e)}, status=400)

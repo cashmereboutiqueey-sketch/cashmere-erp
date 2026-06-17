@@ -155,6 +155,9 @@ class InventoryViewSet(viewsets.ModelViewSet):
         if not source_id or not target_id or not items:
             return Response({'error': 'Missing required fields'}, status=400)
 
+        if str(source_id) == str(target_id):
+            return Response({'error': 'Source and target locations must be different'}, status=400)
+
         for item_data in items:
             product_id = item_data.get('product')
             quantity = int(item_data.get('quantity', 0))
@@ -204,10 +207,12 @@ class OrderViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         old_status = serializer.instance.status
         order = serializer.save()
-        # Only run financial/inventory side-effects when status actually changes
         if old_status != order.status:
             from .services import OrderService
-            OrderService.process_new_order(order)
+            if order.status == Order.OrderStatus.CANCELLED:
+                OrderService.restore_inventory(order)
+            else:
+                OrderService.process_new_order(order)
 
     @action(detail=True, methods=['post'])
     def fulfill(self, request, pk=None):
@@ -385,8 +390,9 @@ class OrderViewSet(viewsets.ModelViewSet):
                     order.save()
                     updated_count += 1
                 except Order.DoesNotExist:
+                    logger.warning("update_shipping_status: Order ID %s not found, skipping.", update.get('id'))
                     continue
-                    
+
         return Response({'updated': updated_count})
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -417,9 +423,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def dashboard_stats(self, request):
         # 1. Revenue & Orders
-        total_revenue = Order.objects.filter(status=Order.OrderStatus.PAID).aggregate(
-            total=Sum('total_price')
-        )['total'] or Decimal('0.00')
+        total_revenue = Order.objects.filter(
+            status__in=[Order.OrderStatus.PAID, Order.OrderStatus.FULFILLED]
+        ).aggregate(total=Sum('total_price'))['total'] or Decimal('0.00')
 
         total_orders = Order.objects.count()
 
@@ -637,12 +643,14 @@ class AnalyticsViewSet(viewsets.ViewSet):
             metrics['active_campaigns'] = len(events)
             metrics['ad_spend'] = total_spend
 
-            revenue = Order.objects.filter(status=Order.OrderStatus.PAID).aggregate(t=Sum('total_price'))['t'] or Decimal('0.00')
+            revenue = Order.objects.filter(
+                status__in=[Order.OrderStatus.PAID, Order.OrderStatus.FULFILLED]
+            ).aggregate(t=Sum('total_price'))['t'] or Decimal('0.00')
             if total_spend > 0:
                 metrics['roas'] = float(revenue) / total_spend
 
         except Exception as e:
-            print(f"Marketing Sync Error: {e}")
+            logger.error("Marketing Sync Error: %s", e, exc_info=True)
 
         return Response(metrics)
 
@@ -656,20 +664,21 @@ class CategoryViewSet(viewsets.ModelViewSet):
         from django.db.models.functions import Coalesce
         from decimal import Decimal
 
+        paid_statuses = ['PAID', 'FULFILLED']
         return super().get_queryset().annotate(
             items_sold=Coalesce(
-                Sum('products__orderitem__quantity', filter=Q(products__orderitem__order__status='PAID')),
+                Sum('products__orderitem__quantity', filter=Q(products__orderitem__order__status__in=paid_statuses)),
                 0
             ),
             revenue=Coalesce(
                 Sum(F('products__orderitem__quantity') * F('products__orderitem__unit_price'),
-                    filter=Q(products__orderitem__order__status='PAID'),
+                    filter=Q(products__orderitem__order__status__in=paid_statuses),
                     output_field=DecimalField(max_digits=14, decimal_places=2)),
                 Decimal('0.00')
             ),
             cogs=Coalesce(
                 Sum(F('products__orderitem__quantity') * F('products__standard_cost'),
-                    filter=Q(products__orderitem__order__status='PAID'),
+                    filter=Q(products__orderitem__order__status__in=paid_statuses),
                     output_field=DecimalField(max_digits=14, decimal_places=2)),
                 Decimal('0.00')
             )

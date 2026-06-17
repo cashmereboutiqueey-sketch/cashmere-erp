@@ -9,10 +9,15 @@ interface ProductLabelProps {
     currency?: string;
 }
 
-// 40mm × 25mm sticker label
+// 40mm × 25mm sticker label — landscape orientation
 const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
     ({ product_name, product_sku, product_barcode, product_price, currency = 'LE' }, ref) => {
         const barcodeValue = product_barcode || product_sku;
+
+        // Scale bar width so the barcode fits within ~37mm (140px at 96dpi).
+        // Code128 uses roughly 11 modules per char + ~57 modules overhead.
+        const estimatedModules = barcodeValue.length * 11 + 57;
+        const barWidth = Math.min(0.9, Math.max(0.4, 140 / estimatedModules));
 
         return (
             <div
@@ -41,12 +46,12 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
                     CASHMERE
                 </div>
 
-                {/* Barcode */}
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                {/* Barcode — constrained to available width */}
+                <div style={{ display: 'flex', justifyContent: 'center', width: '100%', overflow: 'hidden' }}>
                     <Barcode
                         value={barcodeValue}
-                        width={0.9}
-                        height={20}
+                        width={barWidth}
+                        height={22}
                         fontSize={6}
                         margin={0}
                         displayValue={true}

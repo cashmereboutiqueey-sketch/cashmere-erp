@@ -162,7 +162,7 @@ export default function FactoryHRPage() {
 
         try {
             const res = await hrService.processPayroll(payrollStartDate, payrollEndDate);
-            toast.error(res.message);
+            toast.success(res.message || 'Payroll processed successfully.');
         } catch (error: any) {
             const msg = error.response?.data?.error || 'Failed to process payroll';
             toast.error(`Error: ${msg}`);

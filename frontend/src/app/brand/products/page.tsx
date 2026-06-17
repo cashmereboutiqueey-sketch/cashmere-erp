@@ -97,7 +97,8 @@ export default function ProductCatalogPage() {
             const content = printArea?.innerHTML?.trim();
             if (!content) { window.print(); return; }
 
-            const win = window.open('', '_blank', 'width=175,height=115,toolbar=no,scrollbars=no,menubar=no,status=no');
+            // 40mm × 25mm in CSS px at 96dpi ≈ 152 × 95; add ~30px for window chrome
+            const win = window.open('', '_blank', 'width=182,height=125,toolbar=no,scrollbars=no,menubar=no,status=no');
             if (!win) { window.print(); return; }
 
             win.document.write(`<!DOCTYPE html>
@@ -105,6 +106,7 @@ export default function ProductCatalogPage() {
   @page { size: 40mm 25mm; margin: 0; }
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
   html, body { width: 40mm; height: 25mm; margin: 0; padding: 0; overflow: hidden; background: white; font-family: Arial, sans-serif; }
+  svg { display: block; max-width: 100% !important; }
 </style></head>
 <body>${content}
 <script>window.onload=function(){setTimeout(function(){window.print();window.close();},150);};<\/script>
