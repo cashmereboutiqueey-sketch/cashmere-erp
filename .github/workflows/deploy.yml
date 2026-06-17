@@ -37,15 +37,17 @@ jobs:
             echo "  attempt $i: state=$STATE health=$HEALTH"
             if [ "$HEALTH" = "healthy" ]; then
               echo "Backend is healthy."
-              break
+              exit 0
             fi
             if [ "$STATE" = "restarting" ] || [ "$STATE" = "exited" ]; then
-              echo "Container is in bad state: $STATE — checking logs..."
-              docker logs cashmere-backend --tail 20 || true
-              echo "Waiting for restart to settle..."
+              echo "Container is in bad state: $STATE — showing logs:"
+              docker logs cashmere-backend --tail 30 || true
             fi
             sleep 5
           done
+          echo "ERROR: backend never became healthy after 200s — showing final logs:"
+          docker logs cashmere-backend --tail 50 || true
+          exit 1
 
       - name: Run migrations and collect static
         run: |
