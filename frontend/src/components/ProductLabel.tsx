@@ -9,52 +9,50 @@ interface ProductLabelProps {
     currency?: string;
 }
 
-// 25mm × 40mm sticker label — portrait orientation
+// 4" × 2" sticker label — landscape (101.6mm × 50.8mm)
 const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
     ({ product_name, product_sku, product_barcode, product_price, currency = 'LE' }, ref) => {
         const barcodeValue = product_barcode || product_sku;
 
-        // Scale bar width so the barcode fits within ~22mm (83px at 96dpi).
-        // Code128 uses roughly 11 modules per char + ~57 modules overhead.
+        // Fit barcode within ~95mm (362px at 96dpi) of the 101.6mm width.
+        // Code128: ~11 modules per char + ~57 modules overhead.
         const estimatedModules = barcodeValue.length * 11 + 57;
-        const barWidth = Math.min(0.9, Math.max(0.4, 83 / estimatedModules));
+        const barWidth = Math.min(1.5, Math.max(0.5, 362 / estimatedModules));
 
         return (
             <div
                 ref={ref}
                 style={{
-                    width: '25mm',
-                    height: '40mm',
-                    padding: '1mm 1mm 0.5mm 1mm',
+                    width: '4in',
+                    height: '2in',
+                    padding: '3mm 3mm 2mm 3mm',
                     boxSizing: 'border-box',
                     fontFamily: 'Arial, sans-serif',
                     backgroundColor: 'white',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'flex-start',
-                    gap: '0.5mm',
+                    justifyContent: 'space-between',
                     overflow: 'hidden',
                 }}
             >
                 {/* Brand Header */}
                 <div style={{
-                    fontSize: '7px',
+                    fontSize: '11px',
                     fontWeight: 'bold',
-                    letterSpacing: '2px',
+                    letterSpacing: '4px',
                     lineHeight: 1,
-                    marginBottom: '0',
                 }}>
                     CASHMERE
                 </div>
 
-                {/* Barcode — constrained to available width */}
+                {/* Barcode */}
                 <div style={{ display: 'flex', justifyContent: 'center', width: '100%', overflow: 'hidden', lineHeight: 0 }}>
                     <Barcode
                         value={barcodeValue}
                         width={barWidth}
-                        height={18}
-                        fontSize={5}
+                        height={45}
+                        fontSize={9}
                         margin={0}
                         displayValue={true}
                         background="#ffffff"
@@ -64,7 +62,7 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
 
                 {/* Product Name */}
                 <div style={{
-                    fontSize: '6px',
+                    fontSize: '9px',
                     textAlign: 'center',
                     direction: 'rtl',
                     lineHeight: 1,
@@ -72,7 +70,7 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
                     overflow: 'hidden',
                     whiteSpace: 'nowrap',
                     textOverflow: 'ellipsis',
-                    padding: '0 1px',
+                    padding: '0 2px',
                 }}>
                     {product_name}
                 </div>
@@ -85,15 +83,15 @@ const ProductLabel = forwardRef<HTMLDivElement, ProductLabelProps>(
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    padding: '1px 3px',
+                    padding: '2px 6px',
                     boxSizing: 'border-box',
                     WebkitPrintColorAdjust: 'exact',
                     printColorAdjust: 'exact',
                 } as React.CSSProperties}>
-                    <span style={{ fontSize: '6.5px', fontWeight: 'bold', letterSpacing: '0.5px' }}>Price</span>
-                    <span style={{ fontSize: '8px', fontWeight: 'bold' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 'bold', letterSpacing: '0.5px' }}>Price</span>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold' }}>
                         {Number(product_price).toFixed(0)}{' '}
-                        <span style={{ fontSize: '6.5px' }}>{currency}</span>
+                        <span style={{ fontSize: '9px' }}>{currency}</span>
                     </span>
                 </div>
             </div>
